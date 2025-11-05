@@ -26,6 +26,9 @@ namespace LeanSubst
     | forward {x y z} : Conv R x z -> R x y -> Conv R y z
     | backward {x y z} : Conv R y z -> R x y -> Conv R x z
 
+    class HasConfluence (R : T -> T -> Prop) where
+      confluence {s t1 t2} : Star R s t1 -> Star R s t2 -> ∃ t, Star R t1 t ∧ Star R t2 t
+
     variable {R R1 R2 : T -> T -> Prop}
 
     namespace Star
@@ -180,7 +183,20 @@ namespace LeanSubst
             cases lem; case _ q lem =>
               exists q; apply And.intro
               apply lem.1; apply Star.step ih.2 lem.2
+
+      variable [SubstMap T] [Substitutive R]
+
+      omit [HasTriangle R] in
+      theorem subst {x y} σ : Star R x y -> Star R (x[σ]) (y[σ]) := by
+        intro r; induction r
+        case _ => apply Star.refl
+        case _ r1 r2 ih =>
+          replace r2 := Substitutive.subst σ r2
+          apply Star.step ih r2
     end Star
+
+    instance HasConfluence_from_HasTriangle {T : Type u} {R : T -> T -> Prop} [HasTriangle R] : HasConfluence R where
+      confluence := Star.confluence
 
     namespace Plus
       theorem destruct {x z} : Plus R x z -> ∃ y, R x y ∧ Star R y z := by
@@ -224,8 +240,73 @@ namespace LeanSubst
         case _ r ih => apply forward_right ih r
         case _ r ih => apply backward_right ih r
 
-      theorem trans {x y z} [HasTriangle R] : Conv R x y -> Conv R y z -> Conv R x z := by
-        sorry
+      theorem star_forward {x y z} : Conv R x z -> Star R x y -> Conv R y z := by
+        intro cv r
+        induction r; simp [*]
+        case _ r1 r2 ih => apply forward ih r2
+
+      theorem star_backward {x y z} : Conv R y z -> Star R x y -> Conv R x z := by
+        intro cv r
+        induction r; simp [*]
+        case _ r1 r2 ih =>
+          apply ih
+          apply backward cv r2
+
+      theorem star_forward_right {x y z} : Conv R x y -> Star R y z -> Conv R x z := by
+        intro cv r
+        induction r; simp [*]
+        case _ r1 r2 ih => apply forward_right ih r2
+
+      theorem star_backward_right {x y z} : Conv R x y -> Star R z y -> Conv R x z := by
+        intro cv r
+        induction r; simp [*]
+        case _ r1 r2 ih =>
+          apply ih
+          apply backward_right cv r2
+
+      theorem star_equiv {x y} [HasConfluence R] : Conv R x y <-> (∃ t, Star R x t ∧ Star R y t) := by
+        apply Iff.intro
+        case _ =>
+          intro cv
+          induction cv
+          case _ t =>
+            exists t
+            apply And.intro Star.refl Star.refl
+          case _ a b c cv r ih =>
+            cases ih; case _ t ih =>
+            have lem := HasConfluence.confluence (Star.step Star.refl r) ih.1
+            cases lem; case _ z lem =>
+            have lem2 := Star.trans ih.2 lem.2
+            exists z; apply And.intro lem.1 lem2
+          case _ a b c cv r ih =>
+            cases ih; case _ t ih =>
+            have lem := Star.stepr r ih.1
+            exists t; simp [*]
+        case _ =>
+          intro h
+          cases h; case _ t h =>
+          apply star_backward _ h.1
+          apply star_backward_right _ h.2
+          apply refl
+
+      theorem trans {x y z} [HasConfluence R] : Conv R x y -> Conv R y z -> Conv R x z := by
+        intro h1 h2
+        replace h1 := star_equiv.1 h1
+        replace h2 := star_equiv.1 h2
+        cases h1; case _ t1 h1 =>
+        cases h2; case _ t2 h2 =>
+        have lem := HasConfluence.confluence h1.2 h2.1
+        cases lem; case _ w lem =>
+        replace h1 := Star.trans h1.1 lem.1
+        replace h2 := Star.trans h2.2 lem.2
+        apply star_backward _ h1
+        apply star_backward_right _ h2
+        apply refl
+
+      -- theorem subst {x y} [SubstMap T] [Substitutive R] σ : Conv R x y -> Conv R (x[σ]) (y[σ]) := by
+      --   intro cv
+
+      --   sorry
     end Conv
   end
 end LeanSubst
