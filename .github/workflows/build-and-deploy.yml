@@ -38,7 +38,7 @@ jobs:
       # #   https://github.com/fgdorais/lean4-unicode-basic/issues/81
       - name: Install 'elan' for automatic Lean toolchain management without Nix
         uses: leanprover/lean-action@434f25c2f80ded67bba02502ad3a86f25db50709 # v1.3.0
-        with:
+        # with:
           # Disable caching since we use our own cache configuration below.
           # use-github-cache: false
           # use-mathlib-cache: false
