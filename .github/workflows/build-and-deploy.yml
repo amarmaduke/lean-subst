@@ -37,7 +37,7 @@ jobs:
       # # Lean or 'elan' installed via Nix in the CI environment. The following issue may be related:
       # #   https://github.com/fgdorais/lean4-unicode-basic/issues/81
       - name: Install 'elan' for automatic Lean toolchain management without Nix
-        uses: leanprover/lean-action@434f25c2f80ded67bba02502ad3a86f25db50709 # v1.3.0
+        uses: leanprover/lean-action@v1
         # with:
           # Disable caching since we use our own cache configuration below.
           # use-github-cache: false
@@ -60,7 +60,7 @@ jobs:
       # - name: Build the Lean project within devenv
       #   run: devenv shell just -- build
       - name: Build the Lean documentation within devenv
-        run: cd docbuild && lake build LeanSubst:docs
+        run: cd docbuild && lake update && lake --version && lake build LeanSubst:docs
       # - name: Build the Lean Blueprint PDF and web within devenv
       #   run: devenv shell just -- blueprint
       # - name: Build the project website within devenv
