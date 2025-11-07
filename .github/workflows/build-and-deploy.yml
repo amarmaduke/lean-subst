@@ -1,0 +1,80 @@
+name: Build the project and deploy to GitHub Pages
+
+# Runs the workflow on pushes and pull requests to the main branch.
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch: # Allows manual triggering of the workflow.
+
+# Sets permissions of the `GITHUB_TOKEN` to allow deployment to GitHub Pages.
+permissions:
+  contents: read # Read access to repository contents.
+  id-token: write # Required to upload the site to GitHub Pages.
+  pages: write # Write access to GitHub Pages.
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          fetch-depth: 0 # Fetch all history for all branches and tags.
+      # - name: Install Nix
+      #   uses: cachix/install-nix-action@fd24c48048070c1be9acd18c9d369a83f0fe94d7 # v31.8.1
+      # - name: Cache Nix store
+      #   uses: cachix/cachix-action@0fc020193b5a1fa3ac4575aa3a7d3aa6a35435ad # v16
+      #   with:
+      #     name: devenv
+      # - name: Install devenv
+      #   run: nix profile install nixpkgs#devenv
+      # # TODO: The following two steps are a workaround to avoid an issue where the documentation
+      # # won't build because of an error building the `UnicodeBasic` doc-gen4 dependency when using
+      # # Lean or 'elan' installed via Nix in the CI environment. The following issue may be related:
+      # #   https://github.com/fgdorais/lean4-unicode-basic/issues/81
+      - name: Install 'elan' for automatic Lean toolchain management without Nix
+        uses: leanprover/lean-action@434f25c2f80ded67bba02502ad3a86f25db50709 # v1.3.0
+        with:
+          # Disable caching since we use our own cache configuration below.
+          # use-github-cache: false
+          # use-mathlib-cache: false
+          # # Don't auto-configure the Lean action; we just want 'elan' installed.
+          # auto-config: false
+      # - name: Disable Lean management in devenv
+      #   run: |
+      #     echo "Creating 'devenv.local.nix' to disable Lean toolchain management in devenv."
+      #     echo "{...}: {languages.lean4.enable = false;}" > devenv.local.nix
+      # - name: Cache Lean dependencies
+      #   uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      #   with:
+      #     path: .lake
+      #     # Include OS, architecture, Lean toolchain, Lake manifest, and git commit hash.
+      #     key: ${{ runner.os }}-lake-${{ runner.arch }}-${{ hashFiles('lean-toolchain') }}-${{ hashFiles('lake-manifest.json') }}-${{ github.sha }}
+      #     # If no exact match is found, fallback to the latest commit with the same previous
+      #     # components.
+      #     restore-keys: ${{ runner.os }}-lake-${{ runner.arch }}-${{ hashFiles('lean-toolchain') }}-${{ hashFiles('lake-manifest.json') }}
+      # - name: Build the Lean project within devenv
+      #   run: devenv shell just -- build
+      - name: Build the Lean documentation within devenv
+        run: cd docbuild && lake build LeanSubst:docs
+      # - name: Build the Lean Blueprint PDF and web within devenv
+      #   run: devenv shell just -- blueprint
+      # - name: Build the project website within devenv
+      #   shell: devenv shell bash -- -e {0}
+      #   env:
+      #     JEKYLL_GITHUB_TOKEN: ${{ github.token }} # Pass the GitHub token to Jekyll.
+      #   run: just website production
+      - name: Upload the site as a GitHub Pages artifact
+        uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4.0.0
+        with:
+          path: docbuild/.lake/doc
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5
