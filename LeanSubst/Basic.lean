@@ -169,7 +169,7 @@ namespace LeanSubst
         SubstMapStable.apply_id
 
       @[simp] -- ⇑σ = 0.(σ ◦ S)
-      theorem rewrite6 {σ : Subst T} : σ.lift = .re 0 :: (σ ∘ S) := by
+      theorem rewrite_lift {σ : Subst T} : σ.lift = .re 0 :: (σ ∘ S) := by
         funext; case _ x =>
         cases x
         case _ => unfold Subst.lift; simp
@@ -182,7 +182,7 @@ namespace LeanSubst
             funext; case _ i => unfold Ren.to; simp
 
       @[simp] -- I ◦ σ = σ
-      theorem rewrite7 {σ : Subst T} : σ ∘ I = σ := by
+      theorem rewrite6 {σ : Subst T} : σ ∘ I = σ := by
         funext; case _ x =>
         unfold Subst.compose; unfold I; unfold Subst.apply; simp
         generalize zdef : σ x = z
@@ -203,7 +203,7 @@ namespace LeanSubst
         SubstMapCompose.apply_compose
 
       @[simp] -- (σ ◦ τ) ◦ μ = σ ◦ (τ ◦ μ)
-      theorem rewrite8 {σ τ μ : Subst T} : (σ ∘ τ) ∘ μ = σ ∘ τ ∘ μ := by
+      theorem rewrite7 {σ τ μ : Subst T} : (σ ∘ τ) ∘ μ = σ ∘ τ ∘ μ := by
         funext; case _ x =>
         unfold Subst.compose; simp
         cases σ x <;> simp
@@ -219,7 +219,7 @@ namespace LeanSubst
     any_goals simp [*]
     case _ x => rw [<-h]; unfold Ren.to; simp
     all_goals
-      rw [Subst.lift_to_commute, <-h]
+      rw [Ren.lift_to_commute, <-h]
       unfold Ren.fro; simp
   })
 
@@ -238,8 +238,8 @@ namespace LeanSubst
       rw [<-to_S, lem2]
     have lem3 {σ : Subst $Ty} {r t} : t[Ren.to r][σ] = t[(Ren.to r) ∘ σ] := by
       induction t generalizing σ r
-      all_goals simp [-Subst.rewrite1, *]
-      all_goals try rw [<-Subst.lift_to_commute]; simp [*]
+      all_goals simp [-Subst.rewrite_lift, *]
+      all_goals try rw [<-Ren.lift_to_commute]; simp [*]
       all_goals try (
         simp [Subst.compose]
         split <;> simp [*]
@@ -266,8 +266,8 @@ namespace LeanSubst
       rw [<-to_S, lem6]
     have lem7 {τ : Subst $Ty} {t r} : t[τ][Ren.to r] = t[τ ∘ (Ren.to r)] := by
       induction t generalizing τ r
-      all_goals simp [-Subst.rewrite1, *]
-      all_goals try rw [<-Subst.lift_to_commute]; simp [*]
+      all_goals simp [-Subst.rewrite_lift, *]
+      all_goals try rw [<-Ren.lift_to_commute]; simp [*]
       all_goals try (
         simp [Subst.compose]
         split <;> simp [*]
@@ -288,8 +288,8 @@ namespace LeanSubst
       funext; case _ x =>
       cases x <;> simp [*]
     induction $s generalizing $σ $τ
-    all_goals simp [-Subst.rewrite1, *]
-    all_goals try rw [<-Subst.lift_to_commute]; simp [*]
+    all_goals simp [-Subst.rewrite_lift, *]
+    all_goals try rw [<-Ren.lift_to_commute]; simp [*]
     all_goals try (
       simp [Subst.compose]
       split <;> simp [*]
