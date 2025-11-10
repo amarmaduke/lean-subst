@@ -23,16 +23,20 @@ namespace LeanSubst.Examples.LambdaCalc
   instance SubstMap_Term : SubstMap Term where
     smap := smap
 
+  instance HasSimpleVar_Term : HasSimpleVar Term where
+    var := Term.var
+    smap := by solve_simple_var_smap
+
   @[simp]
-  theorem subst_var : (#x)[σ] = match σ x with | .re y => #y | .su t => t := by
+  theorem subst_var {x σ} : (#x)[σ] = match σ x with | .re y => #y | .su t => t := by
     unfold Subst.apply; simp [SubstMap.smap]
 
   @[simp]
-  theorem subst_app : (t1 :@ t2)[σ] = t1[σ] :@ t2[σ] := by
+  theorem subst_app {t1 t2 σ} : (t1 :@ t2)[σ] = t1[σ] :@ t2[σ] := by
     unfold Subst.apply; simp [SubstMap.smap]
 
   @[simp]
-  theorem subst_lam : (:λ t)[σ] = :λ t[σ.lift] := by
+  theorem subst_lam {t σ} : (:λ t)[σ] = :λ t[σ.lift] := by
     unfold Subst.apply; simp [SubstMap.smap]
 
   theorem apply_id {t : Term} : t[I] = t := by

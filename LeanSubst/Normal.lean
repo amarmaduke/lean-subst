@@ -3,6 +3,8 @@ import LeanSubst.Basic
 import LeanSubst.Reduction
 
 namespace LeanSubst
+  universe u
+
   section
     variable {T : Type u}
 
@@ -62,7 +64,7 @@ namespace LeanSubst
         case _ => simp [*]
         case _ _ r2 ih => apply preservation_step ih r2
 
-      theorem star : (∀ y, Star R t y -> SN R y) -> SN R t := by
+      theorem star {t} : (∀ y, Star R t y -> SN R y) -> SN R t := by
         intro h
         constructor
         intro y r

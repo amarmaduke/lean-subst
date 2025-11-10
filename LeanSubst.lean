@@ -4,3 +4,4 @@ import LeanSubst.Basic
 import LeanSubst.Map
 import LeanSubst.Reduction
 import LeanSubst.Normal
+import LeanSubst.IsRen

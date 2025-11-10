@@ -1,5 +1,7 @@
 
 namespace LeanSubst
+  universe u
+  variable {T : Type u}
 
   namespace Sequence
     @[simp]
@@ -26,7 +28,7 @@ namespace LeanSubst
     smap : Subst.Lift T -> (Nat -> Subst.Action T) -> T -> T
 
   section
-    variable {T : Type u} [SubstMap T]
+    variable [SubstMap T]
 
     open SubstMap
 
@@ -67,9 +69,9 @@ namespace LeanSubst
   def S : Subst T := λ n => .re (n + 1)
   def Sn (k : Nat) : Subst T := λ n => .re (n + k)
 
-  @[simp] theorem I_action : @I T n = .re n := by unfold I; simp
-  @[simp] theorem S_action : @S T n = .re (n + 1) := by unfold S; simp
-  @[simp] theorem Sn_action : @Sn T k n = .re (n + k) := by unfold Sn; simp
+  @[simp] theorem I_action {n} : @I T n = .re n := by unfold I; simp
+  @[simp] theorem S_action {n} : @S T n = .re (n + 1) := by unfold S; simp
+  @[simp] theorem Sn_action {k n} : @Sn T k n = .re (n + k) := by unfold Sn; simp
 
   @[simp]
   theorem to_I : Ren.to (λ x => x) = @I T := by
@@ -80,7 +82,7 @@ namespace LeanSubst
     unfold Ren.to; simp; unfold S; simp
 
   @[simp]
-  theorem to_Sn : Ren.to (λ x => x + k) = @Sn T k := by
+  theorem to_Sn {k} : Ren.to (λ x => x + k) = @Sn T k := by
     unfold Ren.to; simp; unfold Sn; simp
 
   notation t "[" σ "]" => Subst.apply σ t
@@ -88,14 +90,14 @@ namespace LeanSubst
 
   class SubstMapStable (T : Type u) [SubstMap T] where
     apply_id {t : T} : t[I] = t
-    apply_stable {σ : Subst T} : r.to = σ -> Ren.apply r = Subst.apply σ
+    apply_stable {r} {σ : Subst T} : r.to = σ -> Ren.apply r = Subst.apply σ
 
   class SubstMapCompose (T : Type u) [SubstMap T] where
     apply_compose {s : T} {σ τ : Subst T} : s[σ][τ] = s[σ ∘ τ]
 
   namespace Ren
     section
-      variable {T : Type u} [SubstMap T]
+      variable [SubstMap T]
 
       theorem lift_to_commute {r : Ren} : r.lift.to = (@Ren.to T r).lift := by
         funext; case _ x =>
@@ -115,8 +117,6 @@ namespace LeanSubst
 
   namespace Subst
     section
-      variable {T : Type u}
-
       @[simp] -- 0.S = I
       theorem rewrite1 : .re 0 :: S = @I T := by
         funext; case _ x =>
@@ -193,7 +193,7 @@ namespace LeanSubst
     end
 
     section
-      variable {T : Type u} [SubstMap T] [SubstMapCompose T]
+      variable [SubstMap T] [SubstMapCompose T]
 
       open SubstMap
       open SubstMapCompose

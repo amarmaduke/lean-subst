@@ -2,9 +2,10 @@
 import LeanSubst.Basic
 
 namespace LeanSubst
+  universe u
 
   class Substitutive {T : Type u} [SubstMap T] (R : T -> T -> Prop) where
-    subst σ : R t s -> R (t[σ]) (s[σ])
+    subst {t s} σ : R t s -> R (t[σ]) (s[σ])
 
   class HasTriangle {T : Type u} (R : T -> T -> Prop) where
     complete : T -> T
@@ -65,7 +66,7 @@ namespace LeanSubst
             subst ih; apply Or.inl
             apply Exists.intro v; apply And.intro r2 Star.refl
 
-      theorem congr3_1 t2 t3 (f : T -> T -> T -> T) :
+      theorem congr3_1 {t1 t1'} t2 t3 (f : T -> T -> T -> T) :
         (∀ {t1 t2 t3 t1'}, R t1 t1' -> R (f t1 t2 t3) (f t1' t2 t3)) ->
         Star R t1 t1' ->
         Star R (f t1 t2 t3) (f t1' t2 t3)
