@@ -61,7 +61,7 @@ namespace LeanSubst
           rw [h2] at h1; simp at h1
           exists k
 
-      theorem var_apply_forced {x} {σ : Subst T} :
+      theorem var_apply_forced {σ : Subst T} x :
         IsRen σ ->
         ∃ k, (HasSimpleVar.var x)[σ] = HasSimpleVar.var k
       := by
