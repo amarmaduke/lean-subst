@@ -1,6 +1,6 @@
 # Lean Substitution Library (lean-subst)
 
-Inspired heavily by the work on Autosubst ([1])[https://doi.org/10.1007/978-3-319-22102-1_24] ([2])[https://dl.acm.org/doi/10.1145/3293880.3294101], this library gives a framework for handling De Bruijn substitution for non-indexed single-sorted syntax. Other Autosubst inspired systems supported multi-sorted syntax by way of multi-sorted substitutions (i.e., `t[σ;τ]` substitutes for the term and type variables via two separate substitutions). This library instead allows variables to be annotated with extra data. For example, `var : VarKind -> Nat -> Term` where `VarKind = Term | Type` encodes the multi-sorted idea using only variable constructor and hence one substitution.
+Inspired heavily by the work on Autosubst [[1]](https://doi.org/10.1007/978-3-319-22102-1_24) [[2]](https://dl.acm.org/doi/10.1145/3293880.3294101), this library gives a framework for handling De Bruijn substitution for non-indexed single-sorted syntax. Other Autosubst inspired systems supported multi-sorted syntax by way of multi-sorted substitutions (i.e., `t[σ;τ]` substitutes for the term and type variables via two separate substitutions). This library instead allows variables to be annotated with extra data. For example, `var : VarKind -> Nat -> Term` where `VarKind = Term | Type` encodes the multi-sorted idea using only variable constructor and hence one substitution.
 
 This accomplished by treating substitutions as sequences of "substitution actions":
 ```lean
