@@ -1,6 +1,6 @@
 import LeanSubst.Basic
 
-namespace LeanSubst
+namespace LeanSubst.Subst
   section
     universe u v
     variable {A : Type u} {B : Type v} {f : A -> B}
@@ -13,12 +13,12 @@ namespace LeanSubst
       | .re k => .re k
 
     @[simp]
-    theorem map_rename_seq {k} {σ : Subst A} : map f (.re k :: σ) = .re k :: map f σ := by
+    theorem map_rename_seq {k} {σ : Subst A} : map f (#k :: σ) = #k :: map f σ := by
       funext; case _ x =>
       cases x <;> simp
 
     @[simp]
-    theorem map_replace_seq {t} {σ : Subst A} : map f (.su t :: σ) = .su (f t) :: map f σ := by
+    theorem map_replace_seq {t} {σ : Subst A} : map f (%t :: σ) = %(f t) :: map f σ := by
       funext; case _ x =>
       cases x <;> simp
 
@@ -64,4 +64,4 @@ namespace LeanSubst
       : map f (S ∘ σ) = S ∘ (map f σ)
     := by apply map_rename_compose_right
   end
-end LeanSubst
+end LeanSubst.Subst

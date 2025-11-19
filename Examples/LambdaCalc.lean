@@ -7,13 +7,25 @@ namespace LeanSubst.Examples.LambdaCalc
   | app : Term -> Term -> Term
   | lam : Term -> Term
 
-  prefix:max "#" => Term.var
+  instance instTerm_PrefixHash : PrefixHash Term where
+    hash := Term.var
+
+  namespace Term
+    @[simp]
+    theorem var_def {x} : Term.var x = #x := by
+      simp [PrefixHash.hash]
+
+    @[simp]
+    theorem var_eq {x y} : (PrefixHash.hash (T := Term) x = #y) = (x = y) := by
+      simp [-var_def, PrefixHash.hash]
+  end Term
+
   prefix:100 ":λ" => Term.lam
   infixl:65 ":@" => Term.app
 
   @[simp]
   def smap (lf : Subst.Lift Term) (f : Nat -> Subst.Action Term) : Term -> Term
-  | #x =>
+  | .var x =>
     match f x with
     | .re y => #y
     | .su t => t
@@ -28,7 +40,7 @@ namespace LeanSubst.Examples.LambdaCalc
     smap := by solve_simple_var_smap
 
   @[simp]
-  theorem subst_var {x σ} : (#x)[σ] = match σ x with | .re y => #y | .su t => t := by
+  theorem subst_var {x} {σ : Subst Term} : (#x)[σ] = match σ x with | .re y => #y | .su t => t := by
     unfold Subst.apply; simp [SubstMap.smap]
 
   @[simp]

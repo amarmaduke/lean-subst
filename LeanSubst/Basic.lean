@@ -1,4 +1,6 @@
 
+import LeanSubst.Notation
+
 namespace LeanSubst
   universe u
   variable {T : Type u}
@@ -18,6 +20,40 @@ namespace LeanSubst
     inductive Action (T : Type u) where
     | re : Nat -> Action T
     | su : T -> Action T
+
+    instance instPrefixHash_Action : PrefixHash (Action T) where
+      hash := Action.re
+
+    instance instPrefixPercent_Action : PrefixPercent T Action where
+      percent := Action.su
+
+    @[simp]
+    theorem re_def {k} : @Action.re T k = #k := by simp [PrefixHash.hash]
+
+    @[simp]
+    theorem re_eq {k1 k2} : (PrefixHash.hash (T := Action T) k1 = #k2) = (k1 = k2) := by
+      apply propext; apply Iff.intro
+      case _ =>
+        intro h
+        unfold PrefixHash.hash at h
+        unfold instPrefixHash_Action at h
+        simp [-re_def] at h
+        apply h
+      case _ => intro h; subst h; rfl
+
+    @[simp]
+    theorem su_def {t : T} : Action.su t = %t := by simp [PrefixPercent.percent]
+
+    @[simp]
+    theorem su_eq {t1 t2 : T} : (PrefixPercent.percent (T := T) (F := Action) t1 = %t2) = (t1 = t2) := by
+      apply propext; apply Iff.intro
+      case _ =>
+        intro h
+        unfold PrefixPercent.percent at h
+        unfold instPrefixPercent_Action at h
+        simp [-su_def] at h
+        apply h
+      case _ => intro h; subst h; rfl
 
     def Lift (X : Type u) := (Nat -> Action X) -> Nat -> Action X
   end Subst
@@ -65,13 +101,13 @@ namespace LeanSubst
     end Subst
   end
 
-  def I : Subst T := λ n => .re n
-  def S : Subst T := λ n => .re (n + 1)
-  def Sn (k : Nat) : Subst T := λ n => .re (n + k)
+  def I : Subst T := λ n => #n
+  def S : Subst T := λ n => #(n + 1)
+  def Sn (k : Nat) : Subst T := λ n => #(n + k)
 
-  @[simp] theorem I_action {n} : @I T n = .re n := by unfold I; simp
-  @[simp] theorem S_action {n} : @S T n = .re (n + 1) := by unfold S; simp
-  @[simp] theorem Sn_action {k n} : @Sn T k n = .re (n + k) := by unfold Sn; simp
+  @[simp] theorem I_action {n} : @I T n = #n := by unfold I; simp
+  @[simp] theorem S_action {n} : @S T n = #(n + 1) := by unfold S; simp
+  @[simp] theorem Sn_action {k n} : @Sn T k n = #(n + k) := by unfold Sn; simp
 
   @[simp]
   theorem to_I : Ren.to (λ x => x) = @I T := by
@@ -118,7 +154,7 @@ namespace LeanSubst
   namespace Subst
     section
       @[simp] -- 0.S = I
-      theorem rewrite1 : .re 0 :: S = @I T := by
+      theorem rewrite1 : #0 :: S = @I T := by
         funext; case _ x =>
         cases x; all_goals (unfold Sequence.cons; unfold S; unfold I; simp)
 
@@ -128,7 +164,7 @@ namespace LeanSubst
       @[simp]
       theorem I_lift : I.lift = @I T := by
         funext; case _ x =>
-        cases x; all_goals (unfold Subst.lift; unfold I; simp)
+        cases x; all_goals (simp [Subst.lift, I])
 
       @[simp] -- σ ◦ I = σ
       theorem rewrite2 {σ : Subst T} : I ∘ σ = σ := by
@@ -137,29 +173,29 @@ namespace LeanSubst
 
       @[simp] -- (s.σ ) ◦ τ = s[τ].(σ ◦ τ)
       theorem rewrite3_replace {σ τ : Subst T} {s : T}
-        : (.su s :: σ) ∘ τ = .su (s[τ]) :: (σ ∘ τ)
+        : (%s :: σ) ∘ τ = %(s[τ]) :: (σ ∘ τ)
       := by
         funext; case _ x =>
-        cases x; all_goals (unfold Subst.compose; unfold Sequence.cons; simp)
+        cases x; all_goals (simp [Subst.compose, Sequence.cons])
 
       @[simp] -- (s.σ ) ◦ τ = s[τ].(σ ◦ τ)
       theorem rewrite3_rename {s} {σ τ : Subst T}
-        : (.re s :: σ) ∘ τ = (τ s) :: (σ ∘ τ)
+        : (#s :: σ) ∘ τ = (τ s) :: (σ ∘ τ)
       := by
         funext; case _ x =>
-        cases x; all_goals (unfold Subst.compose; unfold Sequence.cons; simp)
+        cases x; all_goals (simp [Subst.compose, Sequence.cons])
 
       @[simp] -- S ◦ (s.σ ) = σ
       theorem rewrite4 {s} {σ : Subst T} : S ∘ (s :: σ) = σ := by
         funext; case _ x =>
-        cases x; all_goals (unfold Subst.compose; unfold Sequence.cons; unfold S; simp)
+        cases x; all_goals (simp [Subst.compose, Sequence.cons, S])
 
       @[simp] -- 0[σ ].(S ◦ σ ) = σ
       theorem rewrite5 {σ : Subst T} : σ 0 :: (S ∘ σ) = σ := by
         funext; case _ x =>
         cases x
         case _ => simp
-        case _ => simp; unfold S; unfold Subst.compose; simp
+        case _ => simp [S, Subst.compose]
 
       variable [SubstMapStable T]
       open SubstMapStable
@@ -169,17 +205,17 @@ namespace LeanSubst
         SubstMapStable.apply_id
 
       @[simp] -- ⇑σ = 0.(σ ◦ S)
-      theorem rewrite_lift {σ : Subst T} : σ.lift = .re 0 :: (σ ∘ S) := by
+      theorem rewrite_lift {σ : Subst T} : σ.lift = #0 :: (σ ∘ S) := by
         funext; case _ x =>
         cases x
-        case _ => unfold Subst.lift; simp
+        case _ => simp [Subst.lift]
         case _ n =>
-          simp; unfold Subst.lift; unfold S; unfold Subst.compose; simp
+          simp [Subst.lift, S, Subst.compose]
           generalize tdef : σ n = t
           cases t <;> simp at *
           case _ y =>
             rw [apply_stable]
-            funext; case _ i => unfold Ren.to; simp
+            funext; case _ i => simp [Ren.to]
 
       @[simp] -- I ◦ σ = σ
       theorem rewrite6 {σ : Subst T} : σ ∘ I = σ := by
@@ -187,7 +223,7 @@ namespace LeanSubst
         unfold Subst.compose; unfold I; unfold Subst.apply; simp
         generalize zdef : σ x = z
         cases z <;> simp at *
-        have lem : smap Subst.lift (λ x => .re x) = @Subst.apply T _ I := by
+        have lem : smap Subst.lift (λ x => #x) = @Subst.apply T _ I := by
           unfold Subst.apply; unfold I; simp
         rw [lem, apply_id]
     end

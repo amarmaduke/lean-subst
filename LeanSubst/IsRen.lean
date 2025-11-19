@@ -34,16 +34,16 @@ namespace LeanSubst
       := by
         unfold Subst.apply; simp
 
-      theorem re {i k} {σ : Subst T} : σ i = .re k -> (HasSimpleVar.var i)[σ] = HasSimpleVar.var k := by
+      theorem re {i k} {σ : Subst T} : σ i = #k -> (HasSimpleVar.var i)[σ] = HasSimpleVar.var k := by
         intro h; simp [*]
 
-      theorem su {i t} {σ : Subst T} : σ i = .su t -> (HasSimpleVar.var i)[σ] = t := by
+      theorem su {i t} {σ : Subst T} : σ i = %t -> (HasSimpleVar.var i)[σ] = t := by
         intro h; simp [*]
     end
   end HasSimpleVar
 
   def IsRen {T : Type u} [SubstMap T] [HasSimpleVar T] (σ : Subst T) : Prop :=
-    ∀ i, ∃ k, σ i = .re k ∨ σ i = .su (HasSimpleVar.var k)
+    ∀ i, ∃ k, σ i = #k ∨ σ i = %(HasSimpleVar.var k)
 
   namespace IsRen
     section
@@ -51,7 +51,7 @@ namespace LeanSubst
 
       theorem var_forced {i t} {σ : Subst T} :
         IsRen σ ->
-        σ i = .su t ->
+        σ i = %t ->
         ∃ k, t = HasSimpleVar.var k
       := by
         intro h1 h2
@@ -85,7 +85,7 @@ namespace LeanSubst
         exists (r i); apply Or.inl
         simp [Ren.to]
 
-      theorem cons_re {σ : Subst T} k : IsRen σ -> IsRen (.re k :: σ) := by
+      theorem cons_re {σ : Subst T} k : IsRen σ -> IsRen (#k :: σ) := by
         intro h; unfold IsRen at *; intro i
         cases i <;> simp
         case _ i =>
@@ -95,7 +95,7 @@ namespace LeanSubst
           case _ h => exists x; simp [*]
           case _ h => exists x; simp [*]
 
-      theorem cons_su {σ : Subst T} k : IsRen σ -> IsRen (.su (HasSimpleVar.var k) :: σ) := by
+      theorem cons_su {σ : Subst T} k : IsRen σ -> IsRen (%(HasSimpleVar.var k) :: σ) := by
         intro h; unfold IsRen at *; intro i
         cases i <;> simp
         case _ => exists k

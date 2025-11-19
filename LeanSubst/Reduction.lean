@@ -14,6 +14,10 @@ namespace LeanSubst
   section
     variable {T : Type u}
 
+    inductive ActionRed (R : T -> T -> Prop) : Subst.Action T -> Subst.Action T -> Prop where
+    | su {x y} : R x y -> ActionRed R %x %y
+    | re {x} : ActionRed R #x #x
+
     inductive Star (R : T -> T -> Prop) : T -> T -> Prop where
     | refl {t} : Star R t t
     | step {x y z} : Star R x y -> R y z -> Star R x z
@@ -310,4 +314,16 @@ namespace LeanSubst
       --   sorry
     end Conv
   end
+
+  section
+    variable {T : Type u} (R : T -> T -> Prop) {t t' : T}
+
+    @[simp]
+    def FunctionalTerm (t : T) :=
+      ∀ {x y}, R t x -> R t y -> x = y
+
+    class Functional where
+      functional : ∀ {t}, FunctionalTerm R t
+  end
+
 end LeanSubst

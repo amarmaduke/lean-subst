@@ -19,7 +19,7 @@ namespace LeanSubst
     inductive SNPlus (R : T -> T -> Prop) : T -> Prop where
     | sn {x} : (∀ y, Plus R x y -> SNPlus R y) -> SNPlus R x
 
-    variable {R : T -> T -> Prop}
+    variable {R R1 R2 : T -> T -> Prop}
 
     namespace SNPlus
       theorem impies_sn {t} : SNPlus R t -> SN R t := by
@@ -77,6 +77,19 @@ namespace LeanSubst
         cases lem; case _ z lem =>
           have lem2 := ih z lem.1
           apply SNPlus.preservation lem2 lem.2
+
+      theorem expansion_step {t t' : T} (f : FunctionalTerm R t) : SN R t' -> R t t' -> SN R t := by
+        intro h r
+        apply SN.sn; intro y r'
+        rw [<-f r r']
+        apply h
+
+      theorem expansion {t t' : T} [Functional R] : SN R t' -> Star R t t' -> SN R t := by
+        intro h r
+        induction r; apply h
+        case _ r1 r2 ih =>
+          have lem := expansion_step Functional.functional h r2
+          apply ih lem
 
       variable [SubstMap T] [Substitutive R]
 
