@@ -35,7 +35,7 @@ namespace LeanSubst.Subst
     theorem map_S_noop : map f S = S := by apply map_rename_noop
 
     theorem map_rename_compose_left {τ : Subst A} [SubstMap A] [SubstMap B] {f : A -> B} {r : Ren}
-      : (∀ t, f (t[r.to]) = (f t)[r.to]) -> map f (τ ∘ r.to) = (map f τ) ∘ r.to
+      : (∀ t, f t[r.to] = (f t)[r.to]) -> map f (τ ∘ r.to) = (map f τ) ∘ r.to
     := by
       intro h
       unfold Subst.compose; simp
@@ -54,7 +54,7 @@ namespace LeanSubst.Subst
         unfold Ren.to; simp
 
     theorem map_S_compose_left {τ : Subst A} [SubstMap A] [SubstMap B] {f : A -> B}
-      : (∀ t, f (t[S]) = (f t)[S]) -> map f (τ ∘ S) = (map f τ) ∘ S
+      : (∀ t, f t[S] = (f t)[S]) -> map f (τ ∘ S) = (map f τ) ∘ S
     := by
       intro h
       apply map_rename_compose_left h

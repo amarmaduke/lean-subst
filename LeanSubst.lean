@@ -5,4 +5,6 @@ import LeanSubst.Basic
 import LeanSubst.Map
 import LeanSubst.Reduction
 import LeanSubst.Normal
+import LeanSubst.Subtype
+import LeanSubst.Coe
 import LeanSubst.IsRen

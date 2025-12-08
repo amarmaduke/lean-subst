@@ -192,7 +192,7 @@ namespace LeanSubst
       variable [SubstMap T] [Substitutive R]
 
       omit [HasTriangle R] in
-      theorem subst {x y} σ : Star R x y -> Star R (x[σ]) (y[σ]) := by
+      theorem subst {x y} σ : Star R x y -> Star R x[σ] y[σ] := by
         intro r; induction r
         case _ => apply Star.refl
         case _ r1 r2 ih =>

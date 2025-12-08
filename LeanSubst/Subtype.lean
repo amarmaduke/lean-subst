@@ -103,7 +103,7 @@ namespace LeanSubst
 
     variable [i4 : SubstMapLift P]
 
-    theorem prop_subst : ∀ (σ : Subst {x:T // P x}) t, P t -> P (t[prj P σ]) := by
+    theorem prop_subst : ∀ (σ : Subst {x:T // P x}) t, P t -> P t[prj P σ] := by
       intro σ t h
       unfold Subst.apply
       rw [<-i4.lift_eq]
@@ -112,7 +112,7 @@ namespace LeanSubst
 
     @[simp]
     theorem subst_mk {t p} {σ : Subst {x:T // P x}}
-      : (Subtype.mk t p)[σ] = Subtype.mk (t[prj P σ]) (prop_subst P σ t p)
+      : (Subtype.mk t p)[σ] = Subtype.mk t[prj P σ] (prop_subst P σ t p)
     := by
       conv => {
         lhs; unfold Subst.apply; unfold SubstMap.smap

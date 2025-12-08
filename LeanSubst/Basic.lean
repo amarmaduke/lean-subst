@@ -121,8 +121,11 @@ namespace LeanSubst
   theorem to_Sn {k} : Ren.to (λ x => x + k) = @Sn T k := by
     unfold Ren.to; simp; unfold Sn; simp
 
-  notation t "[" σ "]" => Subst.apply σ t
-  infixr:65 " ∘ " => Subst.compose
+  macro:max t:term noWs "[" σ:term "]" : term => `(Subst.apply $σ $t)
+--  notation t "[" σ "]" => Subst.apply σ t
+  infixr:85 " ∘ " => Subst.compose
+
+  def test (xs : List Nat) (y : Nat) (h : y < xs.length) : Nat := xs[y]
 
   class SubstMapStable (T : Type u) [SubstMap T] where
     apply_id {t : T} : t[I] = t
@@ -173,7 +176,7 @@ namespace LeanSubst
 
       @[simp] -- (s.σ ) ◦ τ = s[τ].(σ ◦ τ)
       theorem rewrite3_replace {σ τ : Subst T} {s : T}
-        : (%s :: σ) ∘ τ = %(s[τ]) :: (σ ∘ τ)
+        : (%s :: σ) ∘ τ = %s[τ] :: (σ ∘ τ)
       := by
         funext; case _ x =>
         cases x; all_goals (simp [Subst.compose, Sequence.cons])
