@@ -97,7 +97,7 @@ namespace LeanSubst
       rw [prj_ren, lift_ren_lift]
       unfold SubstMap.smap; simp
 
-    class SubstMapLift [i : SubstMap T] [SubstMap {x:T // P x}] where
+    class SubstMapLift [i : SubstMap T] [SubstMapClosed P] where
       lift_eq : ∀ σ t,
         i.smap (lift P Subst.lift) (prj P σ) t = i.smap Subst.lift (prj P σ) t
 

@@ -1,10 +1,9 @@
 
 import LeanSubst.Notation
-import LeanSubst.Monad
 
 namespace LeanSubst
   universe u
-  variable {T : Type u} {F : Type u -> Type u}
+  variable {T : Type u}
 
   namespace Sequence
     @[simp]
@@ -17,110 +16,110 @@ namespace LeanSubst
 
   def Ren := Nat -> Nat
 
-  def Subst.Lift (X : Type u) (F : Type u -> Type u) := (Nat -> F X) -> Nat -> F X
+  namespace Subst
+    inductive Action (T : Type u) where
+    | re : Nat -> Action T
+    | su : T -> Action T
 
-  def Subst (T : Type u) (F : Type u -> Type u) := Nat -> F T
+    instance instPrefixHash_Action : PrefixHash (Action T) where
+      hash := Action.re
 
-  class SubstMap (T : Type u) (F : Type u -> Type u) where
-    smap : Subst.Lift T F -> (Nat -> F T) -> T -> T
+    instance instPrefixPercent_Action : PrefixPercent T Action where
+      percent := Action.su
 
-  class HasVar (T : Type u) where
-    to : Nat -> T
-    fro : T -> Nat
-    to_fro_id : ∀ x, fro (to x) = x
+    @[simp]
+    theorem re_def {k} : @Action.re T k = #k := by simp [PrefixHash.hash]
 
-  @[simp]
-  theorem has_var_to_fro_id {T} [HasVar T] {x} : HasVar.fro (HasVar.to (T := T) x) = x := by
-    rw [HasVar.to_fro_id]
+    @[simp]
+    theorem re_eq {k1 k2} : (PrefixHash.hash (T := Action T) k1 = #k2) = (k1 = k2) := by
+      apply propext; apply Iff.intro
+      case _ =>
+        intro h
+        unfold PrefixHash.hash at h
+        unfold instPrefixHash_Action at h
+        simp [-re_def] at h
+        apply h
+      case _ => intro h; subst h; rfl
 
-  class ActionOps (T : Type u) (F : Type u -> Type u) [Monad F] where
-    fro : F T -> T
-    to_fro_id : ∀ x, fro (pure x) = x
+    @[simp]
+    theorem su_def {t : T} : Action.su t = %t := by simp [PrefixPercent.percent]
 
-  @[simp]
-  theorem action_ops_to_fro_id {T F} [Monad F] [ActionOps T F] {x} : ActionOps.fro (T := T) (F := F) (pure x) = x := by
-    rw [ActionOps.to_fro_id]
+    @[simp]
+    theorem su_eq {t1 t2 : T} : (PrefixPercent.percent (T := T) (F := Action) t1 = %t2) = (t1 = t2) := by
+      apply propext; apply Iff.intro
+      case _ =>
+        intro h
+        unfold PrefixPercent.percent at h
+        unfold instPrefixPercent_Action at h
+        simp [-su_def] at h
+        apply h
+      case _ => intro h; subst h; rfl
 
-  class SubstMapVar (T : Type u) (F : Type u -> Type u) [HasVar T] [Monad F] [SubstMap T F] [ActionOps T F] where
-    smap_var {lf f x} : pure (SubstMap.smap (F := F) lf f (HasVar.to (T := T) x)) = f x
+    def Lift (X : Type u) := (Nat -> Action X) -> Nat -> Action X
+  end Subst
 
-  @[simp]
-  theorem subst_map_var {T F} [HasVar T] [Monad F] [SubstMap T F] [ActionOps T F] [SubstMapVar T F] {lf f x}
-    : pure (SubstMap.smap (F := F) lf f (HasVar.to (T := T) x)) = f x
-  := by rw [SubstMapVar.smap_var]
+  def Subst (T : Type u) := Nat -> Subst.Action T
 
-  @[simp]
-  instance instHasVar_ActionF [Monad F] [HasVar T] [ActionOps T F] : HasVar (F T) where
-    to n := pure $ HasVar.to n
-    fro t := HasVar.fro $ ActionOps.fro t
-    to_fro_id := by {
-      intro x
-      rw [ActionOps.to_fro_id]
-      rw [HasVar.to_fro_id]
-    }
-
-  @[simp]
-  instance instActionOps_ActionF [Monad F] [LawfulMonad F] [ActionOps T F] : ActionOps (F T) F where
-    fro := join
-    to_fro_id := by intro x; simp
-
-  @[simp]
-  instance instSubstMap_ActionF [Monad F] [ActionOps T F] [SubstMap T F] : SubstMap (F T) F where
-    smap lf f := Functor.map (SubstMap.smap (F := F) (λ f n => join (lf (λ n => pure (f n)) n)) (join ∘ f))
-
-  variable [HasVar T] [Monad F] [ActionOps T F]
+  class SubstMap (T : Type u) where
+    smap : Subst.Lift T -> (Nat -> Subst.Action T) -> T -> T
 
   section
-    variable [LawfulMonad F] [SubstMap T F]
+    variable [SubstMap T]
 
     open SubstMap
 
     namespace Ren
-      def to : Ren -> Subst T F
-      | r, n => HasVar.to (r n)
+      def to : Ren -> Subst T
+      | r, n => .re (r n)
 
-      def fro : Subst T F -> Ren
-      | σ, n => HasVar.fro (σ n)
+      def fro : Subst T -> Ren
+      | σ, n =>
+        match σ n with
+        | .su _ => 0
+        | .re k => k
 
       def lift : Ren -> Ren
       | _, 0 => 0
       | σ, n + 1 => σ n + 1
 
-      def apply (r : Ren) : T -> T := smap (F := F) (to ∘ lift ∘ fro) (to r)
+      def apply (r : Ren) : T -> T := smap (to ∘ lift ∘ fro) (to r)
     end Ren
 
     namespace Subst
-      def lift : Subst T F -> Subst T F
-      | _, 0 => HasVar.to 0
-      | σ, n + 1 => Ren.apply (F := F) (· + 1) (σ n)
+      def lift : Subst T -> Subst T
+      | _, 0 => .re 0
+      | σ, n + 1 => match (σ n) with
+        | .su t => .su (Ren.apply (λ n => n + 1) t)
+        | .re k => .re (k + 1)
 
-      def apply (σ : Subst T F) : T -> T := smap lift σ
+      def apply (σ : Subst T) : T -> T := smap lift σ
 
-      def compose : Subst T F -> Subst T F -> Subst T F
-      | σ, τ, n => apply (λ n => pure (f := F) (τ n)) (σ n)
+      def compose : Subst T -> Subst T -> Subst T
+      | σ, τ, n => match (σ n) with
+        | .su t => .su (apply τ t)
+        | .re k => τ k
     end Subst
   end
 
-  def I : Subst T F := HasVar.to
-  def S : Subst T F := λ n => HasVar.to (n + 1)
-  -- def Sn (k : Nat) : Subst T := λ n => #(n + k)
+  def I : Subst T := λ n => #n
+  def S : Subst T := λ n => #(n + 1)
+  def Sn (k : Nat) : Subst T := λ n => #(n + k)
 
-  @[simp] theorem I_action {n} : I n = HasVar.to (T := F T) n := by unfold I; simp
-
-  @[simp] theorem S_action {n} : S n = HasVar.to (T := F T) (n + 1) := by unfold S; simp
-  -- @[simp] theorem Sn_action {k n} : @Sn T k n = #(n + k) := by unfold Sn; simp
+  @[simp] theorem I_action {n} : @I T n = #n := by unfold I; simp
+  @[simp] theorem S_action {n} : @S T n = #(n + 1) := by unfold S; simp
+  @[simp] theorem Sn_action {k n} : @Sn T k n = #(n + k) := by unfold Sn; simp
 
   @[simp]
-  theorem to_I : Ren.to (λ x => x) = I (T := T) (F := F) := by
+  theorem to_I : Ren.to (λ x => x) = @I T := by
     unfold Ren.to; simp; unfold I; simp
 
   @[simp]
-  theorem to_S : Ren.to (λ x => x + 1) = S (T := T) (F := F) := by
+  theorem to_S : Ren.to (λ x => x + 1) = @S T := by
     unfold Ren.to; simp; unfold S; simp
 
-  -- @[simp]
-  -- theorem to_Sn {k} : Ren.to (λ x => x + k) = @Sn T k := by
-  --   unfold Ren.to; simp; unfold Sn; simp
+  @[simp]
+  theorem to_Sn {k} : Ren.to (λ x => x + k) = @Sn T k := by
+    unfold Ren.to; simp; unfold Sn; simp
 
   macro:max t:term noWs "[" σ:term "]" : term => `(Subst.apply $σ $t)
 --  notation t "[" σ "]" => Subst.apply σ t
@@ -128,64 +127,59 @@ namespace LeanSubst
 
   def test (xs : List Nat) (y : Nat) (h : y < xs.length) : Nat := xs[y]
 
-  class SubstMapStable (T : Type u) (F : Type u -> Type u) [HasVar T] [Monad F] [ActionOps T F] [LawfulMonad F] [SubstMap T F] where
-    apply_id {t : T} : t[I (T := T) (F := F)] = t
-    apply_stable {r} {σ : Subst T F} : r.to = σ -> Ren.apply (T := T) (F := F) r = Subst.apply σ
+  class SubstMapStable (T : Type u) [SubstMap T] where
+    apply_id {t : T} : t[I] = t
+    apply_stable {r} {σ : Subst T} : r.to = σ -> Ren.apply r = Subst.apply σ
 
-  class SubstMapCompose (T : Type u) (F : Type u -> Type u) [HasVar T] [Monad F] [ActionOps T F] [LawfulMonad F] [SubstMap T F] where
-    apply_compose {s : T} {σ τ : Subst T F} : s[σ][τ] = s[σ ∘ τ]
+  class SubstMapCompose (T : Type u) [SubstMap T] where
+    apply_compose {s : T} {σ τ : Subst T} : s[σ][τ] = s[σ ∘ τ]
 
   namespace Ren
     section
-      variable [LawfulMonad F] [SubstMap T F] [SubstMapVar T F]
+      variable [SubstMap T]
 
-      theorem lift_to_commute {r : Ren} : r.lift.to = (Ren.to (T := T) (F := F) r).lift := by
+      theorem lift_to_commute {r : Ren} : r.lift.to = (@Ren.to T r).lift := by
         funext; case _ x =>
         cases x
         case zero =>
           unfold Ren.to; unfold Ren.lift; simp
           unfold Subst.lift; simp
         case _ n =>
-          generalize lhsdef : ((Ren.to (T := T) (F := F) r.lift)) (n + 1) = lhs
-          generalize rhsdef : ((Ren.to (T := T) (F := F) r).lift) (n + 1) = rhs
+          generalize lhsdef : ((@Ren.to T r.lift)) (n + 1) = lhs
+          generalize rhsdef : ((@Ren.to T r).lift) (n + 1) = rhs
           unfold Ren.to at lhsdef; simp at *
           unfold Ren.lift at lhsdef; simp at *
           unfold Subst.lift at rhsdef; simp at *
-          subst lhsdef; subst rhsdef
-          unfold apply; simp [Ren.to]
+          subst lhsdef; subst rhsdef; rfl
     end
   end Ren
 
   namespace Subst
     section
       @[simp] -- 0.S = I
-      theorem rewrite1 : HasVar.to 0 :: S = I (T := T) (F := F) := by
+      theorem rewrite1 : #0 :: S = @I T := by
         funext; case _ x =>
         cases x; all_goals (unfold Sequence.cons; unfold S; unfold I; simp)
 
-      variable [LawfulMonad F] [SubstMap T F] [SubstMapVar T F]
+      variable [SubstMap T]
       open SubstMap
 
       @[simp]
-      theorem I_lift : I.lift = I (T := T) (F := F) := by
+      theorem I_lift : I.lift = @I T := by
         funext; case _ x =>
-        cases x; all_goals (simp [Subst.lift, I, Ren.apply])
+        cases x; all_goals (simp [Subst.lift, I])
 
       @[simp] -- σ ◦ I = σ
-      theorem rewrite2 {σ : Subst T F} : I ∘ σ = σ := by
+      theorem rewrite2 {σ : Subst T} : I ∘ σ = σ := by
         funext; case _ x =>
-        unfold Subst.compose; unfold I; simp [Subst.apply]
+        unfold Subst.compose; unfold I; simp
 
       @[simp] -- (s.σ ) ◦ τ = s[τ].(σ ◦ τ)
-      theorem rewrite3_replace {σ τ : Subst T F} {s : T}
-        : (pure s :: σ) ∘ τ = pure s[τ] :: (σ ∘ τ)
+      theorem rewrite3_replace {σ τ : Subst T} {s : T}
+        : (%s :: σ) ∘ τ = %s[τ] :: (σ ∘ τ)
       := by
         funext; case _ x =>
-        cases x; all_goals (simp [Subst.compose, Sequence.cons, Subst.apply])
-        unfold Function.comp; simp; congr
-        funext; case _ f x =>
-        cases x <;> simp [Subst.lift, Ren.apply]
-        sorry -- probably true?
+        cases x; all_goals (simp [Subst.compose, Sequence.cons])
 
       @[simp] -- (s.σ ) ◦ τ = s[τ].(σ ◦ τ)
       theorem rewrite3_rename {s} {σ τ : Subst T}
