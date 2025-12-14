@@ -73,12 +73,19 @@ namespace LeanSubst
   theorem Subst.succ_action {n} : @Subst.succ T n = .re (n + 1) := by simp [Subst.succ]
 
   @[simp]
-  theorem Ren.to_id : Ren.to (λ x => x) = @Subst.id T := by
+  theorem Ren.to_id : Ren.to (T := T) id = +0 := by
     unfold Ren.to; unfold Subst.id; simp
 
   @[simp]
-  theorem Ren.to_succ : Ren.to (λ x => x + 1) = @Subst.succ T := by
+  theorem Ren.to_succ : Ren.to (T := T) (· + 1) = +1 := by
     unfold Ren.to; simp; unfold Subst.succ; simp
+
+  @[simp]
+  theorem Ren.to_compose {r1 r2 : Ren} [SubstMap T]
+    : Ren.to (T := T) (r2 ∘ r1) = Subst.compose r1 r2
+  := by
+    funext; case _ x =>
+    cases x <;> simp [Ren.to, Subst.compose]
 
   macro:max t:term noWs "[" σ:term "]" : term => `(Subst.apply $σ $t)
   infixr:85 " ∘ " => Subst.compose
