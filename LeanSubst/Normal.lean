@@ -6,7 +6,7 @@ namespace LeanSubst
   universe u
 
   section
-    variable {T : Type u}
+    variable {T : Type}
 
     def Reducible (R : T -> T -> Prop) (t : T) := ∃ t', R t t'
     def Normal (R : T -> T -> Prop) (t : T) := ¬ (Reducible R t)

@@ -7,40 +7,45 @@ namespace LeanSubst.Examples.LambdaCalc
   | app : Term -> Term -> Term
   | lam : Term -> Term
 
-  instance instTerm_PrefixHash : PrefixHash Term where
-    hash := Term.var
+  prefix:100 ":λ " => Term.lam
+  infixl:65 " :@ " => Term.app
 
-  namespace Term
-    @[simp]
-    theorem var_def {x} : Term.var x = #x := by
-      simp [PrefixHash.hash]
-
-    @[simp]
-    theorem var_eq {x y} : (PrefixHash.hash (T := Term) x = #y) = (x = y) := by
-      simp [-var_def, PrefixHash.hash]
-  end Term
-
-  prefix:100 ":λ" => Term.lam
-  infixl:65 ":@" => Term.app
+  @[coe]
+  def Term.from_action : Subst.Action Term -> Term
+  | .re y => var y
+  | .su t => t
 
   @[simp]
-  def smap (lf : Subst.Lift Term) (f : Nat -> Subst.Action Term) : Term -> Term
+  theorem Term.from_action_id {n} : from_action (+0 n) = var n := by
+    simp [from_action, Subst.id]
+
+  @[simp]
+  theorem Term.from_action_succ {n} : from_action (+1 n) = var (n + 1) := by
+    simp [from_action, Subst.succ]
+
+  @[simp]
+  theorem Term.from_acton_re {n} : from_action (.re n) = var n := by simp [from_action]
+
+  @[simp]
+  theorem Term.from_action_su {t} : from_action (.su t) = t := by simp [from_action]
+
+  instance instCoe_SubstActionTerm_Term : Coe (Subst.Action Term) Term where
+    coe := Term.from_action
+
+  @[simp]
+  def smap (k : Subst.Kind) (lf : Subst.Lift Term k) (f : SplitSubst Term k) : Term -> Term
   | .var x =>
-    match f x with
-    | .re y => #y
-    | .su t => t
-  | t1 :@ t2 => smap lf f t1 :@ smap lf f t2
-  | :λ t => :λ smap lf (lf f) t
+    match k with
+    | .re => .var (f x)
+    | .su => f x
+  | t1 :@ t2 => smap k lf f t1 :@ smap k lf f t2
+  | :λ t => :λ smap k lf (lf f) t
 
   instance SubstMap_Term : SubstMap Term where
     smap := smap
 
-  instance HasSimpleVar_Term : HasSimpleVar Term where
-    var := Term.var
-    smap := by solve_simple_var_smap
-
   @[simp]
-  theorem subst_var {x} {σ : Subst Term} : (#x)[σ] = match σ x with | .re y => #y | .su t => t := by
+  theorem subst_var {x} {σ : Subst Term} : (.var x)[σ] = σ x := by
     unfold Subst.apply; simp [SubstMap.smap]
 
   @[simp]
@@ -51,12 +56,20 @@ namespace LeanSubst.Examples.LambdaCalc
   theorem subst_lam {t σ} : (:λ t)[σ] = :λ t[σ.lift] := by
     unfold Subst.apply; simp [SubstMap.smap]
 
-  theorem apply_id {t : Term} : t[I] = t := by
+  @[simp]
+  theorem Term.from_action_compose {x} {σ τ : Subst Term}
+    : (from_action (σ x))[τ] = from_action ((σ ∘ τ) x)
+  := by
+    simp [Term.from_action, Subst.compose]
+    generalize zdef : σ x = z
+    cases z <;> simp [Term.from_action]
+
+  theorem apply_id {t : Term} : t[+0] = t := by
     induction t
     all_goals (simp at * <;> try simp [*])
 
-  theorem apply_stable {r : Ren} {σ : Subst Term}
-    : r.to = σ -> Ren.apply r = Subst.apply σ
+  theorem apply_stable (r : Ren) (σ : Subst Term)
+    : r = σ -> Ren.apply r = Subst.apply σ
   := by solve_stable r, σ
 
   instance SubstMapStable_Term : SubstMapStable Term where

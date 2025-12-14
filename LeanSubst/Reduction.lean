@@ -4,7 +4,7 @@ import LeanSubst.Basic
 namespace LeanSubst
   universe u
 
-  class Substitutive {T : Type u} [SubstMap T] (R : T -> T -> Prop) where
+  class Substitutive {T : Type} [SubstMap T] (R : T -> T -> Prop) where
     subst {t s} σ : R t s -> R (t[σ]) (s[σ])
 
   class HasTriangle {T : Type u} (R : T -> T -> Prop) where
@@ -12,11 +12,11 @@ namespace LeanSubst
     triangle {t s} : R t s -> R s (complete t)
 
   section
-    variable {T : Type u}
+    variable {T : Type}
 
     inductive ActionRed (R : T -> T -> Prop) : Subst.Action T -> Subst.Action T -> Prop where
-    | su {x y} : R x y -> ActionRed R %x %y
-    | re {x} : ActionRed R #x #x
+    | su {x y} : R x y -> ActionRed R (.su x) (.su y)
+    | re {x} : ActionRed R (.re x) (.re x)
 
     inductive Star (R : T -> T -> Prop) : T -> T -> Prop where
     | refl {t} : Star R t t
@@ -200,7 +200,7 @@ namespace LeanSubst
           apply Star.step ih r2
     end Star
 
-    instance HasConfluence_from_HasTriangle {T : Type u} {R : T -> T -> Prop} [HasTriangle R] : HasConfluence R where
+    instance HasConfluence_from_HasTriangle {T : Type} {R : T -> T -> Prop} [HasTriangle R] : HasConfluence R where
       confluence := Star.confluence
 
     namespace Plus
