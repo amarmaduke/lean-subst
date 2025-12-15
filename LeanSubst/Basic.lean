@@ -97,7 +97,7 @@ namespace LeanSubst
   class SubstMapCompose (T : Type) [SubstMap T] where
     apply_compose {s : T} {σ τ : Subst T} : s[σ][τ] = s[σ ∘ τ]
 
-  theorem Ren.lift_to_commute [SubstMap T] {r : Ren} : r.lift.to = (@Ren.to T r).lift := by
+  theorem Ren.to_lift [SubstMap T] {r : Ren} : r.lift.to = (@Ren.to T r).lift := by
     funext; case _ x =>
     cases x
     case zero =>
@@ -112,7 +112,7 @@ namespace LeanSubst
       subst lhsdef; subst rhsdef; rfl
 
   theorem Ren.lift_eq_from_eq [SubstMap T] {r : Ren} {σ : Subst T} : r = σ -> r.lift = σ.lift := by
-    intro h; rw [<-h, lift_to_commute]
+    intro h; rw [<-h, to_lift]
 
   namespace Subst
     section
@@ -236,7 +236,7 @@ namespace LeanSubst
       any_goals solve | simp [*]
       any_goals solve | (
         simp [-Subst.rewrite_lift, *]
-        rw [<-Ren.lift_to_commute]; simp [*])
+        rw [<-Ren.to_lift]; simp [*])
     have lem3s {σ : Subst $Ty} {t} : t[+1][σ] = t[+1 ∘ σ] := by rw [<-Ren.to_succ, lem3]
     have lem4 {σ τ : Subst $Ty} : +1 ∘ τ ∘ σ = (+1 ∘ τ) ∘ σ := by
       funext; case _ x =>
@@ -258,7 +258,7 @@ namespace LeanSubst
       any_goals solve | simp [*]
       any_goals solve | (
         simp [-Subst.rewrite_lift, *]
-        rw [<-Ren.lift_to_commute]; simp [*])
+        rw [<-Ren.to_lift]; simp [*])
     have lem7s {τ : Subst $Ty} {t} : t[τ][+1] = t[τ ∘ +1] := by rw [<-Ren.to_succ, lem7]
     have lem8 {σ τ : Subst $Ty} : (σ ∘ +1) ∘ τ = σ ∘ +1 ∘ τ := by
       funext; case _ x =>
@@ -277,7 +277,7 @@ namespace LeanSubst
     any_goals solve | simp [*]
     try any_goals solve | (
       simp [-Subst.rewrite_lift, *]
-      rw [<-Ren.lift_to_commute]; simp [*])
+      rw [<-Ren.to_lift]; simp [*])
   })
 
 end LeanSubst
