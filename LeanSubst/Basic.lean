@@ -19,6 +19,8 @@ namespace LeanSubst
   | re : Nat -> Subst.Action T
   | su : T -> Subst.Action T
 
+  export Subst.Action (re su)
+
   abbrev Subst (T : Type) := Nat -> Subst.Action T
 
   def SplitSubst (T : Type) : Subst.Kind -> Type
@@ -37,7 +39,7 @@ namespace LeanSubst
 
     @[coe]
     def Ren.to : Ren -> Subst T
-    | r => λ n => .re (r n)
+    | r => λ n => re (r n)
 
     @[simp]
     instance instCoe_Ren_Subst {T} : Coe Ren (Subst T) where
@@ -50,7 +52,7 @@ namespace LeanSubst
     def Ren.apply (r : Ren) : T -> T := smap .re lift r
 
     def Subst.lift : Subst T -> Subst T
-    | _, 0 => .re 0
+    | _, 0 => re 0
     | σ, n + 1 => match (σ n) with
       | .su t => .su (Ren.apply (λ n => n + 1) t)
       | .re k => .re (k + 1)
@@ -59,18 +61,18 @@ namespace LeanSubst
 
     def Subst.compose : Subst T -> Subst T -> Subst T
     | σ, τ, n => match (σ n) with
-      | .su t => .su (apply τ t)
+      | .su t => su (apply τ t)
       | .re k => τ k
   end
 
-  def Subst.id : Subst T := λ n => .re n
-  def Subst.succ : Subst T := λ n => .re (n + 1)
+  def Subst.id : Subst T := λ n => re n
+  def Subst.succ : Subst T := λ n => re (n + 1)
 
   notation "+0" => Subst.id
   notation "+1" => Subst.succ
 
-  theorem Subst.id_action {n} : @Subst.id T n = .re n := by simp [Subst.id]
-  theorem Subst.succ_action {n} : @Subst.succ T n = .re (n + 1) := by simp [Subst.succ]
+  theorem Subst.id_action {n} : @Subst.id T n = re n := by simp [Subst.id]
+  theorem Subst.succ_action {n} : @Subst.succ T n = re (n + 1) := by simp [Subst.succ]
 
   @[simp]
   theorem Ren.to_id : Ren.to (T := T) id = +0 := by
@@ -122,7 +124,7 @@ namespace LeanSubst
   namespace Subst
     section
       @[simp] -- 0.S = I
-      theorem rewrite1 : .re 0 :: +1 = @Subst.id T := by
+      theorem rewrite1 : re 0 :: +1 = @Subst.id T := by
         funext; case _ x =>
         cases x; all_goals (simp [Sequence.cons, Subst.id, Subst.succ])
 
@@ -141,14 +143,14 @@ namespace LeanSubst
 
       @[simp] -- (s.σ ) ◦ τ = s[τ].(σ ◦ τ)
       theorem rewrite3_replace {σ τ : Subst T} {s : T}
-        : (.su s :: σ) ∘ τ = .su s[τ] :: (σ ∘ τ)
+        : (su s :: σ) ∘ τ = su s[τ] :: (σ ∘ τ)
       := by
         funext; case _ x =>
         cases x; all_goals (simp [Subst.compose, Sequence.cons])
 
       @[simp] -- (s.σ ) ◦ τ = s[τ].(σ ◦ τ)
       theorem rewrite3_rename {s} {σ τ : Subst T}
-        : (.re s :: σ) ∘ τ = (τ s) :: (σ ∘ τ)
+        : (re s :: σ) ∘ τ = (τ s) :: (σ ∘ τ)
       := by
         funext; case _ x =>
         cases x; all_goals (simp [Subst.compose, Sequence.cons])
@@ -173,7 +175,7 @@ namespace LeanSubst
         SubstMapStable.apply_id
 
       @[simp] -- ⇑σ = 0.(σ ◦ S)
-      theorem rewrite_lift {σ : Subst T} : σ.lift = .re 0 :: (σ ∘ +1) := by
+      theorem rewrite_lift {σ : Subst T} : σ.lift = re 0 :: (σ ∘ +1) := by
         funext; case _ x =>
         cases x
         case _ => simp [Subst.lift]

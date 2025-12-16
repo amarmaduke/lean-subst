@@ -12,8 +12,8 @@ namespace LeanSubst.Examples.LambdaCalc
 
   @[coe]
   def Term.from_action : Subst.Action Term -> Term
-  | .re y => var y
-  | .su t => t
+  | re y => var y
+  | su t => t
 
   @[simp]
   theorem Term.from_action_id {n} : from_action (+0 n) = var n := by
@@ -24,10 +24,10 @@ namespace LeanSubst.Examples.LambdaCalc
     simp [from_action, Subst.succ]
 
   @[simp]
-  theorem Term.from_acton_re {n} : from_action (.re n) = var n := by simp [from_action]
+  theorem Term.from_acton_re {n} : from_action (re n) = var n := by simp [from_action]
 
   @[simp]
-  theorem Term.from_action_su {t} : from_action (.su t) = t := by simp [from_action]
+  theorem Term.from_action_su {t} : from_action (su t) = t := by simp [from_action]
 
   instance instCoe_SubstActionTerm_Term : Coe (Subst.Action Term) Term where
     coe := Term.from_action
