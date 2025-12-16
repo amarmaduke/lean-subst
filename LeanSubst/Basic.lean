@@ -90,6 +90,11 @@ namespace LeanSubst
   macro:max t:term noWs "[" σ:term "]" : term => `(Subst.apply $σ $t)
   infixr:85 " ∘ " => Subst.compose
 
+  @[app_unexpander Subst.apply]
+  def unexpandSubstApply : Lean.PrettyPrinter.Unexpander
+  | `($_ $σ $t) => `($t[$σ])
+  | _ => throw ()
+
   class SubstMapStable (T : Type) [SubstMap T] where
     apply_id {t : T} : t[+0] = t
     apply_stable (r : Ren) (σ : Subst T) : r = σ -> Ren.apply r = Subst.apply σ
