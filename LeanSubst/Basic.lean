@@ -18,6 +18,7 @@ namespace LeanSubst
   inductive Subst.Action (T : Type) where
   | re : Nat -> Subst.Action T
   | su : T -> Subst.Action T
+  deriving Repr
 
   export Subst.Action (re su)
 
@@ -67,12 +68,20 @@ namespace LeanSubst
 
   def Subst.id : Subst T := λ n => re n
   def Subst.succ : Subst T := λ n => re (n + 1)
+  def Subst.pred : Subst T := λ n => re (n - 1)
 
   notation "+0" => Subst.id
   notation "+1" => Subst.succ
+  notation "-1" => Subst.pred
 
+  @[simp]
   theorem Subst.id_action {n} : @Subst.id T n = re n := by simp [Subst.id]
+
+  @[simp]
   theorem Subst.succ_action {n} : @Subst.succ T n = re (n + 1) := by simp [Subst.succ]
+
+  @[simp]
+  theorem Subst.pred_action {n} : @Subst.pred T n = re (n - 1) := by simp [Subst.pred]
 
   @[simp]
   theorem Ren.to_id : Ren.to (T := T) id = +0 := by
@@ -81,6 +90,15 @@ namespace LeanSubst
   @[simp]
   theorem Ren.to_succ : Ren.to (T := T) (· + 1) = +1 := by
     unfold Ren.to; simp; unfold Subst.succ; simp
+
+  @[simp]
+  theorem Ren.to_pred : Ren.to (T := T) (· - 1) = -1 := by
+    unfold Ren.to; simp; unfold Subst.pred; simp
+
+  @[simp]
+  theorem Ren.pred_succ [SubstMap T] : Subst.compose (T := T) +1 -1 = +0 := by
+    unfold Subst.compose; simp
+    unfold Subst.id; rfl
 
   @[simp]
   theorem Ren.to_compose {r1 r2 : Ren} [SubstMap T]
