@@ -17,7 +17,7 @@ def mk1 : T -> Fin 1 -> T
 | t, .mk 0 _ => t
 
 @[simp]
-theorem mk1_eta {t : Fin 1 -> T} : (λ i => (mk1 (t 0)) i) = t := by
+theorem mk1_eta {t : Fin 1 -> T} : t = (λ i => (mk1 (t 0)) i) := by
   funext; case _ x =>
   cases x; case _ x p =>
   cases x; simp [mk1]
@@ -31,7 +31,7 @@ def mk2 : T -> T -> Fin 2 -> T
 | _, t2, .mk 1 _ => t2
 
 @[simp]
-theorem mk2_eta {t : Fin 2 -> T} : (λ i => (mk2 (t 0) (t 1)) i) = t := by
+theorem mk2_eta {t : Fin 2 -> T} : t = (λ i => (mk2 (t 0) (t 1)) i) := by
   funext; case _ x =>
   cases x; case _ x p =>
   cases x; simp [mk2]; case _ x =>
@@ -50,7 +50,7 @@ def mk3 : T -> T -> T -> Fin 3 -> T
 | _, _, t3, .mk 2 _ => t3
 
 @[simp]
-theorem mk3_eta {t : Fin 3 -> T} : (λ i => (mk3 (t 0) (t 1) (t 2)) i) = t := by
+theorem mk3_eta {t : Fin 3 -> T} : t = (λ i => (mk3 (t 0) (t 1) (t 2)) i) := by
   funext; case _ x =>
   cases x; case _ x p =>
   cases x; simp [mk3]; case _ x =>
@@ -74,7 +74,7 @@ def mk4 : T -> T -> T -> T -> Fin 4 -> T
 | _, _, _, t4, .mk 3 _ => t4
 
 @[simp]
-theorem mk4_eta {t : Fin 4 -> T} : (λ i => (mk4 (t 0) (t 1) (t 2) (t 3)) i) = t := by
+theorem mk4_eta {t : Fin 4 -> T} : t = (λ i => (mk4 (t 0) (t 1) (t 2) (t 3)) i) := by
   funext; case _ x =>
   cases x; case _ x p =>
   cases x; simp [mk4]; case _ x =>
