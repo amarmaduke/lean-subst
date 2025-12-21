@@ -7,8 +7,21 @@ variable {T : Type}
 def mk0 : Fin 0 -> T
 | x => nomatch x
 
+@[simp]
+theorem mk0_eta {t : Fin 0 -> T} : t = mk0 := by
+  funext; case _ x =>
+  cases x; case _ x p =>
+  cases p
+
 def mk1 : T -> Fin 1 -> T
 | t, .mk 0 _ => t
+
+@[simp]
+theorem mk1_eta {t : Fin 1 -> T} : (λ i => (mk1 (t 0)) i) = t := by
+  funext; case _ x =>
+  cases x; case _ x p =>
+  cases x; simp [mk1]
+  omega
 
 @[simp]
 theorem mk1_0 {t : T} : mk1 t 0 = t := by simp [mk1]
@@ -16,6 +29,14 @@ theorem mk1_0 {t : T} : mk1 t 0 = t := by simp [mk1]
 def mk2 : T -> T -> Fin 2 -> T
 | t1, _, .mk 0 _ => t1
 | _, t2, .mk 1 _ => t2
+
+@[simp]
+theorem mk2_eta {t : Fin 2 -> T} : (λ i => (mk2 (t 0) (t 1)) i) = t := by
+  funext; case _ x =>
+  cases x; case _ x p =>
+  cases x; simp [mk2]; case _ x =>
+  cases x; simp [mk2]
+  omega
 
 @[simp]
 theorem mk2_0 {t1 t2 : T} : mk2 t1 t2 0 = t1 := by simp [mk2]
@@ -27,6 +48,15 @@ def mk3 : T -> T -> T -> Fin 3 -> T
 | t1, _, _, .mk 0 _ => t1
 | _, t2, _, .mk 1 _ => t2
 | _, _, t3, .mk 2 _ => t3
+
+@[simp]
+theorem mk3_eta {t : Fin 3 -> T} : (λ i => (mk3 (t 0) (t 1) (t 2)) i) = t := by
+  funext; case _ x =>
+  cases x; case _ x p =>
+  cases x; simp [mk3]; case _ x =>
+  cases x; simp [mk3]; case _ x =>
+  cases x; simp [mk3]
+  omega
 
 @[simp]
 theorem mk3_0 {t1 t2 t3 : T} : mk3 t1 t2 t3 0 = t1 := by simp [mk3]
@@ -42,6 +72,16 @@ def mk4 : T -> T -> T -> T -> Fin 4 -> T
 | _, t2, _, _, .mk 1 _ => t2
 | _, _, t3, _, .mk 2 _ => t3
 | _, _, _, t4, .mk 3 _ => t4
+
+@[simp]
+theorem mk4_eta {t : Fin 4 -> T} : (λ i => (mk4 (t 0) (t 1) (t 2) (t 3)) i) = t := by
+  funext; case _ x =>
+  cases x; case _ x p =>
+  cases x; simp [mk4]; case _ x =>
+  cases x; simp [mk4]; case _ x =>
+  cases x; simp [mk4]; case _ x =>
+  cases x; simp [mk4]
+  omega
 
 @[simp]
 theorem mk4_0 {t1 t2 t3 t4 : T} : mk4 t1 t2 t3 t4 0 = t1 := by simp [mk4]
