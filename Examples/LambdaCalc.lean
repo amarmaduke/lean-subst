@@ -33,27 +33,33 @@ namespace LeanSubst.Examples.LambdaCalc
     coe := Term.from_action
 
   @[simp]
-  def smap (k : Subst.Kind) (lf : Subst.Lift Term k) (f : SplitSubst Term k) : Term -> Term
-  | .var x =>
-    match k with
-    | .re => .var (f x)
-    | .su => f x
-  | t1 :@ t2 => smap k lf f t1 :@ smap k lf f t2
-  | :λ t => :λ smap k lf (lf f) t
+  def rmap (lf : Endo Ren) (r : Ren) : Term -> Term
+  | .var x => .var (r x)
+  | t1 :@ t2 => rmap lf r t1 :@ rmap lf r t2
+  | :λ t => :λ rmap lf (lf r) t
 
-  instance SubstMap_Term : SubstMap Term where
+  instance : RenMap Term where
+    rmap := rmap
+
+  @[simp]
+  def smap (lf : Endo (Subst Term)) (σ : Subst Term) : Term -> Term
+  | .var x => σ x
+  | t1 :@ t2 => smap lf σ t1 :@ smap lf σ t2
+  | :λ t => :λ smap lf (lf σ) t
+
+  instance SubstMap_Term : SubstMap Term Term where
     smap := smap
 
   @[simp]
-  theorem subst_var {x} {σ : Subst Term} : (.var x)[σ] = σ x := by
+  theorem subst_var {x} {σ : Subst Term} : (Term.var x)[σ] = σ x := by
     unfold Subst.apply; simp [SubstMap.smap]
 
   @[simp]
-  theorem subst_app {t1 t2 σ} : (t1 :@ t2)[σ] = t1[σ] :@ t2[σ] := by
+  theorem subst_app {t1 t2} {σ : Subst Term} : (t1 :@ t2)[σ] = t1[σ] :@ t2[σ] := by
     unfold Subst.apply; simp [SubstMap.smap]
 
   @[simp]
-  theorem subst_lam {t σ} : (:λ t)[σ] = :λ t[σ.lift] := by
+  theorem subst_lam {t} {σ : Subst Term} : (:λ t)[σ] = :λ t[σ.lift] := by
     unfold Subst.apply; simp [SubstMap.smap]
 
   @[simp]
@@ -68,18 +74,20 @@ namespace LeanSubst.Examples.LambdaCalc
     induction t
     all_goals (simp at * <;> try simp [*])
 
-  theorem apply_stable (r : Ren) (σ : Subst Term)
-    : r = σ -> Ren.apply r = Subst.apply σ
-  := by solve_stable r, σ
-
-  instance SubstMapStable_Term : SubstMapStable Term where
+  instance : SubstMapId Term Term where
     apply_id := apply_id
+
+  theorem apply_stable (r : Ren) (σ : Subst Term)
+    : r = σ -> Ren.apply (T := Term) r = Subst.apply σ
+  := by solve_stable Term, r, σ
+
+  instance : SubstMapStable Term Term where
     apply_stable := apply_stable
 
   theorem apply_compose {s : Term} {σ τ : Subst Term} : s[σ][τ] = s[σ ∘ τ] := by
     solve_compose Term, s, σ, τ
 
-  instance SubstMapCompose_Term : SubstMapCompose Term where
+  instance : SubstMapCompose Term Term where
     apply_compose := apply_compose
 
 end LeanSubst.Examples.LambdaCalc

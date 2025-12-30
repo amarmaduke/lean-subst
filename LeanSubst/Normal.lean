@@ -1,4 +1,5 @@
 
+import Init.WF
 import LeanSubst.Basic
 import LeanSubst.Reduction
 
@@ -91,9 +92,29 @@ namespace LeanSubst
           have lem := expansion_step Functional.functional h r2
           apply ih lem
 
-      variable [SubstMap T] [Substitutive R]
+      theorem equiv_acc {t} : SN R t <-> Acc (flip $ R) t := by
+        apply Iff.intro
+        case _ =>
+          intro h; induction h
+          case _ x h ih =>
+          constructor
+          simp [flip]
+          exact ih
+        case _ =>
+          intro h; induction h
+          case _ x h ih =>
+          constructor
+          simp [flip] at ih
+          exact ih
 
-      theorem subst_preimage {σ t} : SN R t[σ] -> SN R t := by
+      theorem wellfounded : (∀ t, SN R t) -> WellFounded (flip $ R) := by
+        intro h; constructor
+        intro a; replace h := h a
+        apply equiv_acc.1 h
+
+      variable [RenMap T] [SubstMap T T] [Substitutive R]
+
+      theorem subst_preimage {σ : Subst T} {t} : SN R t[σ] -> SN R t := by
         intro r; apply preimage (Subst.apply σ) t _ r
         intro x y r; apply Substitutive.subst
         apply r

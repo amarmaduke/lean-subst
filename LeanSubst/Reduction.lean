@@ -4,8 +4,8 @@ import LeanSubst.Basic
 namespace LeanSubst
   universe u
 
-  class Substitutive {T : Type} [SubstMap T] (R : T -> T -> Prop) where
-    subst {t s} σ : R t s -> R (t[σ]) (s[σ])
+  class Substitutive {T : Type} [RenMap T] [SubstMap T T] (R : T -> T -> Prop) where
+    subst {t s} (σ : Subst T) : R t s -> R (t[σ]) (s[σ])
 
   class HasTriangle {T : Type u} (R : T -> T -> Prop) where
     complete : T -> T
@@ -189,10 +189,10 @@ namespace LeanSubst
               exists q; apply And.intro
               apply lem.1; apply Star.step ih.2 lem.2
 
-      variable [SubstMap T] [Substitutive R]
+      variable [RenMap T] [SubstMap T T] [Substitutive R]
 
       omit [HasTriangle R] in
-      theorem subst {x y} σ : Star R x y -> Star R x[σ] y[σ] := by
+      theorem subst {x y} (σ : Subst T) : Star R x y -> Star R x[σ] y[σ] := by
         intro r; induction r
         case _ => apply Star.refl
         case _ r1 r2 ih =>
@@ -205,25 +205,25 @@ namespace LeanSubst
 
     namespace Plus
       theorem destruct {x z} : Plus R x z -> ∃ y, R x y ∧ Star R y z := by
-      intro r; induction r
-      case _ b r =>
-        exists b; apply And.intro r Star.refl
-      case _ r1 r2 ih =>
-        cases ih; case _ u ih =>
-          exists u; apply And.intro ih.1
-          apply Star.step ih.2 r2
+        intro r; induction r
+        case _ b r =>
+          exists b; apply And.intro r Star.refl
+        case _ r1 r2 ih =>
+          cases ih; case _ u ih =>
+            exists u; apply And.intro ih.1
+            apply Star.step ih.2 r2
 
       theorem stepr {x y z} : R x y -> Plus R y z -> Plus R x z := by
-      intro r1 r2
-      induction r2 generalizing x
-      case _ r2 => apply Plus.step (Plus.start r1) r2
-      case _ r3 r4 ih => apply Plus.step (ih r1) r4
+        intro r1 r2
+        induction r2 generalizing x
+        case _ r2 => apply Plus.step (Plus.start r1) r2
+        case _ r3 r4 ih => apply Plus.step (ih r1) r4
 
       theorem stepr_from_star {x y z} : R x y -> Star R y z -> Plus R x z := by
-      intro r1 r2
-      induction r2 generalizing x
-      case _ => apply Plus.start; apply r1
-      case _ r3 r4 ih => apply Plus.step (ih r1) r4
+        intro r1 r2
+        induction r2 generalizing x
+        case _ => apply Plus.start; apply r1
+        case _ r3 r4 ih => apply Plus.step (ih r1) r4
     end Plus
 
     namespace Conv

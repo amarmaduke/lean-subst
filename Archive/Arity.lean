@@ -147,28 +147,28 @@ theorem mk4_cong {a1 b1 c1 d1 a2 b2 c2 d2 : T}
 
 section
 
-  variable [SubstMap T]
+  variable [RenMap T] [SubstMap T T]
 
   @[simp]
-  theorem subst_mk0 {σ : Subst T} {x} : (mk0 x)[σ] = mk0 x := by
+  theorem subst_mk0 {σ : Subst T} {x} : (mk0 x)[σ:T] = mk0 x := by
     cases x; case _ x p =>
     cases p
 
   @[simp]
-  theorem subst_mk1 {σ : Subst T} {t x} : (mk1 t x)[σ] = mk1 t[σ] x := by
+  theorem subst_mk1 {σ : Subst T} {t : T} {x} : (mk1 t x)[σ] = mk1 t[σ] x := by
     cases x; case _ x p =>
     cases x; simp
     case succ => simp at p
 
   @[simp]
-  theorem subst_mk2 {σ : Subst T} {t1 t2 x} : (mk2 t1 t2 x)[σ] = mk2 t1[σ] t2[σ] x := by
+  theorem subst_mk2 {σ : Subst T} {t1 t2 : T} {x} : (mk2 t1 t2 x)[σ] = mk2 t1[σ] t2[σ] x := by
     cases x; case _ x p =>
     cases x; simp; case _ x =>
     cases x; simp; case _ x =>
     omega
 
   @[simp]
-  theorem subst_mk3 {σ : Subst T} {t1 t2 t3 x}
+  theorem subst_mk3 {σ : Subst T} {t1 t2 t3 : T} {x}
     : (mk3 t1 t2 t3 x)[σ] = mk3 t1[σ] t2[σ] t3[σ] x
   := by
     cases x; case _ x p =>
@@ -178,7 +178,7 @@ section
     omega
 
   @[simp]
-  theorem subst_mk4 {σ : Subst T} {t1 t2 t3 t4 x}
+  theorem subst_mk4 {σ : Subst T} {t1 t2 t3 t4 : T} {x}
     : (mk4 t1 t2 t3 t4 x)[σ] = mk4 t1[σ] t2[σ] t3[σ] t4[σ] x
   := by
     cases x; case _ x p =>
