@@ -7,8 +7,8 @@ namespace LeanSubst
   class SubstMapId (S T : Type) [RenMap T] [SubstMap S T] where
     apply_id {t : S} : t[+0:T] = t
 
-  class SubstMapStable (S T : Type) [RenMap S] [RenMap T] [SubstMap S T] where
-    apply_stable (r : Ren) (σ : Subst T) : r = σ -> Ren.apply (T := S) r = Subst.apply σ
+  class SubstMapStable (S : Type) [RenMap S] [SubstMap S S] where
+    apply_stable (r : Ren) (σ : Subst S) : r = σ -> Ren.apply (T := S) r = Subst.apply σ
 
   export SubstMapStable (apply_stable)
 
@@ -36,7 +36,7 @@ namespace LeanSubst
   namespace Subst
     section
       @[simp]
-      theorem rewrite1 : re 0 :: +1 = @Subst.id T := by
+      theorem rewrite1 : re 0 :: +1 = +0@T := by
         funext; case _ x =>
         cases x; all_goals (simp [Sequence.cons, Subst.id, Subst.succ])
 
@@ -44,38 +44,36 @@ namespace LeanSubst
       variable [RenMap T]
 
       @[simp]
-      theorem I_lift : +0.lift = @Subst.id T := by
+      theorem I_lift : +0.lift = +0@T := by
         funext; case _ x =>
         cases x; all_goals (simp [Subst.lift, Subst.id])
 
-      variable [SubstMap T T]
-
       @[simp]
-      theorem rewrite2 {σ : Subst T} : +0 ∘ σ = σ := by
+      theorem rewrite2 [SubstMap T T] {σ : Subst T} : +0 ∘ σ = σ := by
         funext; case _ x =>
         unfold Subst.compose; simp [Subst.id]
 
       @[simp]
-      theorem rewrite3_replace {σ τ : Subst T} {s : T}
+      theorem rewrite3_replace [SubstMap T T] {σ τ : Subst T} {s : T}
         : (su s :: σ) ∘ τ = su s[τ] :: (σ ∘ τ)
       := by
         funext; case _ x =>
         cases x; all_goals (simp [Subst.compose, Sequence.cons])
 
       @[simp]
-      theorem rewrite3_rename {s} {σ τ : Subst T}
+      theorem rewrite3_rename [SubstMap T T] {s} {σ τ : Subst T}
         : (re s :: σ) ∘ τ = (τ s) :: (σ ∘ τ)
       := by
         funext; case _ x =>
         cases x; all_goals (simp [Subst.compose, Sequence.cons])
 
       @[simp]
-      theorem rewrite4 {s} {σ : Subst T} : +1 ∘ (s :: σ) = σ := by
+      theorem rewrite4 [SubstMap T T]  {s} {σ : Subst T} : +1 ∘ (s :: σ) = σ := by
         funext; case _ x =>
         cases x; all_goals (simp [Subst.compose, Sequence.cons, Subst.succ])
 
       @[simp]
-      theorem rewrite5 {σ : Subst T} : σ 0 :: (+1 ∘ σ) = σ := by
+      theorem rewrite5 [SubstMap T T] {σ : Subst T} : σ 0 :: (+1 ∘ σ) = σ := by
         funext; case _ x =>
         cases x
         case _ => simp
@@ -88,7 +86,7 @@ namespace LeanSubst
     := SubstMapId.apply_id
 
     @[simp]
-    theorem rewrite_lift [RenMap T] [SubstMap T T] [SubstMapStable T T] {σ : Subst T}
+    theorem rewrite_lift [RenMap T] [SubstMap T T] [SubstMapStable T] {σ : Subst T}
       : σ.lift = re 0 :: (σ ∘ +1)
     := by
       funext; case _ x =>
@@ -99,7 +97,7 @@ namespace LeanSubst
         generalize tdef : σ n = t
         cases t <;> simp at *
         case _ y =>
-          rw [apply_stable (T := T) (σ := +1)]
+          rw [apply_stable (σ := +1)]
           funext; case _ i => simp [Ren.to, Subst.succ]
 
     @[simp]
@@ -113,25 +111,23 @@ namespace LeanSubst
       have lem := SubstMapId.apply_id (T := T) (t := t)
       simp [Subst.apply] at lem; exact lem
 
-    section
+    @[simp]
+    theorem apply_compose_commute
+      [RenMap S] [RenMap T] [SubstMap T T] [SubstMap S T] [SubstMapCompose S T]
+      {s : S} {σ τ : Subst T}
+      : s[σ:T][τ:_] = s[σ ∘ τ:T]
+    := SubstMapCompose.apply_compose
 
-      @[simp]
-      theorem apply_compose_commute
-        [RenMap S] [RenMap T] [SubstMap T T] [SubstMap S T] [SubstMapCompose S T]
-        {s : S} {σ τ : Subst T}
-        : s[σ:T][τ:_] = s[σ ∘ τ:T]
-      := SubstMapCompose.apply_compose
+    @[simp]
+    theorem rewrite7
+      [RenMap T] [SubstMap T T] [SubstMapCompose T T]
+      {σ τ μ : Subst T}
+      : (σ ∘ τ) ∘ μ = σ ∘ τ ∘ μ
+    := by
+      funext; case _ x =>
+      simp [Subst.compose]
+      cases σ x <;> simp
 
-      @[simp] -- (σ ◦ τ) ◦ μ = σ ◦ (τ ◦ μ)
-      theorem rewrite7
-        [RenMap T] [SubstMap T T] [SubstMapCompose T T]
-        {σ τ μ : Subst T}
-        : (σ ∘ τ) ∘ μ = σ ∘ τ ∘ μ
-      := by
-        funext; case _ x =>
-        simp [Subst.compose]
-        cases σ x <;> simp
-    end
   end Subst
 
   macro "solve_stable" S:term "," r:term "," σ:term : tactic => `(tactic| {

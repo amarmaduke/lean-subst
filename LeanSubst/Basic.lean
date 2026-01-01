@@ -70,27 +70,27 @@ namespace LeanSubst
   | σ, τ, n =>
     match σ n with
     | su t => su (apply τ t)
-    | re k =>
-      match τ k with
-      | su _ => re k
-      | re k => re k
+    | re k => re k
 
   def Subst.id : Subst T := λ n => re n
   def Subst.succ : Subst T := λ n => re (n + 1)
   def Subst.pred : Subst T := λ n => re (n - 1)
 
   notation "+0" => Subst.id
+  macro "+0@" noWs T:term : term =>`(@Subst.id $T)
   notation "+1" => Subst.succ
+  macro "+1@" noWs T:term : term =>`(@Subst.succ $T)
   notation "-1" => Subst.pred
+  macro "-1@" noWs T:term : term =>`(@Subst.pred $T)
 
   @[simp]
-  theorem Subst.id_action {n} : @Subst.id T n = re n := by simp [Subst.id]
+  theorem Subst.id_action {n} : (+0@T) n = re n := by simp [Subst.id]
 
   @[simp]
-  theorem Subst.succ_action {n} : @Subst.succ T n = re (n + 1) := by simp [Subst.succ]
+  theorem Subst.succ_action {n} : (+1@T) n = re (n + 1) := by simp [Subst.succ]
 
   @[simp]
-  theorem Subst.pred_action {n} : @Subst.pred T n = re (n - 1) := by simp [Subst.pred]
+  theorem Subst.pred_action {n} : (-1@T) n = re (n - 1) := by simp [Subst.pred]
 
   @[simp]
   theorem Ren.to_id : Ren.to (T := T) id = +0 := by
