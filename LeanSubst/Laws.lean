@@ -240,115 +240,115 @@ namespace LeanSubst
       generalize zdef : σ x = z
       cases z <;> simp
 
-    macro "solve_id" S:term "," T:term "," t:term : tactic => `(tactic| {
-      have lem (t : $S) (r : Ren) : t[+0 ◾ (@Ren.to $T r):$S] = t := by
-        induction t generalizing r <;> simp at *
-        all_goals try simp [*]
-      have h := lem $t id; simp at h; exact h
-    })
+  end Subst
 
-    macro "solve_stable" S:term "," r:term "," σ:term : tactic => `(tactic| {
-      intro h; simp [Ren.apply, Subst.apply]
-      funext; case _ t =>
-      induction t generalizing $r $σ
-      all_goals simp [RenMap.rmap, SubstMap.smap, *] at *; try simp [*]
-      any_goals solve | (
-        rw [<-Ren.lift_eq_from_eq (S := $S) (r := $r) h])
-      any_goals solve | (rw [<-h]; simp [Ren.to])
-    })
+  macro "subst_solve_id" S:term "," T:term "," t:term : tactic => `(tactic| {
+    have lem (t : $S) (r : Ren) : t[+0 ◾ (@Ren.to $T r):$S] = t := by
+      induction t generalizing r <;> simp at *
+      all_goals try simp [*]
+    have h := lem $t (λ x => x); simp at h; exact h
+  })
 
-    macro "solve_hcompose"
-      S:term ","
-      T:term ","
-      s:Lean.Parser.Tactic.elimTarget ","
-      σ:term ","
-      τ:term
-      : tactic =>
-    `(tactic| {
-      have lem1 {σ : Subst $S} {μ : Subst $T} {r : Ren} : (σ ∘ r.to) ◾ μ = (σ ◾ μ) ∘ r.to := by
-        funext; case _ x =>
-        simp [Subst.hcompose, Subst.compose]
-        generalize zdef : σ x = z
-        cases z <;> simp [Ren.to]
-        rw [Subst.apply_ren_commute]
-      have lem2 {σ : Subst $S} {μ : Subst $T} : (σ ∘ +1) ◾ μ = (σ ◾ μ) ∘ +1 := by
-        have lem := @lem1 σ μ (· + 1)
-        simp at lem; exact lem
-      induction $s generalizing $σ $τ <;> simp at *
-      all_goals simp [*]
-    })
+  macro "subst_solve_stable" S:term "," r:term "," σ:term : tactic => `(tactic| {
+    intro h; simp [Ren.apply, Subst.apply]
+    funext; case _ t =>
+    induction t generalizing $r $σ
+    all_goals simp [RenMap.rmap, SubstMap.smap, *] at *; try simp [*]
+    any_goals solve | (
+      rw [<-Ren.lift_eq_from_eq (S := $S) (r := $r) h])
+    any_goals solve | (rw [<-h]; simp [Ren.to])
+  })
 
-    macro "solve_compose"
-      Ty:term ","
-      s:Lean.Parser.Tactic.elimTarget ","
-      σ:term ","
-      τ:term
-      : tactic =>
-    `(tactic| {
-      have lem1 (τ : Subst $Ty) : (Ren.to (· + 1)) ∘ τ.lift = τ ∘ (Ren.to (· + 1)) := by
-        funext; case _ x =>
-        cases x <;> simp
-      have lem1s (τ : Subst $Ty) : +1 ∘ τ.lift = τ ∘ +1 := by
-        funext; case _ x =>
-        cases x <;> simp
-      have lem2 {σ : Subst $Ty} {r} : (r ∘ σ).lift = (Ren.to r).lift ∘ σ.lift := by
-        funext; case _ x =>
-        cases x <;> simp
-        try case _ x => simp [Ren.to, Subst.succ, Subst.compose]
-      have lem2s {σ : Subst $Ty} : (+1 ∘ σ).lift = +1.lift ∘ σ.lift := by rw [<-Ren.to_succ, lem2]
-      have lem3 {σ : Subst $Ty} {r : Ren} {t : $Ty} : t[r:$Ty][σ:_] = t[(r ∘ σ):_] := by
-        induction t generalizing σ r
-        any_goals solve | simp [*]
-        try any_goals solve | (
-          simp [-Subst.rewrite_lift, *]
-          rw [<-Ren.to_lift (S := $Ty)]; simp [*])
-      have lem3s {σ : Subst $Ty} {t : $Ty} : t[+1:$Ty][σ:_] = t[+1 ∘ σ:_] := by
-        rw [<-Ren.to_succ, lem3]
-      have lem4 {σ τ : Subst $Ty} : +1 ∘ τ ∘ σ = (+1 ∘ τ) ∘ σ := by
-        funext; case _ x =>
-        cases x <;> simp [Subst.compose, Subst.succ]
-      have lem5 {r1 r2 : Ren} {τ : Subst $Ty} : (τ ∘ r2.to) ∘ r1.to = τ ∘ r2.to ∘ r1.to := by
-        funext; case _ x =>
-        unfold Subst.compose; simp
-        cases τ x <;> simp [*]
-        unfold Subst.compose; simp
-      have lem6 {τ : Subst $Ty} {r : Ren} : (τ ∘ r.to).lift = τ.lift ∘ r.to.lift := by
-        funext; case _ x =>
-        cases x; simp
-        case _ x =>
-          simp [Subst.compose]
-          cases τ x <;> simp [*]
-      have lem6s {τ : Subst $Ty} : (τ ∘ +1).lift = τ.lift ∘ +1.lift := by rw [<-Ren.to_succ, lem6]
-      have lem7 {τ : Subst $Ty} {t:$Ty} {r : Ren} : t[τ:_][r:$Ty] = t[τ ∘ r.to:_] := by
-        induction t generalizing τ r
-        any_goals solve | simp [*]
-        try any_goals solve | (
-          simp [-Subst.rewrite_lift, *]
-          rw [<-Ren.to_lift (S := $Ty)]; simp [*])
-      have lem7s {τ : Subst $Ty} {t : $Ty} : t[τ:_][+1:$Ty] = t[τ ∘ +1:_] := by
-        rw [<-Ren.to_succ, lem7]
-      have lem8 {σ τ : Subst $Ty} : (σ ∘ +1) ∘ τ = σ ∘ +1 ∘ τ := by
-        funext; case _ x =>
-        unfold Subst.compose; simp
-        cases σ x <;> simp at *
-        try rw [lem3s]
-        unfold Subst.compose; simp
-      have lem9 {σ τ : Subst $Ty} : ((σ ∘ τ) ∘ +1) = σ ∘ τ ∘ +1 := by
-        funext; case _ x =>
-        unfold Subst.compose; simp
-        cases σ x <;> simp at *
-        try rw [lem7s]
-        unfold Subst.compose; simp
-      have lem10 {σ τ : Subst $Ty} : (σ ∘ τ).lift = σ.lift ∘ τ.lift := by
-        funext; case _ x =>
-        cases x <;> simp [*]
-      induction $s generalizing $σ $τ
+  macro "subst_solve_hcompose"
+    S:term ","
+    T:term ","
+    s:Lean.Parser.Tactic.elimTarget ","
+    σ:term ","
+    τ:term
+    : tactic =>
+  `(tactic| {
+    have lem1 {σ : Subst $S} {μ : Subst $T} {r : Ren} : (σ ∘ r.to) ◾ μ = (σ ◾ μ) ∘ r.to := by
+      funext; case _ x =>
+      simp [Subst.hcompose, Subst.compose]
+      generalize zdef : σ x = z
+      cases z <;> simp [Ren.to]
+      rw [Subst.apply_ren_commute]
+    have lem2 {σ : Subst $S} {μ : Subst $T} : (σ ∘ +1) ◾ μ = (σ ◾ μ) ∘ +1 := by
+      have lem := @lem1 σ μ (· + 1)
+      simp at lem; exact lem
+    induction $s generalizing $σ $τ <;> simp at *
+    all_goals simp [*]
+  })
+
+  macro "subst_solve_compose"
+    Ty:term ","
+    s:Lean.Parser.Tactic.elimTarget ","
+    σ:term ","
+    τ:term
+    : tactic =>
+  `(tactic| {
+    have lem1 (τ : Subst $Ty) : (Ren.to (· + 1)) ∘ τ.lift = τ ∘ (Ren.to (· + 1)) := by
+      funext; case _ x =>
+      cases x <;> simp
+    have lem1s (τ : Subst $Ty) : +1 ∘ τ.lift = τ ∘ +1 := by
+      funext; case _ x =>
+      cases x <;> simp
+    have lem2 {σ : Subst $Ty} {r} : (r ∘ σ).lift = (Ren.to r).lift ∘ σ.lift := by
+      funext; case _ x =>
+      cases x <;> simp
+      try case _ x => simp [Ren.to, Subst.succ, Subst.compose]
+    have lem2s {σ : Subst $Ty} : (+1 ∘ σ).lift = +1.lift ∘ σ.lift := by rw [<-Ren.to_succ, lem2]
+    have lem3 {σ : Subst $Ty} {r : Ren} {t : $Ty} : t[r:$Ty][σ:_] = t[(r ∘ σ):_] := by
+      induction t generalizing σ r
       any_goals solve | simp [*]
       try any_goals solve | (
         simp [-Subst.rewrite_lift, *]
-        rw [<-Ren.to_lift]; simp [*])
-    })
-
-  end Subst
+        rw [<-Ren.to_lift (S := $Ty)]; simp [*])
+    have lem3s {σ : Subst $Ty} {t : $Ty} : t[+1:$Ty][σ:_] = t[+1 ∘ σ:_] := by
+      rw [<-Ren.to_succ, lem3]
+    have lem4 {σ τ : Subst $Ty} : +1 ∘ τ ∘ σ = (+1 ∘ τ) ∘ σ := by
+      funext; case _ x =>
+      cases x <;> simp [Subst.compose, Subst.succ]
+    have lem5 {r1 r2 : Ren} {τ : Subst $Ty} : (τ ∘ r2.to) ∘ r1.to = τ ∘ r2.to ∘ r1.to := by
+      funext; case _ x =>
+      unfold Subst.compose; simp
+      cases τ x <;> simp [*]
+      unfold Subst.compose; simp
+    have lem6 {τ : Subst $Ty} {r : Ren} : (τ ∘ r.to).lift = τ.lift ∘ r.to.lift := by
+      funext; case _ x =>
+      cases x; simp
+      case _ x =>
+        simp [Subst.compose]
+        cases τ x <;> simp [*]
+    have lem6s {τ : Subst $Ty} : (τ ∘ +1).lift = τ.lift ∘ +1.lift := by rw [<-Ren.to_succ, lem6]
+    have lem7 {τ : Subst $Ty} {t:$Ty} {r : Ren} : t[τ:_][r:$Ty] = t[τ ∘ r.to:_] := by
+      induction t generalizing τ r
+      any_goals solve | simp [*]
+      try any_goals solve | (
+        simp [-Subst.rewrite_lift, *]
+        rw [<-Ren.to_lift (S := $Ty)]; simp [*])
+    have lem7s {τ : Subst $Ty} {t : $Ty} : t[τ:_][+1:$Ty] = t[τ ∘ +1:_] := by
+      rw [<-Ren.to_succ, lem7]
+    have lem8 {σ τ : Subst $Ty} : (σ ∘ +1) ∘ τ = σ ∘ +1 ∘ τ := by
+      funext; case _ x =>
+      unfold Subst.compose; simp
+      cases σ x <;> simp at *
+      try rw [lem3s]
+      unfold Subst.compose; simp
+    have lem9 {σ τ : Subst $Ty} : ((σ ∘ τ) ∘ +1) = σ ∘ τ ∘ +1 := by
+      funext; case _ x =>
+      unfold Subst.compose; simp
+      cases σ x <;> simp at *
+      try rw [lem7s]
+      unfold Subst.compose; simp
+    have lem10 {σ τ : Subst $Ty} : (σ ∘ τ).lift = σ.lift ∘ τ.lift := by
+      funext; case _ x =>
+      cases x <;> simp [*]
+    induction $s generalizing $σ $τ
+    any_goals solve | simp [*]
+    try any_goals solve | (
+      simp [-Subst.rewrite_lift, *]
+      rw [<-Ren.to_lift]; simp [*])
+  })
 
 end LeanSubst
