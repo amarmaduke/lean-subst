@@ -79,13 +79,13 @@ namespace LeanSubst.Examples.LambdaCalc
 
   theorem apply_stable (r : Ren) (σ : Subst Term)
     : r = σ -> Ren.apply (T := Term) r = Subst.apply σ
-  := by solve_stable Term, r, σ
+  := by subst_solve_stable Term, r, σ
 
   instance : SubstMapStable Term where
     apply_stable := apply_stable
 
   theorem apply_compose {s : Term} {σ τ : Subst Term} : s[σ][τ] = s[σ ∘ τ] := by
-    solve_compose Term, s, σ, τ
+    subst_solve_compose Term, s, σ, τ
 
   instance : SubstMapCompose Term Term where
     apply_compose := apply_compose
