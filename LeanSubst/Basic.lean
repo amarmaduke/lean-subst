@@ -60,6 +60,8 @@ namespace LeanSubst
 
   def Subst.apply [RenMap T] [SubstMap S T] (σ : Subst T) : S -> S := SubstMap.smap Subst.lift σ
 
+  abbrev Subst.apply1 [RenMap S] [SubstMap S S] := Subst.apply (S := S) (T := S)
+
   def Subst.compose [RenMap T] [SubstMap T T] : Subst T -> Subst T -> Subst T
   | σ, τ, n =>
     match σ n with
@@ -116,18 +118,20 @@ namespace LeanSubst
     funext; case _ x =>
     cases x <;> simp [Ren.to, Subst.compose]
 
-  abbrev the {T : Type} (_ : T) := T
-
-  macro:max t:term noWs "[" σ:term "]" : term => `(Subst.apply (S := the $t) (T := the $t) $σ $t)
+  macro:max t:term noWs "[" σ:term "]" : term => `(Subst.apply1 $σ $t)
   macro:max t:term noWs "[" σ:term ":" T:term "]" : term => `(Subst.apply (T := $T) $σ $t)
   infixr:85 " ∘ " => Subst.compose
-  infixr:85 " • " => Subst.hcompose
+  infixr:85 " ◾ " => Subst.hcompose
+
+  @[app_unexpander Subst.apply1]
+  def unexpandSubstApply1 : Lean.PrettyPrinter.Unexpander
+  | `($_ $σ $t) => `($t[$σ])
+  | _ => throw ()
 
   @[app_unexpander Subst.apply]
   def unexpandSubstApply : Lean.PrettyPrinter.Unexpander
-  | `($_ $σ $t) => `($t[$σ])
+  | `($_ $σ $t) => `($t[$σ : _])
   | `($_ (T := $T) $σ $t) => `($t[$σ : $T])
-  | `($_ (S := the $_) (T := the $_) $σ $t) => `($t[$σ])
   | _ => throw ()
 
 end LeanSubst

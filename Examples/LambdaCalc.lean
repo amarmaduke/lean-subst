@@ -52,15 +52,15 @@ namespace LeanSubst.Examples.LambdaCalc
 
   @[simp]
   theorem subst_var {x} {σ : Subst Term} : (Term.var x)[σ] = σ x := by
-    unfold Subst.apply; simp [SubstMap.smap]
+    simp [Subst.apply, SubstMap.smap]
 
   @[simp]
   theorem subst_app {t1 t2} {σ : Subst Term} : (t1 :@ t2)[σ] = t1[σ] :@ t2[σ] := by
-    unfold Subst.apply; simp [SubstMap.smap]
+    simp [Subst.apply, SubstMap.smap]
 
   @[simp]
   theorem subst_lam {t} {σ : Subst Term} : (:λ t)[σ] = :λ t[σ.lift] := by
-    unfold Subst.apply; simp [SubstMap.smap]
+    simp [Subst.apply, SubstMap.smap]
 
   @[simp]
   theorem Term.from_action_compose {x} {σ τ : Subst Term}
@@ -81,7 +81,7 @@ namespace LeanSubst.Examples.LambdaCalc
     : r = σ -> Ren.apply (T := Term) r = Subst.apply σ
   := by solve_stable Term, r, σ
 
-  instance : SubstMapStable Term Term where
+  instance : SubstMapStable Term where
     apply_stable := apply_stable
 
   theorem apply_compose {s : Term} {σ τ : Subst Term} : s[σ][τ] = s[σ ∘ τ] := by
