@@ -4,6 +4,12 @@ defaultTargets = ["lean-subst"]
 
 leanOptions = { autoImplicit = false }
 
+[[require]]
+name = "lilac"
+scope = "amarmaduke"
+git = "https://github.com/amarmaduke/lilac"
+rev = "main"
+
 [[lean_lib]]
 name = "LeanSubst"
 

@@ -115,7 +115,7 @@ namespace LeanSubst
       variable [RenMap T] [SubstMap T T] [Substitutive R]
 
       theorem subst_preimage {σ : Subst T} {t} : SN R t[σ] -> SN R t := by
-        intro r; apply preimage (Subst.apply σ) t _ r
+        intro r; apply preimage (smap σ) t _ r
         intro x y r; apply Substitutive.subst
         apply r
     end SN

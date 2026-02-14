@@ -1,23 +1,45 @@
 import LeanSubst.Basic
+import LeanSubst.Option
 
 namespace LeanSubst
 
-variable {T : Type} [Inhabited T] [RenMap T] [SubstMap T T]
+variable {S T : Type}
+
+def List.smap [SubstMap S T] (σ : Subst T) : List S -> List S
+| [] => []
+| .cons x tl => x[σ:_] :: smap σ tl
+
+instance [SubstMap S T] : SubstMap (List S) T where
+  smap := List.smap
 
 @[simp]
-def List.subst_get (σ : Subst T) : List T -> Nat -> T
-| .nil, _ => default
-| .cons h _, 0 => h[σ]
-| .cons _ t, n + 1 => (subst_get σ t n)[σ]
-
-macro:max t:term noWs "[" σ:term "|" x:term "]" : term => `(List.subst_get $σ $t $x)
+theorem List.smap_nil [SubstMap S T] {σ : Subst T} : (@List.nil S)[σ:_] = [] := by
+  simp [SubstMap.smap, List.smap]
 
 @[simp]
-theorem List.subst_get_zero {σ} {A : T} {Γ : List T} : (A::Γ)[σ|0] = A[σ] := by
-  simp [subst_get]
+theorem List.smap_cons [SubstMap S T] {x} {tl : List S} {σ : Subst T}
+  : (x :: tl)[σ:_] = x[σ:_] :: tl[σ:_]
+:= by
+  simp [SubstMap.smap, List.smap]
 
 @[simp]
-theorem List.subst_get_succ {σ} {A : T} {Γ : List T} {x} : (A::Γ)[σ|x + 1] = Γ[σ|x][σ] := by
-  simp [subst_get]
+def List.dep_subst_get [SubstMap S T] (σ : Subst T) : List S -> Nat -> Option S
+| .nil, _ => none
+| .cons h _, 0 => return h[σ:_]
+| .cons _ t, n + 1 => (dep_subst_get σ t n)[σ:_]
+
+macro:max t:term noWs "[" x:term "|" σ:term "]" : term => `(List.dep_subst_get $σ $t $x)
+
+@[simp]
+theorem List.dep_subst_get_zero [SubstMap S T] {σ : Subst T} {A : S} {Γ : List S}
+  : (A::Γ)[0|σ] = A[σ:_]
+:= by
+  simp [dep_subst_get]
+
+@[simp]
+theorem List.dep_subst_get_succ [SubstMap S T] {σ : Subst T} {A : S} {Γ : List S} {x}
+  : (A::Γ)[x + 1|σ] = Γ[x|σ][σ:_]
+:= by
+  simp [dep_subst_get]
 
 end LeanSubst
