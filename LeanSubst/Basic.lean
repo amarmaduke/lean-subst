@@ -77,33 +77,33 @@ namespace LeanSubst
   notation "-1" => Subst.pred
   macro "-1@" noWs T:term : term =>`(@Subst.pred $T)
 
-  @[simp]
+  @[simp, grind =]
   theorem Subst.id_action {n} : (+0@T) n = re n := by simp [Subst.id]
 
-  @[simp]
+  @[simp, grind =]
   theorem Subst.succ_action {n} : (+1@T) n = re (n + 1) := by simp [Subst.succ]
 
-  @[simp]
+  @[simp, grind =]
   theorem Subst.pred_action {n} : (-1@T) n = re (n - 1) := by simp [Subst.pred]
 
-  @[simp]
+  @[simp, grind =]
   theorem Ren.to_id : Ren.to (T := T) id = +0 := by
     unfold Ren.to; unfold Subst.id; simp
 
-  @[simp]
+  @[simp, grind =]
   theorem Ren.to_succ : Ren.to (T := T) (· + 1) = +1 := by
     unfold Ren.to; simp; unfold Subst.succ; simp
 
-  @[simp]
+  @[simp, grind =]
   theorem Ren.to_pred : Ren.to (T := T) (· - 1) = -1 := by
     unfold Ren.to; simp; unfold Subst.pred; simp
 
-  @[simp]
+  @[simp, grind =]
   theorem Ren.pred_succ [RenMap T] [SubstMap T T] : Subst.compose (T := T) +1 -1 = +0 := by
     unfold Subst.compose; simp
     unfold Subst.id; rfl
 
-  @[simp]
+  @[grind =]
   theorem Ren.to_lift [RenMap T] {r : Ren} : r.lift.to = (@Ren.to T r).lift := by
     funext; case _ x =>
     cases x
@@ -118,7 +118,7 @@ namespace LeanSubst
       unfold Subst.lift at rhsdef; simp at *
       subst lhsdef; subst rhsdef; rfl
 
-  @[simp]
+  @[simp, grind =]
   theorem Ren.to_compose {r1 r2 : Ren} [RenMap T] [SubstMap T T]
     : Ren.to (T := T) (r2 ∘ r1) = Subst.compose r1 r2
   := by

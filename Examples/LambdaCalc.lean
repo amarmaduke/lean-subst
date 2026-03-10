@@ -15,18 +15,18 @@ namespace LeanSubst.Examples.LambdaCalc
   | re y => var y
   | su t => t
 
-  @[simp]
+  @[simp, grind =]
   theorem Term.from_action_id {n} : from_action (+0 n) = var n := by
     simp [from_action, Subst.id]
 
-  @[simp]
+  @[simp, grind =]
   theorem Term.from_action_succ {n} : from_action (+1 n) = var (n + 1) := by
     simp [from_action, Subst.succ]
 
-  @[simp]
+  @[simp, grind =]
   theorem Term.from_acton_re {n} : from_action (re n) = var n := by simp [from_action]
 
-  @[simp]
+  @[simp, grind =]
   theorem Term.from_action_su {t} : from_action (su t) = t := by simp [from_action]
 
   instance instCoe_SubstActionTerm_Term : Coe (Subst.Action Term) Term where
@@ -50,15 +50,15 @@ namespace LeanSubst.Examples.LambdaCalc
   instance SubstMap_Term : SubstMap Term Term where
     smap := smap
 
-  @[simp]
+  @[simp, grind =]
   theorem subst_var {x} {σ : Subst Term} : (Term.var x)[σ] = σ x := by
     simp [SubstMap.smap]
 
-  @[simp]
+  @[simp, grind =]
   theorem subst_app {t1 t2} {σ : Subst Term} : (t1 :@ t2)[σ] = t1[σ] :@ t2[σ] := by
     simp [SubstMap.smap]
 
-  @[simp]
+  @[simp, grind =]
   theorem subst_lam {t} {σ : Subst Term} : (:λ t)[σ] = :λ t[σ.lift] := by
     simp [SubstMap.smap]
 

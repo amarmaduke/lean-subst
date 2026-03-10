@@ -20,11 +20,11 @@ def List.smap [SubstMap S T] (σ : Subst T) : List S -> List S
 instance [SubstMap S T] : SubstMap (List S) T where
   smap := List.smap
 
-@[simp]
+@[simp, grind =]
 theorem List.smap_nil [SubstMap S T] {σ : Subst T} : (@List.nil S)[σ:_] = [] := by
   simp [SubstMap.smap, List.smap]
 
-@[simp]
+@[simp, grind =]
 theorem List.smap_cons [SubstMap S T] {x} {tl : List S} {σ : Subst T}
   : (x :: tl)[σ:_] = x[σ:_] :: tl[σ:_]
 := by
@@ -40,7 +40,7 @@ instance [RenMap S] [RenMap T] [SubstMap T T] [SubstMap S T] [SubstMapCompose S 
 where
   apply_compose := by intro s σ τ; induction s <;> simp [*]
 
-@[simp]
+@[simp, grind =]
 def List.dep_subst_get [SubstMap S T] (σ : Subst T) : List S -> Nat -> Option S
 | .nil, _ => none
 | .cons h _, 0 => return h[σ:_]
@@ -66,13 +66,13 @@ def unexpand_list_dep_subst_get : Lean.PrettyPrinter.Unexpander
 | `($_ (T := $T) $σ $t $x) => `($t[$x|$σ : $T])
 | _ => throw ()
 
-@[simp]
+@[simp, grind =]
 theorem List.dep_subst_get_zero [SubstMap S T] {σ : Subst T} {A : S} {Γ : List S}
   : (A::Γ)[0|σ:_] = A[σ:_]
 := by
   simp [dep_subst_get]
 
-@[simp]
+@[simp, grind =]
 theorem List.dep_subst_get_succ [SubstMap S T] {σ : Subst T} {A : S} {Γ : List S} {x}
   : (A::Γ)[x + 1|σ:_] = Γ[x|σ:_][σ:_]
 := by
