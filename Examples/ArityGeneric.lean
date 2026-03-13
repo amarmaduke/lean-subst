@@ -1,103 +1,115 @@
--- import LeanSubst
+import LeanSubst
+import Lilac
 
--- namespace LeanSubst.Examples.ArityGeneric
+namespace LeanSubst.Examples.ArityGeneric
 
---   inductive Kind where
---   | ctor | bind
+  inductive VariantSort where
+  | ctor | bind
 
---   inductive Term (V : Type) (α : V -> Nat) (β : V -> Kind -> Prop) where
---   | var : Nat -> Term V α β
---   | bind : (v:{v:V // β v .bind}) -> ({k:Nat // k < α v} -> Term V α β) -> Term V α β -> Term V α β
---   | ctor : (v:{v:V // β v .ctor}) -> ({k:Nat // k < α v} -> Term V α β) -> Term V α β
---   | variadic n : Term V α β -> ({k:Nat // k < n} -> Term V α β) -> Term V α β
+  inductive Term (V : VariantSort -> Nat -> Prop) where
+  | var : Nat -> Term V
+  | bind {n} : V .bind n -> Vect n (Term V) -> Term V -> Term V
+  | ctor {n} : V .ctor n -> Vect n (Term V) -> Term V
+  | variadic n : Term V -> Vect n (Term V) -> Term V
 
---   variable {V : Type} {α : V -> Nat} {β : V -> Kind -> Prop}
+  variable {V : VariantSort -> Nat -> Prop}
 
---   @[coe]
---   def Term.from_action : Subst.Action (Term V α β) -> Term V α β
---   | .re y => var y
---   | .su t => t
+  @[coe]
+  def Term.from_action : Subst.Action (Term V) -> Term V
+  | .re y => var y
+  | .su t => t
 
---   @[simp]
---   theorem Term.from_action_id {n}
---     : from_action (+0 n) = @var V α β n
---   := by
---     simp [from_action, Subst.id]
+  @[simp]
+  theorem Term.from_action_id {n}
+    : from_action (+0 n) = @var V n
+  := by
+    simp [from_action, Subst.id]
 
---   @[simp]
---   theorem Term.from_action_succ {n}
---     : from_action (+1 n) = @var V α β (n + 1)
---   := by
---     simp [from_action, Subst.succ]
+  @[simp]
+  theorem Term.from_action_succ {n}
+    : from_action (+1 n) = @var V (n + 1)
+  := by
+    simp [from_action, Subst.succ]
 
---   @[simp]
---   theorem Term.from_acton_re {n}
---     : from_action (.re n) = @var V α β n
---   := by simp [from_action]
+  @[simp]
+  theorem Term.from_acton_re {n}
+    : from_action (.re n) = @var V n
+  := by simp [from_action]
 
---   @[simp]
---   theorem Term.from_action_su {t : Term V α β} : from_action (.su t) = t := by simp [from_action]
+  @[simp]
+  theorem Term.from_action_su {t : Term V} : from_action (.su t) = t := by simp [from_action]
 
---   instance instCoe_SubstActionTerm_Term : Coe (Subst.Action (Term V α β)) (Term V α β) where
---     coe := Term.from_action
+  instance instCoe_SubstActionTerm_Term : Coe (Subst.Action (Term V)) (Term V) where
+    coe := Term.from_action
 
---   @[simp]
---   def smap (k : Subst.Kind) (lf : Subst.Lift (Term V α β) k) (f : SplitSubst (Term V α β) k)
---     : Term V α β -> Term V α β
---   | .var x =>
---     match k with
---     | .re => .var (f x)
---     | .su => f x
---   | .bind v ts t => .bind v (λ i => smap k lf f (ts i)) (smap k lf (lf f) t)
---   | .ctor v ts => .ctor v (λ i => smap k lf f (ts i))
---   | .variadic n t ts => .variadic n (smap k lf f t) (λ i => smap k lf f (ts i))
+  @[simp]
+  def Term.rmap (r : Ren) : Term V -> Term V
+  | var x => var (r x)
+  | bind v ts t => bind v (rmap r <$> ts) (rmap r.lift t)
+  | ctor v ts => ctor v (rmap r <$> ts)
+  | variadic n t ts => variadic n (rmap r t) (rmap r <$> ts)
 
---   instance SubstMap_Term : SubstMap (Term V α β) where
---     smap := smap
+  instance : RenMap (Term V) where
+    rmap := Term.rmap
 
---   @[simp]
---   theorem subst_var {x} {σ : Subst (Term V α β)} : (.var x)[σ] = σ x := by
---     unfold Subst.apply; simp [SubstMap.smap]
+  @[simp]
+  def Term.smap (σ : Subst (Term V)) : Term V -> Term V
+  | var x => σ x
+  | bind v ts t => bind v (smap σ <$> ts) (smap σ.lift t)
+  | ctor v ts => ctor v (smap σ <$> ts)
+  | variadic n t ts => variadic n (smap σ t) (smap σ <$> ts)
 
---   @[simp]
---   theorem subst_bind {v ts t} {σ : Subst (Term V α β)}
---     : (.bind v ts t)[σ] = .bind v (λ k => (ts k)[σ]) t[σ.lift]
---   := by
---     unfold Subst.apply; simp [SubstMap.smap]
+  instance : SubstMap (Term V) (Term V) where
+    smap := Term.smap
 
---   @[simp]
---   theorem subst_ctor {v ts} {σ : Subst (Term V α β)}
---     : (.ctor v ts)[σ] = .ctor v (λ k => (ts k)[σ])
---   := by
---     unfold Subst.apply; simp [SubstMap.smap]
+  @[simp]
+  theorem Term.subst_var {x} {σ : Subst (Term V)} : (.var x)[σ] = σ x := by
+    simp [SubstMap.smap]
 
---   @[simp]
---   theorem subst_variadic {n t ts} {σ : Subst (Term V α β)}
---     : (.variadic n t ts)[σ] = .variadic n t[σ] (λ k => (ts k)[σ])
---   := by
---     unfold Subst.apply; simp [SubstMap.smap]
+  @[simp]
+  theorem Term.subst_bind {n} {v : V .bind n} {ts t} {σ : Subst (Term V)}
+    : (bind v ts t)[σ:Term V] = .bind v (λ k => (ts k)[σ]) t[σ.lift]
+  := by
+    simp [SubstMap.smap]
 
---   @[simp]
---   theorem Term.from_action_compose {x} {σ τ : Subst (Term V α β)}
---     : (from_action (σ x))[τ] = from_action ((σ ∘ τ) x)
---   := by
---     simp [Term.from_action, Subst.compose]
---     generalize zdef : σ x = z
---     cases z <;> simp [Term.from_action]
+  @[simp]
+  theorem Term.subst_ctor {n} {v : V .ctor n} {ts} {σ : Subst (Term V)}
+    : (.ctor v ts)[σ] = .ctor v (λ k => (ts k)[σ])
+  := by
+    simp [SubstMap.smap]
 
---   theorem apply_id {t : Term V α β} : t[+0] = t := by
---     induction t
---     all_goals (simp at * <;> try simp [*])
+  @[simp]
+  theorem Term.subst_variadic {n t ts} {σ : Subst (Term V)}
+    : (.variadic n t ts)[σ] = .variadic n t[σ] (λ k => (ts k)[σ])
+  := by
+    simp [SubstMap.smap]
 
---   theorem apply_stable (r : Ren) (σ : Subst (Term V α β))
---     : r = σ -> Ren.apply r = Subst.apply σ
---   := by solve_stable r, σ
+  @[simp]
+  theorem Term.from_action_compose {x} {σ τ : Subst (Term V)}
+    : (from_action (σ x))[τ] = from_action ((σ ∘ τ) x)
+  := by
+    simp [Term.from_action, Subst.compose]
+    generalize zdef : σ x = z
+    cases z <;> simp [Term.from_action]
 
---   instance SubstMapStable_Term : SubstMapStable (Term V α β) where
---     apply_id := apply_id
---     apply_stable := apply_stable
+  theorem Term.apply_id {t : Term V} : t[+0] = t := by
+    induction t
+    all_goals (simp at * <;> try simp [*])
 
---   theorem apply_compose {s} {σ τ : Subst (Term V α β)} : s[σ][τ] = s[σ ∘ τ] := by
---     solve_compose Term V α β, s, σ, τ
+  instance : SubstMapId (Term V) (Term V) where
+    apply_id := Term.apply_id
 
--- end LeanSubst.Examples.ArityGeneric
+  theorem Term.apply_stable (r : Ren) (σ : Subst (Term V))
+    : r = σ -> rmap r = smap σ
+  := by subst_solve_stable r, σ
+
+  instance : SubstMapStable (Term V) where
+    apply_stable := Term.apply_stable
+
+  theorem Term.apply_compose {s} {σ τ : Subst (Term V)} : s[σ][τ] = s[σ ∘ τ] := by
+    subst_solve_compose Term V, s, σ, τ
+
+  instance : SubstMapCompose (Term V) (Term V) where
+    apply_compose := Term.apply_compose
+
+end LeanSubst.Examples.ArityGeneric

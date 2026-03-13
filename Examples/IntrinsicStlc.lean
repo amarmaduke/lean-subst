@@ -1,4 +1,7 @@
 
+-- This is a demonstration of intrinsic STLC in Lean, it does not use LeanSubst
+-- but it does follow the same pattern employed by LeanSubst
+
 inductive Ty where
 | base : Ty
 | arrow : Ty -> Ty -> Ty
@@ -30,7 +33,7 @@ def Ren.lift {Γ Δ : List Ty} (r : Ren Γ Δ) {T : Ty} : Ren (T::Γ) (T::Δ)
 
 def Term.rmap {Γ Δ : List Ty} (r : Ren Γ Δ) {T : Ty} : Term Γ T -> Term Δ T
 | var v => var (r v)
-| lam t => lam (rmap (Ren.lift r) t)
+| lam t => lam (rmap r.lift t)
 | app f a => app (rmap r f) (rmap r a)
 
 inductive Action (Γ : List Ty) (T : Ty) : Type where
@@ -51,5 +54,5 @@ def Term.smap {Γ Δ : List Ty} (σ : Subst Γ Δ) {T : Ty} : Term Γ T -> Term 
   match σ v with
   | .su t => t
   | .re k => var k
-| lam t => lam (smap (Subst.lift σ) t)
+| lam t => lam (smap σ.lift t)
 | app f a => app (smap σ f) (smap σ a)
