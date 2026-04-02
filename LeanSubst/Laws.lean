@@ -39,9 +39,10 @@ namespace LeanSubst
       variable [RenMap T]
 
       @[simp, grind =]
-      theorem I_lift : +0.lift = +0@T := by
+      theorem I_lift {k} : +0.lift k = +0@T := by
         funext; case _ x =>
         cases x; all_goals (simp [Subst.lift, Subst.id])
+        grind
 
       @[simp, grind =]
       theorem rewrite2 [SubstMap T T] {σ : Subst T} : +0 ∘ σ = σ := by

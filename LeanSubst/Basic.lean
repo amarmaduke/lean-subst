@@ -14,9 +14,8 @@ namespace LeanSubst
 
   def Ren := Sequ Nat
 
-  def Ren.lift : Ren -> Ren
-  | _, 0 => 0
-  | r, n + 1 => r n + 1
+  def Ren.lift (r : Ren) (k : Nat := 1) : Ren
+  | n => if n < k then n else r (n - k) + k
 
   class RenMap (T : Type) where
     rmap : Ren -> T -> T
@@ -44,12 +43,11 @@ namespace LeanSubst
 
   export SubstMap (smap)
 
-  def Subst.lift [RenMap T] : Subst T -> Subst T
-  | _, 0 => re 0
-  | σ, n + 1 =>
-    match σ n with
-    | su t => su (rmap (· + 1) t)
-    | re k => re (k + 1)
+  def Subst.lift [RenMap T] (σ : Subst T) (k : Nat := 1) : Subst T
+  | n => if n < k then re n else
+    match σ (n - k) with
+    | su t => su (rmap (· + k) t)
+    | re i => re (i + k)
 
   @[simp]
   abbrev smap1 [SubstMap S S] := smap (S := S) (T := S)
@@ -104,19 +102,20 @@ namespace LeanSubst
     unfold Subst.id; rfl
 
   @[grind =]
-  theorem Ren.to_lift [RenMap T] {r : Ren} : r.lift.to = (@Ren.to T r).lift := by
+  theorem Ren.to_lift [RenMap T] {r : Ren} {k} : (r.lift k).to = (@Ren.to T r).lift k := by
     funext; case _ x =>
     cases x
     case zero =>
       unfold Ren.to; unfold Ren.lift; simp
-      unfold Subst.lift; simp
+      unfold Subst.lift; grind
     case _ n =>
-      generalize lhsdef : ((@Ren.to T r.lift)) (n + 1) = lhs
-      generalize rhsdef : ((@Ren.to T r).lift) (n + 1) = rhs
+      generalize lhsdef : ((@Ren.to T (r.lift k))) (n + 1) = lhs
+      generalize rhsdef : ((@Ren.to T r).lift k) (n + 1) = rhs
       unfold Ren.to at lhsdef; simp at *
       unfold Ren.lift at lhsdef; simp at *
       unfold Subst.lift at rhsdef; simp at *
-      subst lhsdef; subst rhsdef; rfl
+      simp [Ren.to] at rhsdef
+      subst lhsdef; subst rhsdef; grind
 
   @[simp, grind =]
   theorem Ren.to_compose {r1 r2 : Ren} [RenMap T] [SubstMap T T]
