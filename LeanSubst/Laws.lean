@@ -97,6 +97,31 @@ namespace LeanSubst
           funext; case _ i => simp [Ren.to, Subst.succ]
 
     @[simp, grind =]
+    theorem rewrite_lift_zero [RenMap S] [SubstMap S S] [SubstMapId S S] [SubstMapStable S] {σ : Subst S}
+      : σ.lift 0 = σ
+    := by
+      unfold Subst.lift; funext; case _ i =>
+      simp; generalize zdef : σ i = z
+      cases z <;> simp
+      rw [SubstMapStable.apply_stable (λ x => x) +0 rfl]
+      simp
+
+    @[simp, grind =]
+    theorem rewrite_lift_succ [RenMap S] [SubstMap S S] [SubstMapId S S] [SubstMapStable S] {k} {σ : Subst S}
+      : σ.lift (k + 1) = (σ.lift k).lift
+    := by
+      induction k; simp
+      case _ n ih =>
+        replace ih i : σ.lift (n + 1) i = (σ.lift n).lift 1 i := by rw [ih]
+        funext; case _ i =>
+        cases i <;> simp [Subst.lift]
+        case _ i =>
+          replace ih := ih i
+          unfold Subst.lift at ih; simp at ih
+
+          sorry
+
+    @[simp, grind =]
     theorem rewrite6 [RenMap T] [SubstMap T T] [SubstMapId T T] {σ : Subst T}
       : σ ∘ +0 = σ
     := by
@@ -227,6 +252,34 @@ namespace LeanSubst
       generalize zdef : σ x = z
       cases z <;> simp
 
+    theorem hrewrite_lift1
+      [RenMap S] [RenMap T] [SubstMap S S] [SubstMap S T]
+      [SubstMapId S S] [SubstMapStable S] [SubstMapRenCommute S T]
+      {σ : Subst S} {τ : Subst T}
+      : (σ ◾ τ).lift = σ.lift ◾ τ
+    := by
+      unfold Subst.lift; funext; case _ i =>
+      cases i <;> simp [hcompose]
+      case _ n =>
+        generalize zdef : σ n = z
+        cases z <;> simp; case _ t =>
+        rw [apply_stable (· + 1) (Ren.to (· + 1)) rfl]
+        rw [SubstMapRenCommute.apply_ren_commute]
+
+    @[simp, grind =]
+    theorem hrewrite_lift
+      [RenMap S] [RenMap T] [SubstMap S S] [SubstMap S T]
+      [SubstMapId S S] [SubstMapStable S] [SubstMapRenCommute S T]
+      {k} {σ : Subst S} {τ : Subst T}
+      : (σ ◾ τ).lift k = σ.lift k ◾ τ
+    := by
+      induction k generalizing σ τ
+      case _ => simp
+      case _ i ih =>
+        simp; rw [ih]
+        rw [rewrite_lift_zero]
+        rw [rewrite_lift_zero]
+        rw [hrewrite_lift1]
   end Subst
 
   macro "subst_solve_id" S:term "," T:term "," t:term : tactic => `(tactic| {
@@ -242,7 +295,7 @@ namespace LeanSubst
     induction t generalizing $r $σ
     all_goals simp [rmap, smap, *] at *; try simp [*]
     any_goals solve | (rw [<-h]; simp [Ren.to])
-    all_goals grind
+    all_goals try repeat funext; grind
   })
 
   macro "subst_solve_hcompose"

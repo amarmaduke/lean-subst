@@ -101,6 +101,18 @@ namespace LeanSubst
     unfold Subst.compose; simp
     unfold Subst.id; rfl
 
+  @[simp, grind =]
+  theorem Ren.lift_zero {r : Ren} : r.lift 0 = r := by
+    unfold Ren.lift; funext; case _ i => grind
+
+  @[simp, grind =]
+  theorem Ren.lift_succ {r : Ren} {k} : r.lift (k + 1) = (r.lift k).lift := by
+    induction k; simp
+    case _ n ih =>
+      unfold Ren.lift; funext; case _ i =>
+      simp; unfold Ren.lift at ih; simp at ih
+      grind
+
   @[grind =]
   theorem Ren.to_lift [RenMap T] {r : Ren} {k} : (r.lift k).to = (@Ren.to T r).lift k := by
     funext; case _ x =>
