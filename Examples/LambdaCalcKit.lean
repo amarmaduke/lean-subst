@@ -32,21 +32,33 @@ namespace LeanSubst.Examples.LambdaCalc
   instance instCoe_SubstActionTerm_Term : Coe (Subst.Action Term) Term where
     coe := Term.from_action
 
-  class Kit (A : Type) where
-    coe : A -> Term
-    lift : (Nat -> A) -> Nat -> A
-
-  instance : Kit Nat where
-    coe := Term.var
-    lift := Ren.lift
-
-  instance [RenMap Term] : Kit (Subst.Action Term) where
-    coe := Term.from_action
-    lift := Subst.lift
+  @[simp]
+  def Term.ren_act (r : Nat -> Nat) : Term -> Term
+  | .var x => .var (r x)
+  | t => t
 
   @[simp]
-  def kitmap {A} (σ : Nat -> A) [kit : Kit A] : Term -> Term
-  | .var x => kit.coe (σ x)
+  def Term.subst_act (σ : Nat -> Subst.Action Term) : Term -> Term
+  | .var x => σ x
+  | t => t
+
+  class Kit (T : Type) (A : Type) where
+    act (f : Nat -> A) : T -> T
+    lift (f : Nat -> A) (k : Nat := 1) : Nat -> A
+
+  @[simp]
+  instance : Kit Term Nat where
+    act := Term.ren_act
+    lift f n := Ren.lift f n
+
+  @[simp]
+  instance [RenMap Term] : Kit Term (Subst.Action Term) where
+    act := Term.subst_act
+    lift f n := Subst.lift f n
+
+  @[simp]
+  def kitmap {A} (σ : Nat -> A) [kit : Kit Term A] : Term -> Term
+  | .var x => kit.act σ (.var x)
   | t1 :@ t2 => kitmap σ t1 :@ kitmap σ t2
   | :λ t => :λ kitmap (kit.lift σ) t
 
@@ -98,6 +110,7 @@ namespace LeanSubst.Examples.LambdaCalc
 
   theorem apply_compose {s : Term} {σ τ : Subst Term} : s[σ][τ] = s[σ ∘ τ] := by
     subst_solve_compose Term, s, σ, τ
+
 
   instance : SubstMapCompose Term Term where
     apply_compose := apply_compose

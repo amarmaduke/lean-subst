@@ -106,20 +106,30 @@ namespace LeanSubst
       rw [SubstMapStable.apply_stable (λ x => x) +0 rfl]
       simp
 
-    @[simp, grind =]
-    theorem rewrite_lift_succ [RenMap S] [SubstMap S S] [SubstMapId S S] [SubstMapStable S] {k} {σ : Subst S}
+    @[grind =]
+    theorem rewrite_lift_succ
+      [RenMap S] [SubstMap S S] [SubstMapId S S] [SubstMapStable S] [SubstMapCompose S S]
+      {k} {σ : Subst S}
       : σ.lift (k + 1) = (σ.lift k).lift
     := by
       induction k; simp
       case _ n ih =>
         replace ih i : σ.lift (n + 1) i = (σ.lift n).lift 1 i := by rw [ih]
         funext; case _ i =>
+        have lem := ih i
         cases i <;> simp [Subst.lift]
         case _ i =>
-          replace ih := ih i
-          unfold Subst.lift at ih; simp at ih
-
-          sorry
+          unfold Subst.lift at lem; simp at lem
+          split; simp; case _ h1 =>
+          simp at h1
+          have lem2 : n ≤ i := by omega
+          generalize zdef : σ (i - (n + 1)) = z
+          cases z <;> simp; omega
+          rw [SubstMapStable.apply_stable (· + (n + 2)) _ rfl]
+          rw [SubstMapStable.apply_stable (· + (n + 1)) _ rfl]
+          rw [SubstMapStable.apply_stable (· + 1) _ rfl]
+          rw [SubstMapCompose.apply_compose]
+          congr
 
     @[simp, grind =]
     theorem rewrite6 [RenMap T] [SubstMap T T] [SubstMapId T T] {σ : Subst T}
@@ -225,6 +235,15 @@ namespace LeanSubst
       cases z <;> simp
       rw [SubstMapRenCommute.apply_ren_commute r μ]
 
+    @[grind =]
+    theorem hcomp_distr_ren_right_p1
+      [RenMap S] [RenMap T] [SubstMap S S] [SubstMap S T] [SubstMapRenCommute S T]
+      (σ : Subst S) (μ : Subst T)
+      : (σ ∘ +1) ◾ μ = (σ ◾ μ) ∘ +1
+    := by
+      have lem : @Subst.succ S = Ren.to (· + 1) := by simp
+      rw [lem, hcomp_distr_ren_right]
+
     @[simp, grind =]
     theorem hrewrite6
       [RenMap S] [RenMap T] [SubstMap S S] [SubstMap S T] [SubstMapRenCommute S T]
@@ -269,17 +288,17 @@ namespace LeanSubst
     @[simp, grind =]
     theorem hrewrite_lift
       [RenMap S] [RenMap T] [SubstMap S S] [SubstMap S T]
-      [SubstMapId S S] [SubstMapStable S] [SubstMapRenCommute S T]
+      [SubstMapId S S] [SubstMapStable S] [SubstMapCompose S S] [SubstMapRenCommute S T]
       {k} {σ : Subst S} {τ : Subst T}
       : (σ ◾ τ).lift k = σ.lift k ◾ τ
     := by
       induction k generalizing σ τ
       case _ => simp
       case _ i ih =>
+        rw [rewrite_lift_succ]
         simp; rw [ih]
-        rw [rewrite_lift_zero]
-        rw [rewrite_lift_zero]
-        rw [hrewrite_lift1]
+        rw [rewrite_lift_succ]
+        simp; grind
   end Subst
 
   macro "subst_solve_id" S:term "," T:term "," t:term : tactic => `(tactic| {
