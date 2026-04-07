@@ -41,6 +41,24 @@ namespace LeanSubst.Examples.LambdaCalc
   instance : RenMap Term where
     rmap := rmap
 
+  @[simp, grind =]
+  theorem ren_var {x} {r : Ren} : (Term.var x)⟨r⟩ = .var (r x) := by
+    simp [RenMap.rmap]
+
+  @[simp, grind =]
+  theorem ren_app {t1 t2} {r : Ren} : (t1 :@ t2)⟨r⟩ = t1⟨r⟩ :@ t2⟨r⟩ := by
+    simp [RenMap.rmap]
+
+  @[simp, grind =]
+  theorem ren_lam {t} {r : Ren} : (:λ t)⟨r⟩ = :λ t⟨r.lift⟩ := by
+    simp [RenMap.rmap]
+
+  instance : RenMapId Term where
+    apply_id := by intro t; induction t <;> simp [*]
+
+  instance : RenMapCompose Term where
+    apply_compose := by intro t r1 r2; induction t generalizing r1 r2 <;> simp [*]
+
   @[simp]
   def smap (σ : Subst Term) : Term -> Term
   | .var x => σ x
@@ -84,10 +102,13 @@ namespace LeanSubst.Examples.LambdaCalc
   instance : SubstMapStable Term where
     apply_stable := apply_stable
 
-  theorem apply_compose {s : Term} {σ τ : Subst Term} : s[σ][τ] = s[σ ∘ τ] := by
-    subst_solve_compose Term, s, σ, τ
+  instance : SubstMapRenComposeLeft Term Term where
+    apply_ren_compose_left := by subst_solve_compose
+
+  instance : SubstMapRenComposeRight Term Term where
+    apply_ren_compose_right := by subst_solve_compose
 
   instance : SubstMapCompose Term Term where
-    apply_compose := apply_compose
+    apply_compose := by subst_solve_compose
 
 end LeanSubst.Examples.LambdaCalc

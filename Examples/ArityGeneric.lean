@@ -53,6 +53,34 @@ namespace LeanSubst.Examples.ArityGeneric
     rmap := Term.rmap
 
   @[simp]
+  theorem Term.ren_var {x} {r : Ren} : (Term.var (V := V) x)⟨r⟩ = .var (r x) := by
+    simp [RenMap.rmap]
+
+  @[simp]
+  theorem Term.ren_bind {n} {v : V .bind n} {ts t} {r : Ren}
+    : (bind v ts t)⟨r⟩ = .bind v (λ k => (ts k)⟨r⟩) t⟨r.lift⟩
+  := by
+    simp [RenMap.rmap]
+
+  @[simp]
+  theorem Term.ren_ctor {n} {v : V .ctor n} {ts} {r : Ren}
+    : (Term.ctor v ts)⟨r⟩ = .ctor v (λ k => (ts k)⟨r⟩)
+  := by
+    simp [RenMap.rmap]
+
+  @[simp]
+  theorem Term.ren_variadic {n} {t : Term V} {ts} {r : Ren}
+    : (Term.variadic n t ts)⟨r⟩ = .variadic n t⟨r⟩ (λ k => (ts k)⟨r⟩)
+  := by
+    simp [RenMap.rmap]
+
+  instance : RenMapId (Term V) where
+    apply_id := by intro t; induction t <;> simp [*]
+
+  instance : RenMapCompose (Term V) where
+    apply_compose := by intro t r1 r2; induction t generalizing r1 r2 <;> simp [*]
+
+  @[simp]
   def Term.smap (σ : Subst (Term V)) : Term V -> Term V
   | var x => σ x
   | bind v ts t => bind v (smap σ <$> ts) (smap σ.lift t)
@@ -106,10 +134,13 @@ namespace LeanSubst.Examples.ArityGeneric
   instance : SubstMapStable (Term V) where
     apply_stable := Term.apply_stable
 
-  theorem Term.apply_compose {s} {σ τ : Subst (Term V)} : s[σ][τ] = s[σ ∘ τ] := by
-    subst_solve_compose Term V, s, σ, τ
+  instance : SubstMapRenComposeLeft (Term V) (Term V) where
+    apply_ren_compose_left := by subst_solve_compose
+
+  instance : SubstMapRenComposeRight (Term V) (Term V) where
+    apply_ren_compose_right := by subst_solve_compose
 
   instance : SubstMapCompose (Term V) (Term V) where
-    apply_compose := Term.apply_compose
+    apply_compose := by subst_solve_compose
 
 end LeanSubst.Examples.ArityGeneric
