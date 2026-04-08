@@ -112,19 +112,11 @@ namespace LeanSubst.Examples.LambdaCalc
     generalize zdef : σ x = z
     cases z <;> simp [Term.from_action]
 
-  theorem apply_id {t : Term} : t[+0] = t := by
-    induction t
-    all_goals (simp at * <;> try simp [*])
-
   instance : SubstMapId Term Term where
-    apply_id := apply_id
-
-  theorem apply_stable (r : Ren) (σ : Subst Term)
-    : r = σ -> rmap r = smap σ
-  := by subst_solve_stable r, σ
+    apply_id := by subst_solve_id
 
   instance : SubstMapStable Term where
-    apply_stable := apply_stable
+    apply_stable := by subst_solve_stable
 
   instance : SubstMapRenComposeLeft Term Term where
     apply_ren_compose_left := by subst_solve_compose

@@ -120,19 +120,11 @@ namespace LeanSubst.Examples.ArityGeneric
     generalize zdef : σ x = z
     cases z <;> simp [Term.from_action]
 
-  theorem Term.apply_id {t : Term V} : t[+0] = t := by
-    induction t
-    all_goals (simp at * <;> try simp [*])
-
   instance : SubstMapId (Term V) (Term V) where
-    apply_id := Term.apply_id
-
-  theorem Term.apply_stable (r : Ren) (σ : Subst (Term V))
-    : r = σ -> rmap r = smap σ
-  := by subst_solve_stable r, σ
+    apply_id := by subst_solve_id
 
   instance : SubstMapStable (Term V) where
-    apply_stable := Term.apply_stable
+    apply_stable := by subst_solve_stable
 
   instance : SubstMapRenComposeLeft (Term V) (Term V) where
     apply_ren_compose_left := by subst_solve_compose
