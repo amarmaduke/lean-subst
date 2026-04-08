@@ -111,9 +111,10 @@ namespace LeanSubst
   theorem Red.id_action {x} : Ren.id x = x := by simp [Ren.id]
 
   @[simp]
-  theorem Ren.lift_id : Ren.lift Ren.id = Ren.id := by
+  theorem Ren.lift_id {k} : Ren.lift Ren.id k = Ren.id := by
     funext; case _ x =>
     cases x <;> simp [lift, id]
+    omega
 
   @[grind =]
   theorem Ren.to_lift [RenMap T] {r : Ren} {k} : (r.lift k).to = (@Ren.to T r).lift k := by

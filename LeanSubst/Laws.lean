@@ -482,6 +482,30 @@ namespace LeanSubst
     rw [lemma7]
     unfold Subst.compose; simp
 
+  @[grind =]
+  theorem Subst.Compose.lemma10
+    [RenMap S] [RenMap T] [SubstMap S S] [SubstMap S T]
+    [SubstMapStable S] [SubstMapRenCommute S T]
+    {σ : Subst S} {μ : Subst T} {r : Ren}
+    : (σ ∘ r.to) ◾ μ = (σ ◾ μ) ∘ r.to
+  := by
+    funext; case _ x =>
+    simp [Subst.hcompose, Subst.compose]
+    generalize zdef : σ x = z
+    cases z <;> simp [Ren.to]
+    rw [<-apply_stable _ r.to rfl]
+    rw [Subst.apply_ren_commute]
+
+  @[grind =]
+  theorem Subst.Compose.lemma10s
+    [RenMap S] [RenMap T] [SubstMap S S] [SubstMap S T]
+    [SubstMapStable S] [SubstMapRenCommute S T]
+    {σ : Subst S} {μ : Subst T}
+    : (σ ∘ +1) ◾ μ = (σ ◾ μ) ∘ +1
+  := by
+    have lem := lemma10 (σ := σ) (μ := μ) (r := (· + 1))
+    simp at lem; exact lem
+
   theorem Subst.rewrite_lift_compose_k1
     [RenMap T] [SubstMap T T] [SubstMapStable T]
     [SubstMapRenComposeLeft T T] [SubstMapRenComposeRight T T]
@@ -510,53 +534,31 @@ namespace LeanSubst
       rw [rewrite_lift_succ (σ := τ)]
       rw [rewrite_lift_compose_k1]
 
-  macro "subst_solve_id" S:term "," T:term "," t:term : tactic => `(tactic| {
-    have lem (t : $S) (r : Ren) : t[+0 ◾ (@Ren.to $T r):$S] = t := by
-      induction t generalizing r <;> simp at *
-      all_goals try simp [*]
-    have h := lem $t (λ x => x); simp at h; exact h
+  macro "subst_solve_id" : tactic => `(tactic| {
+    intro t; induction t
+    any_goals solve | simp [*]
+    all_goals try simp at *; simp [*]; grind
   })
 
-  macro "subst_solve_stable" r:term "," σ:term : tactic => `(tactic| {
-    intro h
+  macro "subst_solve_stable" : tactic => `(tactic| {
+    intro r σ h
     funext; case _ t =>
-    induction t generalizing $r $σ
+    induction t generalizing r σ
     all_goals simp [rmap, smap, *] at *; try simp [*]
     any_goals solve | (rw [<-h]; simp [Ren.to])
     all_goals try repeat funext; grind
   })
 
-  macro "subst_solve_hcompose"
-    S:term ","
-    T:term ","
-    s:Lean.Parser.Tactic.elimTarget ","
-    σ:term ","
-    τ:term
-    : tactic =>
-  `(tactic| {
-    have lem1 {σ : Subst $S} {μ : Subst $T} {r : Ren} : (σ ∘ r.to) ◾ μ = (σ ◾ μ) ∘ r.to := by
-      funext; case _ x =>
-      simp [Subst.hcompose, Subst.compose]
-      generalize zdef : σ x = z
-      cases z <;> simp [Ren.to]
-      rw [Subst.apply_ren_commute]
-    have lem2 {σ : Subst $S} {μ : Subst $T} : (σ ∘ +1) ◾ μ = (σ ◾ μ) ∘ +1 := by
-      have lem := @lem1 σ μ (· + 1)
-      simp at lem; exact lem
-    induction $s generalizing $σ $τ <;> simp at *
-    all_goals simp [*]
-  })
-
-  macro "subst_solve_compose" : tactic =>
-  `(tactic| {
-      intro s σ τ
-      induction s generalizing σ τ
-      any_goals solve | simp [*]
-      try any_goals solve | (
-        try simp [-Subst.rewrite_lift, *]
-        try rw [<-Ren.to_lift]
-        try simp [-Subst.rewrite_lift, *]
-        try grind)
+  macro "subst_solve_compose" : tactic => `(tactic| {
+    intro s σ τ
+    induction s generalizing σ τ
+    any_goals solve | simp [*]
+    try any_goals solve | (
+      try simp [-Subst.rewrite_lift, *]
+      try funext; case _ x =>
+      try rw [<-Ren.to_lift]
+      try simp [-Subst.rewrite_lift, *]
+      try grind)
   })
 
 end LeanSubst
