@@ -70,7 +70,7 @@ namespace LeanSubst.Examples.LambdaCalc
 
   @[simp, grind =]
   theorem ren_var {x} {r : Ren} : (Term.var x)⟨r⟩ = .var (r x) := by
-    simp [RenMap.rmap]
+    simp +instances [RenMap.rmap]
 
   @[simp, grind =]
   theorem ren_app {t1 t2} {r : Ren} : (t1 :@ t2)⟨r⟩ = t1⟨r⟩ :@ t2⟨r⟩ := by
@@ -78,7 +78,7 @@ namespace LeanSubst.Examples.LambdaCalc
 
   @[simp, grind =]
   theorem ren_lam {t} {r : Ren} : (:λ t)⟨r⟩ = :λ t⟨r.lift⟩ := by
-    simp [RenMap.rmap]
+    simp +instances [RenMap.rmap]
 
   instance : RenMapId Term where
     apply_id := by intro t; induction t <;> simp [*]
@@ -94,15 +94,15 @@ namespace LeanSubst.Examples.LambdaCalc
 
   @[simp, grind =]
   theorem subst_var {x} {σ : Subst Term} : (Term.var x)[σ] = σ x := by
-    simp [SubstMap.smap]
+    simp +instances [SubstMap.smap]
 
   @[simp, grind =]
   theorem subst_app {t1 t2} {σ : Subst Term} : (t1 :@ t2)[σ] = t1[σ] :@ t2[σ] := by
-    simp [SubstMap.smap]
+    simp +instances [SubstMap.smap]
 
   @[simp, grind =]
   theorem subst_lam {t} {σ : Subst Term} : (:λ t)[σ] = :λ t[σ.lift] := by
-    simp [SubstMap.smap]
+    simp +instances [SubstMap.smap]
 
   @[simp]
   theorem Term.from_action_compose {x} {σ τ : Subst Term}

@@ -536,23 +536,23 @@ namespace LeanSubst
 
   macro "subst_solve_id" : tactic => `(tactic| {
     intro t; induction t
-    any_goals solve | simp [*]
-    all_goals try simp at *; simp [*]; grind
+    any_goals solve | simp +instances [*]
+    all_goals try simp at *; simp  +instances [*]; grind
   })
 
   macro "subst_solve_stable" : tactic => `(tactic| {
     intro r σ h
     funext; case _ t =>
     induction t generalizing r σ
-    all_goals simp [rmap, smap, *] at *; try simp [*]
-    any_goals solve | (rw [<-h]; simp [Ren.to])
+    all_goals simp [rmap, smap, *] at *; try simp +instances [*]
+    any_goals solve | (rw [<-h]; simp +instances [Ren.to])
     all_goals try repeat funext; grind
   })
 
   macro "subst_solve_compose" : tactic => `(tactic| {
     intro s σ τ
     induction s generalizing σ τ
-    any_goals solve | simp [*]
+    any_goals solve | simp +instances [*]
     try any_goals solve | (
       try simp [-Subst.rewrite_lift, *]
       try funext; case _ x =>
