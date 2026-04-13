@@ -17,7 +17,7 @@ namespace LeanSubst
     apply_stable (r : Ren) (σ : Subst S) : r = σ -> rmap (T := S) r = smap σ
 
   class SubstMapRenCommute (S T : Type) [RenMap S] [RenMap T] [SubstMap S T] where
-    apply_ren_commute {s : S} (r : Ren) (τ : Subst T) : s⟨r⟩[τ:T] = s[τ:T]⟨r⟩
+    apply_ren_commute {s : S} (r : Ren) (τ : Subst T) : s⟨r⟩[τ: T] = s[τ:T]⟨r⟩
 
   class SubstMapRenComposeLeft (S T : Type) [RenMap S] [RenMap T] [SubstMap T T] [SubstMap S T] where
     apply_ren_compose_left {s : S} {r : Ren} {τ : Subst T} : s[r.to:T][τ:_] = s[r.to ∘ τ:T]
@@ -422,7 +422,7 @@ namespace LeanSubst
       rw [apply_stable (· + 1) _ rfl]
       rw [apply_ren_compose_left]
       rw [apply_ren_compose_left]
-      grind
+      simp
 
   @[grind =]
   theorem Subst.Compose.lemma6
