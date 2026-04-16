@@ -1,5 +1,6 @@
 import LeanSubst
 import Lilac
+open Lilac
 
 namespace LeanSubst.Examples.ArityGeneric
 
@@ -8,9 +9,9 @@ namespace LeanSubst.Examples.ArityGeneric
 
   inductive Term (V : VariantSort -> Nat -> Prop) where
   | var : Nat -> Term V
-  | bind {n} : V .bind n -> Vect n (Term V) -> Term V -> Term V
-  | ctor {n} : V .ctor n -> Vect n (Term V) -> Term V
-  | variadic n : Term V -> Vect n (Term V) -> Term V
+  | bind {n} : V .bind n -> Fun.Vec (Term V) n -> Term V -> Term V
+  | ctor {n} : V .ctor n -> Fun.Vec (Term V) n -> Term V
+  | variadic n : Term V -> Fun.Vec (Term V) n -> Term V
 
   variable {V : VariantSort -> Nat -> Prop}
 

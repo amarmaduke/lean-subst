@@ -1,10 +1,11 @@
 import Lilac
+open Lilac
 
 namespace LeanSubst
   universe u
   variable {S T : Type}
 
-  def Ren := Sequ Nat
+  def Ren := Fun.Sequ Nat
 
   def Ren.id : Ren := λ x => x
 
@@ -23,7 +24,7 @@ namespace LeanSubst
 
   export Subst.Action (re su)
 
-  def Subst (T : Type) := Sequ $ Subst.Action T
+  def Subst (T : Type) := Fun.Sequ $ Subst.Action T
 
   @[coe]
   def Ren.to : Ren -> Subst T
@@ -171,10 +172,10 @@ namespace LeanSubst
   instance : HAndThen Ren (Nat -> Nat) Ren where
     hAndThen f g := (g ()) ∘ f
 
-  instance : HAndThen (Sequ Nat) Ren Ren where
+  instance : HAndThen (Fun.Sequ Nat) Ren Ren where
     hAndThen f g := (g ()) ∘ f
 
-  instance : HAndThen Ren (Sequ Nat) Ren where
+  instance : HAndThen Ren (Fun.Sequ Nat) Ren where
     hAndThen f g := (g ()) ∘ f
 
   @[simp]

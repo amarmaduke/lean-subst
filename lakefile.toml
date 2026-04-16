@@ -8,7 +8,7 @@ leanOptions = { autoImplicit = false }
 name = "lilac"
 scope = "amarmaduke"
 git = "https://github.com/amarmaduke/lilac"
-rev = "8dcd926e50b3b8efec926ecf4b03d43f5465088b"
+rev = "fa045188b1b8b2b4667808e268d4638bab389211"
 
 [[lean_lib]]
 name = "LeanSubst"
