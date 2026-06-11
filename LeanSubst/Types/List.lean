@@ -1,5 +1,5 @@
 
-import LeanSubst.Laws
+import LeanSubst.Class
 
 namespace LeanSubst
 
