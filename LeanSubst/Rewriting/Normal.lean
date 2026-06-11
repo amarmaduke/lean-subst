@@ -1,8 +1,7 @@
 
 import Init.WF
-import LeanSubst.Ren
-import LeanSubst.Subst
-import LeanSubst.Reduction
+import LeanSubst.Laws
+import LeanSubst.Rewriting.Reduction
 
 namespace LeanSubst
   universe u
@@ -113,7 +112,7 @@ namespace LeanSubst
         intro a; replace h := h a
         apply equiv_acc.1 h
 
-      variable [RenMap T] [SubstMap T T] [Substitutive R]
+      variable [RenMap T T] [SubstMap T T] [Substitutive R]
 
       theorem subst_preimage {σ : Subst T} {t} : SN R t[σ] -> SN R t := by
         intro r; apply preimage (smap σ) t _ r

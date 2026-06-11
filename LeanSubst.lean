@@ -1,9 +1,8 @@
 
-import LeanSubst.Ren
-import LeanSubst.HetRen
-import LeanSubst.Subst
+import LeanSubst.Basic
+import LeanSubst.Ops
 import LeanSubst.Laws
-import LeanSubst.Option
-import LeanSubst.List
-import LeanSubst.Reduction
-import LeanSubst.Normal
+import LeanSubst.Types.Option
+import LeanSubst.Types.List
+import LeanSubst.Rewriting.Reduction
+import LeanSubst.Rewriting.Normal

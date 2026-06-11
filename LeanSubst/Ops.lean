@@ -1,309 +1,211 @@
 
-import LeanSubst.Types
+import LeanSubst.Basic
 
 namespace LeanSubst
 
 universe u1 u2 u3
-variable {S : Type u1} {T : Type u2}
+variable {S : Type u1} {T : Type u2} {U : Type u3}
 
-----------------------------------------------------------------------------------------------------
----- Translation
-----------------------------------------------------------------------------------------------------
-def Ren.het T (r : Ren) : HetRen T := ⟨r.act⟩
-
-@[simp]
-theorem Ren.het_act {r : Ren} {x} : (r.het T).act x = r.act x := by simp [Ren.het]
-
-def HetRen.forget (r : HetRen T) : Ren := ⟨r.act⟩
-
-@[simp]
-theorem HetRen.forget_act {r : HetRen T} {x} : r.forget.act x = r.act x := by simp [HetRen.forget]
-
-@[simp]
-theorem Ren.het_forget (r : Ren) : (r.het T).forget = r := by simp [Ren.het, HetRen.forget]
-
-@[simp]
-theorem HetRen.forget_het (r : HetRen T) : r.forget.het T = r := by simp [Ren.het, HetRen.forget]
-
-def Subst.het S (σ : Subst T) : HetSubst S T := ⟨σ.act⟩
-
-@[simp]
-theorem Subst.het_act {r : Subst T} {x} : (r.het S).act x = r.act x := by simp [Subst.het]
-
-def HetSubst.forget (σ : HetSubst S T) : Subst T := ⟨σ.act⟩
-
-@[simp]
-theorem HetSubst.forget_act {r : HetSubst S T} {x} : r.forget.act x = r.act x := by
-  simp [HetSubst.forget]
-
-@[simp]
-theorem Subst.het_forget (σ : Subst T) : (σ.het S).forget = σ := by
-  simp [Subst.het, HetSubst.forget]
-
-@[simp]
-theorem HetSubst.forget_het (σ : HetSubst S T) : σ.forget.het S = σ := by
-  simp [Subst.het, HetSubst.forget]
-
-def Ren.to (r : Ren) : Subst S := ⟨λ x => re (r.act x)⟩
-
-@[simp]
-theorem Ren.to_act {r : Ren} {x} : (@Ren.to S r).act x = re (r.act x) := by simp [Ren.to]
-
-def HetRen.to (r : HetRen T) : HetSubst S T := ⟨λ x => re (r.act x)⟩
-
-@[simp]
-theorem HetRen.to_act {r : HetRen T} {x} : (@HetRen.to S T r).act x = re (r.act x) := by
-  simp [HetRen.to]
 ----------------------------------------------------------------------------------------------------
 ---- Action
 ----------------------------------------------------------------------------------------------------
 @[simp]
-def Action.rmap [RenMap S] (r : Ren) : Action S -> Action S
+def Action.rmap [RenMap S T] (r : Ren T) : Action S -> Action S
 | re x => re $ r.act x
 | su t => su t⟨r⟩
 
-instance [RenMap S] : RenMap (Action S) where
+instance (priority := high) [RenMap T T] : RenMap (Action T) T where
   rmap := Action.rmap
 
 @[simp]
-theorem Action.rmap_re [RenMap S] {r : Ren} {x : Nat}
-  : (@re S x)⟨r⟩ = re (r.act x)
-:= by simp [RenMap.rmap]
+theorem Action.rmap_re [RenMap T T] {r : Ren T} {x : Nat} : (@re T x)⟨r⟩ = re (r.act x) := by
+  simp [RenMap.rmap]
 
 @[simp]
-theorem Action.rmap_su [RenMap S] {r : Ren} {t : S} : (su t)⟨r⟩ = su t⟨r⟩ := by simp [RenMap.rmap]
+theorem Action.rmap_su [RenMap T T] {r : Ren T} {t : T} : (su t)⟨r⟩ = su t⟨r⟩ := by
+  simp [RenMap.rmap]
 
 @[simp]
-def Action.hsmap [SubstMap S] (σ : HetSubst (Action S) S) : Action S -> Action S
+def Action.hrmap [RenMap S T] (r : Ren T) : Action S -> Action S
+| re x => re x
+| su t => su t⟨r⟩
+
+instance [RenMap S T] : RenMap (Action S) T where
+  rmap := Action.hrmap
+
+@[simp]
+theorem Action.hrmap_re [RenMap S T] {r : Ren T} {x : Nat} : (@re S x)⟨r⟩ = re x := by
+  simp [RenMap.rmap]
+
+@[simp]
+theorem Actionh.rmap_su [RenMap S T] {r : Ren T} {t : S} : (su t)⟨r⟩ = su t⟨r⟩ := by
+  simp [RenMap.rmap]
+
+@[simp]
+def Action.smap [SubstMap T T] (σ : Subst T) : Action T -> Action T
 | re x => σ.act x
-| su t => su t[σ.forget]
+| su t => su t[σ]
 
-instance [SubstMap S] : HetSubstMap (Action S) S where
-  hsmap := Action.hsmap
-
-@[simp]
-theorem Action.hsmap_re [SubstMap S] {σ : HetSubst (Action S) S} {x : Nat}
-  : (@re S x)[σ] = σ.act x
-:= by simp [HetSubstMap.hsmap]
+instance (priority := high) [SubstMap T T] : SubstMap (Action T) T where
+  smap := Action.smap
 
 @[simp]
-theorem Action.hsmap_su [SubstMap S] {σ : HetSubst (Action S) S} {t : S}
-  : (su t)[σ] = su t[σ.forget]
-:= by simp [HetSubstMap.hsmap]
+theorem Action.smap_re [SubstMap T T] {σ : Subst T} {x : Nat} : (@re T x)[σ] = σ.act x := by
+  simp [SubstMap.smap]
+
+@[simp]
+theorem Action.smap_su [SubstMap T T] {σ : Subst T} {t : T} : (su t)[σ] = su t[σ] := by
+  simp [SubstMap.smap]
+
+@[simp]
+def Action.hsmap [SubstMap S T] (σ : Subst T) : Action S -> Action S
+| re x => re x
+| su t => su t[σ]
+
+instance [SubstMap S T] : SubstMap (Action S) T where
+  smap := Action.hsmap
+
+@[simp]
+theorem Action.hsmap_re [SubstMap S T] {σ : Subst T} {x : Nat} : (@re S x)[σ] = re x := by
+  simp [SubstMap.smap]
+
+@[simp]
+theorem Actionh.smap_su [SubstMap S T] {σ : Subst T} {t : S} : (su t)[σ] = su t[σ] := by
+  simp [SubstMap.smap]
 ----------------------------------------------------------------------------------------------------
 ---- Identity
 ----------------------------------------------------------------------------------------------------
-def Ren.id : Ren := ⟨λ x => x⟩
+def Ren.id T : Ren T := ⟨λ x => x⟩
 
 @[simp]
-theorem Ren.id_action {x} : id.act x = x := by simp [Ren.id]
+theorem Ren.id_action {x} : (id T).act x = x := by simp [Ren.id]
 
-def HetRen.id T : HetRen T := ⟨λ x => x⟩
-
-@[simp]
-theorem HetRen.id_action {x} : (id T).act x = x := by simp [HetRen.id]
-
-def Subst.id : Subst S := ⟨λ x => re x⟩
-notation "+0" => Subst.id
+def Subst.id T : Subst T := ⟨λ x => re x⟩
+notation "+0" => Subst.id _
 
 @[simp]
-theorem Subst.id_action {x} : (@id S).act x = re x := by simp [Subst.id]
-
-def HetSubst.id T : HetSubst S T := ⟨λ x => re x⟩
-macro "+0@" noWs T:term : term =>`(HetSubst.id $T)
-
-@[simp]
-theorem HetSubst.id_action {x} : (@id S T).act x = re x := by simp [HetSubst.id]
+theorem Subst.id_action {x} : (id T).act x = re x := by simp [Subst.id]
 ----------------------------------------------------------------------------------------------------
 ---- Successor
 ----------------------------------------------------------------------------------------------------
-def Ren.succ : Ren := ⟨(· + 1)⟩
+def Ren.succ T : Ren T := ⟨(· + 1)⟩
 
 @[simp]
-theorem Ren.succ_action {x} : succ.act x = x + 1 := by simp [Ren.succ]
+theorem Ren.succ_action {x} : (succ T).act x = x + 1 := by simp [Ren.succ]
 
-def HetRen.succ T : HetRen T := ⟨(· + 1)⟩
-
-@[simp]
-theorem HetRen.succ_action {x} : (succ T).act x = x + 1 := by simp [HetRen.succ]
-
-def Subst.succ : Subst S := ⟨λ x => re $ x + 1⟩
-notation "+1" => Subst.succ
+def Subst.succ T : Subst T := ⟨λ x => re $ x + 1⟩
+notation "+1" => Subst.succ _
 
 @[simp]
-theorem Subst.succ_action {x} : (@succ S).act x = re (x + 1) := by simp [Subst.succ]
-
-def HetSubst.succ T : HetSubst S T := ⟨λ x => re $ x + 1⟩
-macro "+1@" noWs T:term : term =>`(HetSubst.succ $T)
-
-@[simp]
-theorem HetSubst.succ_action {x} : (@succ S T).act x = re (x + 1) := by simp [HetSubst.succ]
+theorem Subst.succ_action {x} : (succ T).act x = re (x + 1) := by simp [Subst.succ]
 ----------------------------------------------------------------------------------------------------
 ---- Predecessor
 ----------------------------------------------------------------------------------------------------
-def Ren.pred : Ren := ⟨(· - 1)⟩
+def Ren.pred T : Ren T := ⟨(· - 1)⟩
 
 @[simp]
-theorem Ren.pred_action {x} : pred.act x = x - 1 := by simp [Ren.pred]
+theorem Ren.pred_action {x} : (pred T).act x = x - 1 := by simp [Ren.pred]
 
-def HetRen.pred T : HetRen T := ⟨(· - 1)⟩
-
-@[simp]
-theorem HetRen.pred_action {x} : (pred T).act x = x - 1 := by simp [HetRen.pred]
-
-def Subst.pred : Subst S := ⟨λ x => re $ x - 1⟩
-notation "-1" => Subst.pred
+def Subst.pred T : Subst T := ⟨λ x => re $ x - 1⟩
+notation "-1" => Subst.pred _
 
 @[simp]
-theorem Subst.pred_action {x} : (@pred S).act x = re (x - 1) := by simp [Subst.pred]
-
-def HetSubst.pred : HetSubst S T := ⟨λ x => re $ x - 1⟩
-macro "-1@" noWs T:term : term =>`(HetSubst.pred $T)
-
-@[simp]
-theorem HetSubst.pred_action {x} : (@pred S T).act x = re (x - 1) := by simp [HetSubst.pred]
+theorem Subst.pred_action {x} : (pred T).act x = re (x - 1) := by simp [Subst.pred]
 ----------------------------------------------------------------------------------------------------
 ---- Addition
 ----------------------------------------------------------------------------------------------------
-def Ren.add (k : Nat) : Ren := ⟨(· + k)⟩
+def Ren.add T (k : Nat) : Ren T := ⟨(· + k)⟩
 
 @[simp]
-theorem Ren.add_action {k x} : (add k).act x = x + k := by simp [Ren.add]
+theorem Ren.add_action {k x} : (add T k).act x = x + k := by simp [Ren.add]
 
 @[simp]
-theorem Ren.add_zero : add 0 = id := by simp [Ren.add, Ren.id]
+theorem Ren.add_zero : add T 0 = id T := by simp [Ren.add, Ren.id]
 
 @[simp]
-theorem Ren.add_one : add 1 = succ := by simp [Ren.add, Ren.succ]
+theorem Ren.add_one : add T 1 = succ T := by simp [Ren.add, Ren.succ]
 
-def HetRen.add T (k : Nat) : HetRen T := ⟨(· + k)⟩
-
-@[simp]
-theorem HetRen.add_action {k x} : (add T k).act x = x + k := by simp [HetRen.add]
+def Subst.add T (k : Nat) : Subst T := ⟨λ x => re $ x + k⟩
 
 @[simp]
-theorem HetRen.add_zero : add T 0 = id T := by simp [HetRen.add, HetRen.id]
+theorem Subst.add_action {k x} : (add T k).act x = re (x + k) := by simp [Subst.add]
 
 @[simp]
-theorem HetRen.add_one : add T 1 = succ T := by simp [HetRen.add, HetRen.succ]
-
-def Subst.add (k : Nat) : Subst S := ⟨λ x => re $ x + k⟩
+theorem Subst.add_zero : add T 0 = +0 := by simp [Subst.add, Subst.id]
 
 @[simp]
-theorem Subst.add_action {k x} : (@add S k).act x = re (x + k) := by simp [Subst.add]
-
-@[simp]
-theorem Subst.add_zero : @add S 0 = id := by simp [Subst.add, Subst.id]
-
-@[simp]
-theorem Subst.add_one : @add S 1 = succ := by simp [Subst.add, Subst.succ]
-
-def HetSubst.add (k : Nat) : HetSubst S T := ⟨λ x => re $ x + k⟩
-
-@[simp]
-theorem HetSubst.add_action {k x} : (@add S T k).act x = re (x + k) := by simp [HetSubst.add]
-
-@[simp]
-theorem HetSubst.add_zero : @add S T 0 = id T := by simp [HetSubst.add, HetSubst.id]
-
-@[simp]
-theorem HetSubst.add_one : @add S T 1 = succ T := by simp [HetSubst.add, HetSubst.succ]
+theorem Subst.add_one : add T 1 = +1 := by simp [Subst.add, Subst.succ]
 ----------------------------------------------------------------------------------------------------
 ---- Subtraction
 ----------------------------------------------------------------------------------------------------
-def Ren.sub (k : Nat) : Ren := ⟨(· - k)⟩
+def Ren.sub T (k : Nat) : Ren T := ⟨(· - k)⟩
 
 @[simp]
-theorem Ren.sub_action {k x} : (sub k).act x = x - k := by simp [Ren.sub]
+theorem Ren.sub_action {k x} : (sub T k).act x = x - k := by simp [Ren.sub]
 
 @[simp]
-theorem Ren.sub_zero : sub 0 = id := by simp [Ren.sub, Ren.id]
+theorem Ren.sub_zero : sub T 0 = id T := by simp [Ren.sub, Ren.id]
 
 @[simp]
-theorem Ren.sub_one : sub 1 = pred := by simp [Ren.sub, Ren.pred]
+theorem Ren.sub_one : sub T 1 = pred T := by simp [Ren.sub, Ren.pred]
 
-def HetRen.sub T (k : Nat) : HetRen T := ⟨(· - k)⟩
-
-@[simp]
-theorem HetRen.sub_action {k x} : (sub T k).act x = x - k := by simp [HetRen.sub]
+def Subst.sub T (k : Nat) : Subst T := ⟨λ x => re $ x - k⟩
 
 @[simp]
-theorem HetRen.sub_zero : sub T 0 = id T := by simp [HetRen.sub, HetRen.id]
+theorem Subst.sub_action {k x} : (@sub T k).act x = re (x - k) := by simp [Subst.sub]
 
 @[simp]
-theorem HetRen.sub_one : sub T 1 = pred T := by simp [HetRen.sub, HetRen.pred]
+theorem Subst.sub_zero : sub T 0 = +0 := by simp [Subst.sub, Subst.id]
+
+@[simp]
+theorem Subst.sub_one : sub T 1 = -1 := by simp [Subst.sub, Subst.pred]
+
 ----------------------------------------------------------------------------------------------------
 ---- Cons
 ----------------------------------------------------------------------------------------------------
-def Ren.cons (a : Nat) (r : Ren) : Ren := .mk λ n =>
+def Ren.cons (a : Nat) (r : Ren T) : Ren T := .mk λ n =>
   match n with
   | 0 => a
   | n + 1 => r.act n
 infixr:67 (name := Ren.cons_notation) " :: " => Ren.cons
 
 @[simp]
-theorem Ren.cons_action0 {a} {r : Ren} : (a::r).act 0 = a := by simp [Ren.cons]
+theorem Ren.cons_action0 {a} {r : Ren T} : (a::r).act 0 = a := by simp [Ren.cons]
 
 @[simp]
-theorem Ren.cons_action {a i} {r : Ren} : (a::r).act (i + 1) = r.act i := by simp [Ren.cons]
+theorem Ren.cons_action {a i} {r : Ren T} : (a::r).act (i + 1) = r.act i := by simp [Ren.cons]
 
-def HetRen.cons (a : Nat) (r : HetRen T) : HetRen T := .mk λ n =>
+def Subst.cons (a : Action T) (σ : Subst T) : Subst T := .mk λ n =>
   match n with
   | 0 => a
-  | n + 1 => r.act n
-infixr:67 (name := HetRen.cons_notation) " :: " => HetRen.cons
-
-@[simp]
-theorem HetRen.cons_action0 {a} {r : HetRen T} : (a::r).act 0 = a := by simp [HetRen.cons]
-
-@[simp]
-theorem HetRen.cons_action {a i} {r : HetRen T} : (a::r).act (i + 1) = r.act i := by
-  simp [HetRen.cons]
-
-def Subst.cons (a : Action S) (r : Subst S) : Subst S := .mk λ n =>
-  match n with
-  | 0 => a
-  | n + 1 => r.act n
+  | n + 1 => σ.act n
 infixr:67 (name := Subst.cons_notation) " :: " => Subst.cons
 
 @[simp]
-theorem Subst.cons_action0 {a} {r : Subst S} : (a::r).act 0 = a := by simp [Subst.cons]
+theorem Subst.cons_action0 {a} {σ : Subst T} : (a::σ).act 0 = a := by simp [Subst.cons]
 
 @[simp]
-theorem Subst.cons_action {a i} {r : Subst S} : (a::r).act (i + 1) = r.act i := by simp [Subst.cons]
-
-def HetSubst.cons (a : Action T) (r : HetSubst S T) : HetSubst S T := .mk λ n =>
-  match n with
-  | 0 => a
-  | n + 1 => r.act n
-infixr:67 (name := HetSubst.cons_notation) " :: " => HetSubst.cons
-
-@[simp]
-theorem HetSubst.cons_action0 {a} {r : HetSubst S T} : (a::r).act 0 = a := by simp [HetSubst.cons]
-
-@[simp]
-theorem HetSubst.cons_action {a i} {r : HetSubst S T} : (a::r).act (i + 1) = r.act i := by
-  simp [HetSubst.cons]
+theorem Subst.cons_action {a i} {σ : Subst T} : (a::σ).act (i + 1) = σ.act i := by simp [Subst.cons]
 ----------------------------------------------------------------------------------------------------
 ---- Append
 ----------------------------------------------------------------------------------------------------
-def Ren.append : List Nat -> Ren -> Ren
+def Ren.append : List Nat -> Ren T -> Ren T
 | .nil, r => r
 | .cons hd tl, r => hd::append tl r
 
-instance : HAppend (List Nat) Ren Ren where
+instance : HAppend (List Nat) (Ren T) (Ren T) where
   hAppend := Ren.append
 
 @[simp]
-theorem Ren.append_nil {r : Ren} : ([] : List Nat) ++ r = r := by
+theorem Ren.append_nil {r : Ren T} : ([] : List Nat) ++ r = r := by
   simp [HAppend.hAppend, Ren.append]
 
 @[simp]
-theorem Ren.append_cons {a} {ℓ : List Nat} {r : Ren} : (a::ℓ) ++ r = a::(ℓ ++ r) := by
+theorem Ren.append_cons {a} {ℓ : List Nat} {r : Ren T} : (a::ℓ) ++ r = a::(ℓ ++ r) := by
   simp [HAppend.hAppend, Ren.append]
 
 @[simp, grind <-]
-theorem Ren.append_action_lt {r : Ren} {i}
+theorem Ren.append_action_lt {r : Ren T} {i}
   : {ℓ : List Nat} -> (h : i < ℓ.length) -> (ℓ ++ r).act i = ℓ[i]
 | .cons hd tl, h =>
   match i with
@@ -311,7 +213,7 @@ theorem Ren.append_action_lt {r : Ren} {i}
   | i + 1 => append_action_lt (r := r) (ℓ := tl) (by grind)
 
 @[simp, grind <-]
-theorem Ren.append_action_ge {r : Ren} {i}
+theorem Ren.append_action_ge {r : Ren T} {i}
   : {ℓ : List Nat} -> (h : i ≥ ℓ.length) -> (ℓ ++ r).act i = r.act (i - ℓ.length)
 | .nil, h => by simp
 | .cons hd tl, h =>
@@ -319,182 +221,151 @@ theorem Ren.append_action_ge {r : Ren} {i}
   | 0 => by simp at h
   | i + 1 => @append_action_ge r i tl (by grind) |> cast (by simp)
 
-def HetRen.append : List Nat -> HetRen T -> HetRen T
+def Subst.append : List (Action T) -> Subst T -> Subst T
 | .nil, r => r
 | .cons hd tl, r => hd::append tl r
 
-instance : HAppend (List Nat) (HetRen T) (HetRen T) where
-  hAppend := HetRen.append
-
-@[simp]
-theorem HetRen.append_nil {r : HetRen T} : ([] : List Nat) ++ r = r := by
-  simp [HAppend.hAppend, HetRen.append]
-
-@[simp]
-theorem HetRen.append_cons {a} {ℓ : List Nat} {r : HetRen T} : (a::ℓ) ++ r = a::(ℓ ++ r) := by
-  simp [HAppend.hAppend, HetRen.append]
-
-@[simp, grind <-]
-theorem HetRen.append_action_lt {r : HetRen T} {i}
-  : {ℓ : List Nat} -> (h : i < ℓ.length) -> (ℓ ++ r).act i = ℓ[i]
-| .cons hd tl, h =>
-  match i with
-  | 0 => rfl
-  | i + 1 => append_action_lt (r := r) (ℓ := tl) (by grind)
-
-@[simp, grind <-]
-theorem HetRen.append_action_ge {r : HetRen T} {i}
-  : {ℓ : List Nat} -> (h : i ≥ ℓ.length) -> (ℓ ++ r).act i = r.act (i - ℓ.length)
-| .nil, h => by simp
-| .cons hd tl, h =>
-  match i with
-  | 0 => by simp at h
-  | i + 1 => @append_action_ge r i tl (by grind) |> cast (by simp)
-
-def Subst.append : List (Action S) -> Subst S -> Subst S
-| .nil, r => r
-| .cons hd tl, r => hd::append tl r
-
-instance : HAppend (List $ Action S) (Subst S) (Subst S) where
+instance : HAppend (List $ Action T) (Subst T) (Subst T) where
   hAppend := Subst.append
 
 @[simp]
-theorem Subst.append_nil {r : Subst S} : ([] : List $ Action S) ++ r = r := by
+theorem Subst.append_nil {σ : Subst T} : ([] : List $ Action T) ++ σ = σ := by
   simp [HAppend.hAppend, Subst.append]
 
 @[simp]
-theorem Subst.append_cons {a} {ℓ : List $ Action S} {r : Subst S} : (a::ℓ) ++ r = a::(ℓ ++ r) := by
+theorem Subst.append_cons {a} {ℓ : List $ Action T} {σ : Subst T} : (a::ℓ) ++ σ = a::(ℓ ++ σ) := by
   simp [HAppend.hAppend, Subst.append]
 
 @[simp, grind <-]
-theorem Subst.append_action_lt {r : Subst S} {i}
-  : {ℓ : List $ Action S} -> (h : i < ℓ.length) -> (ℓ ++ r).act i = ℓ[i]
+theorem Subst.append_action_lt {σ : Subst T} {i}
+  : {ℓ : List $ Action T} -> (h : i < ℓ.length) -> (ℓ ++ σ).act i = ℓ[i]
 | .cons hd tl, h =>
   match i with
   | 0 => rfl
-  | i + 1 => append_action_lt (r := r) (ℓ := tl) (by grind)
+  | i + 1 => append_action_lt (σ := σ) (ℓ := tl) (by grind)
 
 @[simp, grind <-]
-theorem Subst.append_action_ge {r : Subst S} {i}
-  : {ℓ : List $ Action S} -> (h : i ≥ ℓ.length) -> (ℓ ++ r).act i = r.act (i - ℓ.length)
+theorem Subst.append_action_ge {σ : Subst T} {i}
+  : {ℓ : List $ Action T} -> (h : i ≥ ℓ.length) -> (ℓ ++ σ).act i = σ.act (i - ℓ.length)
 | .nil, h => by simp
 | .cons hd tl, h =>
   match i with
   | 0 => by simp at h
-  | i + 1 => @append_action_ge r i tl (by grind) |> cast (by simp)
-
-def HetSubst.append : List (Action T) -> HetSubst S T -> HetSubst S T
-| .nil, r => r
-| .cons hd tl, r => hd::append tl r
-
-instance : HAppend (List $ Action T) (HetSubst S T) (HetSubst S T) where
-  hAppend := HetSubst.append
-
-@[simp]
-theorem HetSubst.append_nil {r : HetSubst S T} : ([] : List $ Action T) ++ r = r := by
-  simp [HAppend.hAppend, HetSubst.append]
-
-@[simp]
-theorem HetSubst.append_cons {a} {ℓ : List $ Action T} {r : HetSubst S T}
-  : (a::ℓ) ++ r = a::(ℓ ++ r)
-:= by simp [HAppend.hAppend, HetSubst.append]
-
-@[simp, grind <-]
-theorem HetSubst.append_action_lt {r : HetSubst S T} {i}
-  : {ℓ : List $ Action T} -> (h : i < ℓ.length) -> (ℓ ++ r).act i = ℓ[i]
-| .cons hd tl, h =>
-  match i with
-  | 0 => rfl
-  | i + 1 => append_action_lt (r := r) (ℓ := tl) (by grind)
-
-@[simp, grind <-]
-theorem HetSubst.append_action_ge {r : HetSubst S T} {i}
-  : {ℓ : List $ Action T} -> (h : i ≥ ℓ.length) -> (ℓ ++ r).act i = r.act (i - ℓ.length)
-| .nil, h => by simp
-| .cons hd tl, h =>
-  match i with
-  | 0 => by simp at h
-  | i + 1 => @append_action_ge r i tl (by grind) |> cast (by simp)
+  | i + 1 => @append_action_ge σ i tl (by grind) |> cast (by simp)
 ----------------------------------------------------------------------------------------------------
 ---- Composition
 ----------------------------------------------------------------------------------------------------
-def Ren.compose : Ren -> Ren -> Ren
+def Ren.compose : Ren T -> Ren T -> Ren T
 | r1, r2 => .mk λ n => r2.act (r1.act n)
-infixr:85 (name := Ren.compose_notation) " ∘ " => Ren.compose
+infixr:85 " ∘ " => Ren.compose
 
 @[simp]
-theorem Ren.compose_action {r1 r2 : Ren} {x} : (r1 ∘ r2).act x = r2.act (r1.act x) := by
-  simp [Ren.compose]
+theorem Ren.compose_action {r1 r2 : Ren T} {x} : (r1 ∘ r2).act x = r2.act (r1.act x) :=
+  by simp [Ren.compose]
 
 @[simp]
-theorem Ren.compose_id_left {r : Ren} : id ∘ r = r := by
+theorem Ren.compose_id_left {r : Ren T} : id T ∘ r = r := by
   simp [Ren.compose, Ren.id]
 
 @[simp]
-theorem Ren.compose_id_right {r : Ren} : r ∘ id = r := by
+theorem Ren.compose_id_right {r : Ren T} : r ∘ id T = r := by
   simp [Ren.compose, Ren.id]
 
 @[simp]
-theorem Ren.compose_assoc {r1 r2 r3 : Ren} : (r1 ∘ r2) ∘ r3 = r1 ∘ r2 ∘ r3 := by
+theorem Ren.compose_assoc {r1 r2 r3 : Ren T} : (r1 ∘ r2) ∘ r3 = r1 ∘ r2 ∘ r3 := by
   simp [Ren.compose]
 
-def HetRen.compose : HetRen T -> HetRen T -> HetRen T
-| r1, r2 => .mk λ n => r2.act (r1.act n)
-infixr:85 (name := HetRen.compose_notation) " ∘ " => HetRen.compose
+@[simp]
+theorem Ren.compose_pred_succ : succ T ∘ pred T = id T := by simp [succ, pred, id, compose]
 
 @[simp]
-theorem HetRen.compose_action {r1 r2 : HetRen T} {x} : (r1 ∘ r2).act x = r2.act (r1.act x) := by
-  simp [HetRen.compose]
+theorem Ren.compose_sub_add {k} : add T k ∘ sub T k = id T := by simp [sub, add, id, compose]
 
-@[simp]
-theorem HetRen.compose_id_left {r : HetRen T} : id T ∘ r = r := by
-  simp [HetRen.compose, HetRen.id]
+-- -- r1 contains only S-vars, hence a renaming of T-vars is a no-op
+-- def Ren.hcompose : Ren S -> Ren T -> Ren S
+-- | r, _ => .mk λ n => r.act n
+-- infixr:85 " ◾ " => Ren.hcompose
 
-@[simp]
-theorem HetRen.compose_id_right {r : HetRen T} : r ∘ id T = r := by
-  simp [HetRen.compose, HetRen.id]
+-- @[simp]
+-- theorem Ren.hcompose_ext {r1 : Ren S} {r2 : Ren T} : r1 ◾ r2 = r1 := sorry
 
-@[simp]
-theorem HetRen.compose_assoc {r1 r2 r3 : HetRen T} : (r1 ∘ r2) ∘ r3 = r1 ∘ r2 ∘ r3 := by
-  simp [HetRen.compose]
+-- -- same deal as `Ren.hcompose`
+-- def Ren.hcompose_subst : Ren S -> Subst T -> Ren S
+-- | r, _ => .mk λ n => r.act n
+-- infixr:85 " ◾ " => Ren.hcompose
 
-def Subst.compose [RenMap S] [SubstMap S] : Subst S -> Subst S -> Subst S
-| σ, τ => .mk λ n => (σ.act n)[τ.het _]
-infixr:85 (name := Subst.compose_notation) " ∘ " => Subst.compose
-
-@[simp]
-theorem Subst.compose_action [RenMap S] [SubstMap S] {σ τ : Subst S} {x}
-  : (σ ∘ τ).act x = (σ.act x)[τ.het _]
-:= by simp [Subst.compose]
-
-def HetSubst.compose [HetRenMap S T] [HetSubstMap S T] : HetSubst S T -> HetSubst S T -> HetSubst S T
+def Subst.compose [SubstMap T T] : Subst T -> Subst T -> Subst T
 | σ, τ => .mk λ n => (σ.act n)[τ]
 infixr:85 (name := Subst.compose_notation) " ∘ " => Subst.compose
 
 @[simp]
-theorem Subst.compose_action [RenMap S] [SubstMap S] {σ τ : Subst S} {x}
-  : (σ ∘ τ).act x = (σ.act x)[τ.het _]
-:= by simp [Subst.compose]
+theorem Subst.compose_action [SubstMap T T] {σ τ : Subst T} {x} : (σ ∘ τ).act x = (σ.act x)[τ] := by
+  simp [Subst.compose]
+
+@[simp]
+theorem Subst.compose_pred_succ [SubstMap T T] : succ T ∘ pred T = id T := by
+  simp [succ, pred, id, compose]
+
+@[simp]
+theorem Subst.compose_sub_add [SubstMap T T] {k} : add T k ∘ sub T k = id T := by
+  simp [sub, add, id, compose]
+
+def Subst.compose_ren_left : Ren T -> Subst T -> Subst T
+| r, τ => .mk λ n => τ.act (r.act n)
+infixr:85 (name := Subst.compose_ren_left_notation) " ∘ " => Subst.compose_ren_left
+
+@[simp]
+theorem Subst.compose_ren_left_action {r : Ren T} {τ : Subst T} {x}
+  : (r ∘ τ).act x = τ.act (r.act x)
+:= by simp [Subst.compose_ren_left]
+
+def Subst.compose_ren_right [RenMap T T] : Subst T -> Ren T -> Subst T
+| σ, r => .mk λ n => (σ.act n)⟨r⟩
+infixr:85 (name := Subst.compose_ren_right_notation) " ∘ " => Subst.compose_ren_right
+
+@[simp]
+theorem Subst.compose_ren_right_action [RenMap T T] {σ : Subst T} {r : Ren T} {x}
+  : (σ ∘ r).act x = (σ.act x)⟨r⟩
+:= by simp [Subst.compose_ren_right]
+
+def Subst.hcompose [SubstMap S T] : Subst S -> Subst T -> Subst S
+| σ, τ => .mk λ n => (σ.act n)[τ]
+infixr:85 " ◾ " => Subst.hcompose
+
+@[simp]
+theorem Subst.hcompose_action [SubstMap S T] {σ : Subst S} {τ : Subst T} {x}
+  : (σ ◾ τ).act x = (σ.act x)[τ]
+:= by simp [Subst.hcompose]
+
+def Subst.hcompose_ren [RenMap S T] : Subst S -> Ren T -> Subst S
+| σ, r => .mk λ n => (σ.act n)⟨r⟩
+infixr:85 " ◾ " => Subst.hcompose_ren
+
+@[simp]
+theorem Subst.hcompose_ren_action [RenMap S T] {σ : Subst S} {r : Ren T} {x}
+  : (σ ◾ r).act x = (σ.act x)⟨r⟩
+:= by simp [Subst.hcompose_ren]
+
 ----------------------------------------------------------------------------------------------------
 ---- Lift
 ----------------------------------------------------------------------------------------------------
-def Ren.lift (r : Ren) (k : Nat := 1) : Ren := .mk λ n =>
+def Ren.lift (r : Ren T) (k : Nat := 1) : Ren T := .mk λ n =>
   if n < k then n else r.act (n - k) + k
 
 @[simp, grind <-]
-theorem Ren.lift_action_lt {r k i} (h : i < k) : (lift r k).act i = i := by
+theorem Ren.lift_action_lt {r : Ren T} {k i} (h : i < k) : (lift r k).act i = i := by
   simp [Ren.lift]; grind
 
 @[simp, grind <-]
-theorem Ren.lift_action_ge {r k i} (h : i ≥ k) : (lift r k).act i = r.act (i - k) + k := by
-  simp [Ren.lift]; grind
+theorem Ren.lift_action_ge {r : Ren T} {k i} (h : i ≥ k) : (lift r k).act i = r.act (i - k) + k :=
+  by simp [Ren.lift]; grind
 
 @[simp]
-theorem Ren.lift_of_zero {r : Ren} : r.lift 0 = r := by
+theorem Ren.lift_of_zero {r : Ren T} : r.lift 0 = r := by
   unfold Ren.lift; congr
 
 @[grind =]
-theorem Ren.lift_of_succ {r : Ren} {k} : r.lift (k + 1) = (r.lift k).lift := by
+theorem Ren.lift_of_succ {r : Ren T} {k} : r.lift (k + 1) = (r.lift k).lift := by
   induction k; simp
   case _ n ih =>
     unfold Ren.lift; congr; funext; case _ i =>
@@ -502,25 +373,71 @@ theorem Ren.lift_of_succ {r : Ren} {k} : r.lift (k + 1) = (r.lift k).lift := by
     grind
 
 @[simp]
-theorem Ren.lift_id {k} : Ren.lift Ren.id k = Ren.id := by
+theorem Ren.lift_id {k} : lift (id T) k = id T := by
   simp [Ren.id, Ren.lift]; congr; funext; case _ x =>
   cases x <;> simp; omega
 
-theorem Ren.lift_compose_k1 {r1 r2 : Ren} : (r1 ∘ r2).lift = r1.lift ∘ r2.lift := by
+theorem Ren.lift_compose1 {r1 r2 : Ren T} : (r1 ∘ r2).lift = r1.lift ∘ r2.lift := by
   simp [Ren.compose, Ren.lift]
   funext; case _ x =>
   cases x <;> simp
 
 @[simp]
-theorem Ren.lift_compose {k} {r1 r2 : Ren} : (r1 ∘ r2).lift k = r1.lift k ∘ r2.lift k := by
+theorem Ren.lift_compose {k} {r1 r2 : Ren T} : (r1 ∘ r2).lift k = r1.lift k ∘ r2.lift k := by
   induction k generalizing r1 r2; simp
   case _ k ih =>
     rw [lift_of_succ, ih]
     rw [lift_of_succ (r := r1)]
     rw [lift_of_succ (r := r2)]
-    rw [lift_compose_k1]
+    rw [lift_compose1]
 
+def Subst.lift [RenMap T T] (σ : Subst T) (k : Nat := 1) : Subst T := .mk λ n =>
+  if n < k then re n else (σ.act (n - k))⟨.add T k⟩
 
+@[simp, grind <-]
+theorem Subst.lift_action_lt [RenMap T T] {σ : Subst T} {k i} (h : i < k)
+  : (lift σ k).act i = re i
+:= by simp [Subst.lift]; grind
 
+@[simp, grind <-]
+theorem Subst.lift_action_ge [RenMap T T] {σ : Subst T} {k i} (h : i ≥ k)
+  : (lift σ k).act i = (σ.act (i - k))⟨.add T k⟩
+:= by simp [Subst.lift]; grind
+----------------------------------------------------------------------------------------------------
+---- Promotion
+----------------------------------------------------------------------------------------------------
+def Ren.to (r : Ren T) : Subst T := ⟨λ x => re (r.act x)⟩
+
+@[simp]
+theorem Ren.to_act {r : Ren T} {x} : (@to T r).act x = re (r.act x) := by simp [Ren.to]
+
+@[simp]
+theorem Ren.to_id : (id T).to = .id T := by simp [to, id, Subst.id]
+
+@[simp]
+theorem Ren.to_succ : (succ T).to = .succ T := by simp [to, succ, Subst.succ]
+
+@[simp]
+theorem Ren.to_pred : (pred T).to = .pred T := by simp [to, pred, Subst.pred]
+
+@[simp]
+theorem Ren.to_add {k} : (add T k).to = .add T k := by simp [to, add, Subst.add]
+
+@[simp]
+theorem Ren.to_sub {k} : (sub T k).to = .sub T k := by simp [to, sub, Subst.sub]
+
+@[simp]
+theorem Ren.to_lift [RenMap T T] {r : Ren T} {k} : (r.lift k).to = (@to T r).lift k := by
+  cases r; simp [to, lift, Subst.lift]; case _ act =>
+  funext; case _ x =>
+  cases x; grind
+  case _ n => cases Nat.decLt (n + 1) k <;> simp [ite]
+
+@[simp]
+theorem Ren.to_compose [RenMap T T] [SubstMap T T] {r1 r2 : Ren T}
+  : @to T (r1 ∘ r2) = r1.to ∘ r2.to
+:= by
+  funext; case _ x =>
+  cases x <;> simp [to, compose, Subst.compose]
 
 end LeanSubst

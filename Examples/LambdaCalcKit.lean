@@ -11,7 +11,7 @@ namespace LeanSubst.Examples.LambdaCalc
   infixl:65 " :@ " => Term.app
 
   @[coe]
-  def Term.from_action : Subst.Action Term -> Term
+  def Term.from_action : Action Term -> Term
   | re y => var y
   | su t => t
 
@@ -29,11 +29,11 @@ namespace LeanSubst.Examples.LambdaCalc
   @[simp, grind =]
   theorem Term.from_action_su {t} : from_action (su t) = t := by simp [from_action]
 
-  instance instCoe_SubstActionTerm_Term : Coe (Subst.Action Term) Term where
+  instance instCoe_SubstActionTerm_Term : Coe (Action Term) Term where
     coe := Term.from_action
 
   @[simp]
-  def Term.ren_act (r : Ren) : Term -> Term
+  def Term.ren_act (r : Ren Term) : Term -> Term
   | .var x => .var (r.act x)
   | t => t
 
@@ -47,12 +47,12 @@ namespace LeanSubst.Examples.LambdaCalc
     lift (f : A) (k : Nat := 1) : A
 
   @[simp]
-  instance : Kit Term Ren where
+  instance : Kit Term (Ren Term) where
     act := Term.ren_act
     lift f n := Ren.lift f n
 
   @[simp]
-  instance [RenMap Term] : Kit Term (Subst Term) where
+  instance [RenMap Term Term] : Kit Term (Subst Term) where
     act := Term.subst_act
     lift f n := Subst.lift f n
 
@@ -63,27 +63,27 @@ namespace LeanSubst.Examples.LambdaCalc
   | :λ t => :λ kitmap (kit.lift σ) t
 
   @[simp]
-  def rmap (r : Ren) : Term -> Term := kitmap r
+  def rmap (r : Ren Term) : Term -> Term := kitmap r
 
-  instance : RenMap Term where
+  instance : RenMap Term Term where
     rmap := rmap
 
   @[simp, grind =]
-  theorem ren_var {x} {r : Ren} : (Term.var x)⟨r⟩ = .var (r.act x) := by
+  theorem ren_var {x} {r : Ren Term} : (Term.var x)⟨r⟩ = .var (r.act x) := by
     simp +instances [RenMap.rmap]
 
   @[simp, grind =]
-  theorem ren_app {t1 t2} {r : Ren} : (t1 :@ t2)⟨r⟩ = t1⟨r⟩ :@ t2⟨r⟩ := by
+  theorem ren_app {t1 t2} {r : Ren Term} : (t1 :@ t2)⟨r⟩ = t1⟨r⟩ :@ t2⟨r⟩ := by
     simp [RenMap.rmap]
 
   @[simp, grind =]
-  theorem ren_lam {t} {r : Ren} : (:λ t)⟨r⟩ = :λ t⟨r.lift⟩ := by
+  theorem ren_lam {t} {r : Ren Term} : (:λ t)⟨r⟩ = :λ t⟨r.lift⟩ := by
     simp +instances [RenMap.rmap]
 
-  instance : RenMapId Term where
+  instance : RenMapId Term Term where
     apply_id := by intro t; induction t <;> simp [*]
 
-  instance : RenMapCompose Term where
+  instance : RenMapCompose Term Term where
     apply_compose := by subst_solve_compose
 
   @[simp]
@@ -112,16 +112,24 @@ namespace LeanSubst.Examples.LambdaCalc
     generalize zdef : σ.act x = z
     cases z <;> simp [Term.from_action]
 
+  @[simp]
+  theorem Term.from_action_compose_ren {x} {σ : Subst Term} {r : Ren Term}
+    : (from_action (σ.act x))⟨r⟩ = from_action ((σ ∘ r).act x)
+  := by
+    simp [Term.from_action]
+    generalize zdef : σ.act x = z
+    cases z <;> simp
+
   instance : SubstMapId Term Term where
     apply_id := by subst_solve_id
 
-  instance : SubstMapStable Term where
+  instance : SubstMapStable Term Term where
     apply_stable := by subst_solve_stable
 
   instance : SubstMapRenComposeLeft Term Term where
     apply_ren_compose_left := by subst_solve_compose
 
-  instance : SubstMapRenComposeRight Term Term where
+  instance : SubstMapRenComposeRight Term where
     apply_ren_compose_right := by subst_solve_compose
 
   instance : SubstMapCompose Term Term where

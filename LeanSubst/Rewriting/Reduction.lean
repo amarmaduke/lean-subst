@@ -1,11 +1,10 @@
 
-import LeanSubst.Ren
-import LeanSubst.Subst
+import LeanSubst.Laws
 
 namespace LeanSubst
   universe u
 
-  class Substitutive {T : Type} [RenMap T] [SubstMap T T] (R : T -> T -> Prop) where
+  class Substitutive {T : Type} [RenMap T T] [SubstMap T T] (R : T -> T -> Prop) where
     subst {t s} (σ : Subst T) : R t s -> R (t[σ]) (s[σ])
 
   class HasTriangle {T : Type u} (R : T -> T -> Prop) where
@@ -15,7 +14,7 @@ namespace LeanSubst
   section
     variable {T : Type}
 
-    inductive ActionRed (R : T -> T -> Prop) : Subst.Action T -> Subst.Action T -> Prop where
+    inductive ActionRed (R : T -> T -> Prop) : Action T -> Action T -> Prop where
     | su {x y} : R x y -> ActionRed R (.su x) (.su y)
     | re {x} : ActionRed R (.re x) (.re x)
 
@@ -190,7 +189,7 @@ namespace LeanSubst
               exists q; apply And.intro
               apply lem.1; apply Star.step ih.2 lem.2
 
-      variable [RenMap T] [SubstMap T T] [Substitutive R]
+      variable [RenMap T T] [SubstMap T T] [Substitutive R]
 
       omit [HasTriangle R] in
       theorem subst {x y} (σ : Subst T) : Star R x y -> Star R x[σ] y[σ] := by
