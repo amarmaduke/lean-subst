@@ -32,9 +32,7 @@ structure Subst (T : Type u2) where
 class SubstAction (T : Type u1) (A : Type u2) (U : outParam (Type u3)) where
   act (σ : Subst T) : A -> U
 
-namespace Subst
-  export SubstAction (act)
-end Subst
+def Subst.act [SubstAction S T U] (σ : Subst S) : T -> U := SubstAction.act σ
 
 instance : SubstAction T Nat (Action T) where
   act := Subst.inner
