@@ -105,7 +105,7 @@ namespace LeanSubst.Examples.LambdaCalc
     simp +instances [SubstMap.smap]
 
   @[simp]
-  theorem Term.from_action_compose {x} {σ τ : Subst Term}
+  theorem Term.from_action_compose {x : Nat} {σ τ : Subst Term}
     : (from_action (σ.act x))[τ] = from_action ((σ ∘ τ).act x)
   := by
     simp [Term.from_action, Subst.compose]
@@ -113,7 +113,7 @@ namespace LeanSubst.Examples.LambdaCalc
     cases z <;> simp [Term.from_action]
 
   @[simp]
-  theorem Term.from_action_compose_ren {x} {σ : Subst Term} {r : Ren Term}
+  theorem Term.from_action_compose_ren {x : Nat} {σ : Subst Term} {r : Ren Term}
     : (from_action (σ.act x))⟨r⟩ = from_action ((σ ∘ r).act x)
   := by
     simp [Term.from_action]

@@ -190,15 +190,38 @@ namespace Subst
   --   case _ hd tl ih =>
   --     sorry
 
+  @[grind =]
+  theorem subst_append_assoc {xs ys : List $ Action T} {σ : Subst T}
+    : xs ++ ys ++ σ = xs ++ (ys ++ σ)
+  := by
+    induction xs generalizing ys σ <;> simp [*]
+
+  @[grind =]
+  theorem subst_append_assoc_nat {xs ys : List Nat} {σ : Subst T}
+    : xs ++ ys ++ σ = xs ++ (ys ++ σ)
+  := by
+    induction xs generalizing ys σ <;> simp [*]
+
   @[simp]
   theorem range_act_succ {s e} {σ : Subst T} : act (succ T) (s..e) ++ σ = s.succ..e.succ ++ σ := by
     induction e generalizing s σ <;> simp
     case _ e ih =>
     simp [Ren.range]
     cases Nat.decLe s e
-    case _ h2 => sorry
+    case _ h2 => simp [ite]
     case _ h2 =>
-      sorry
+      simp [ite]
+      cases Nat.decLe (s + 1) e
+      case _ h3 =>
+        have lem : s = e := by omega
+        subst lem; simp
+      case _ h3 =>
+        simp [*]
+        rw [subst_append_assoc, ih]; simp
+        rw [subst_append_assoc_nat]; simp [Ren.range]
+        split
+        case _ h4 => rw [subst_append_assoc_nat]; simp
+        case _ h4 => omega
 
   @[simp, grind =]
   theorem rewrite_lift_k
