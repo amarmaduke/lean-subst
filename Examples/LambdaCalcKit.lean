@@ -16,11 +16,11 @@ namespace LeanSubst.Examples.LambdaCalc
   | su t => t
 
   @[simp, grind =]
-  theorem Term.from_action_id {n} : from_action (+0.act n) = var n := by
+  theorem Term.from_action_id {n} : from_action (+0σ.act n) = var n := by
     simp [from_action, Subst.id]
 
   @[simp, grind =]
-  theorem Term.from_action_succ {n} : from_action (+1.act n) = var (n + 1) := by
+  theorem Term.from_action_succ {n} : from_action (+1σ.act n) = var (n + 1) := by
     simp [from_action, Subst.succ]
 
   @[simp, grind =]
@@ -129,7 +129,7 @@ namespace LeanSubst.Examples.LambdaCalc
   instance : SubstMapRenComposeLeft Term Term where
     apply_ren_compose_left := by subst_solve_compose
 
-  instance : SubstMapRenComposeRight Term where
+  instance : SubstMapRenComposeRight Term Term where
     apply_ren_compose_right := by subst_solve_compose
 
   instance : SubstMapCompose Term Term where

@@ -80,12 +80,13 @@ theorem Subst.act_inner {f : Nat -> Action T} {x} : Subst.act { inner := f } x =
 ---- Identity
 ----------------------------------------------------------------------------------------------------
 def Ren.id T : Ren T := ⟨λ x => x⟩
+notation "+0r" => Ren.id _
 
 @[simp]
 theorem Ren.id_action {x} : (id T).act x = x := by simp [id]
 
 def Subst.id T : Subst T := ⟨λ x => re x⟩
-notation "+0" => Subst.id _
+notation "+0σ" => Subst.id _
 
 @[simp]
 theorem Subst.id_action {x} : (id T).act x = re x := by simp [id, act, SubstAction.act]
@@ -93,12 +94,13 @@ theorem Subst.id_action {x} : (id T).act x = re x := by simp [id, act, SubstActi
 ---- Successor
 ----------------------------------------------------------------------------------------------------
 def Ren.succ T : Ren T := ⟨(· + 1)⟩
+notation "+1r" => Ren.succ _
 
 @[simp]
 theorem Ren.succ_action {x} : (succ T).act x = x + 1 := by simp [succ]
 
 def Subst.succ T : Subst T := ⟨λ x => re $ x + 1⟩
-notation "+1" => Subst.succ _
+notation "+1σ" => Subst.succ _
 
 @[simp]
 theorem Subst.succ_action {x} : (succ T).act x = re (x + 1) := by simp [succ, act, SubstAction.act]
@@ -106,12 +108,13 @@ theorem Subst.succ_action {x} : (succ T).act x = re (x + 1) := by simp [succ, ac
 ---- Predecessor
 ----------------------------------------------------------------------------------------------------
 def Ren.pred T : Ren T := ⟨(· - 1)⟩
+notation "-1r" => Ren.pred _
 
 @[simp]
 theorem Ren.pred_action {x} : (pred T).act x = x - 1 := by simp [pred]
 
 def Subst.pred T : Subst T := ⟨λ x => re $ x - 1⟩
-notation "-1" => Subst.pred _
+notation "-1σ" => Subst.pred _
 
 @[simp]
 theorem Subst.pred_action {x} : (pred T).act x = re (x - 1) := by simp [pred, act, SubstAction.act]
@@ -119,51 +122,55 @@ theorem Subst.pred_action {x} : (pred T).act x = re (x - 1) := by simp [pred, ac
 ---- Addition
 ----------------------------------------------------------------------------------------------------
 def Ren.add T (k : Nat) : Ren T := ⟨(· + k)⟩
+notation "+r" => Ren.add _
 
 @[simp]
 theorem Ren.add_action {k x} : (add T k).act x = x + k := by simp [Ren.add]
 
 @[simp]
-theorem Ren.add_zero : add T 0 = id T := by simp [Ren.add, Ren.id]
+theorem Ren.add_zero : add T 0 = +0r := by simp [Ren.add, Ren.id]
 
 @[simp]
-theorem Ren.add_one : add T 1 = succ T := by simp [Ren.add, Ren.succ]
+theorem Ren.add_one : add T 1 = +1r := by simp [Ren.add, Ren.succ]
 
 def Subst.add T (k : Nat) : Subst T := ⟨λ x => re $ x + k⟩
+notation "+σ" => Subst.add _
 
 @[simp]
 theorem Subst.add_action {k x} : (add T k).act x = re (x + k) := by simp [add, act, SubstAction.act]
 
 @[simp]
-theorem Subst.add_zero : add T 0 = +0 := by simp [add, id]
+theorem Subst.add_zero : add T 0 = +0σ := by simp [add, id]
 
 @[simp]
-theorem Subst.add_one : add T 1 = +1 := by simp [add, succ]
+theorem Subst.add_one : add T 1 = +1σ := by simp [add, succ]
 ----------------------------------------------------------------------------------------------------
 ---- Subtraction
 ----------------------------------------------------------------------------------------------------
 def Ren.sub T (k : Nat) : Ren T := ⟨(· - k)⟩
+notation "-r" => Ren.sub _
 
 @[simp]
 theorem Ren.sub_action {k x} : (sub T k).act x = x - k := by simp [sub]
 
 @[simp]
-theorem Ren.sub_zero : sub T 0 = id T := by simp [sub, id]
+theorem Ren.sub_zero : sub T 0 = +0r := by simp [sub, id]
 
 @[simp]
-theorem Ren.sub_one : sub T 1 = pred T := by simp [sub, pred]
+theorem Ren.sub_one : sub T 1 = -1r := by simp [sub, pred]
 
 def Subst.sub T (k : Nat) : Subst T := ⟨λ x => re $ x - k⟩
+notation "-σ" => Subst.sub _
 
 @[simp]
 theorem Subst.sub_action {k x} : (@sub T k).act x = re (x - k) := by
   simp [sub, act, SubstAction.act]
 
 @[simp]
-theorem Subst.sub_zero : sub T 0 = +0 := by simp [sub, id]
+theorem Subst.sub_zero : sub T 0 = +0σ := by simp [sub, id]
 
 @[simp]
-theorem Subst.sub_one : sub T 1 = -1 := by simp [sub, pred]
+theorem Subst.sub_one : sub T 1 = -1σ := by simp [sub, pred]
 
 ----------------------------------------------------------------------------------------------------
 ---- Cons
@@ -303,26 +310,26 @@ theorem Ren.compose_action {r1 r2 : Ren T} {x} : (r1 ∘ r2).act x = r2.act (r1.
   simp [compose]
 
 @[simp]
-theorem Ren.compose_id_left {r : Ren T} : id T ∘ r = r := by simp [compose, id]
+theorem Ren.compose_id_left {r : Ren T} : +0r ∘ r = r := by simp [compose, id]
 
 @[simp]
-theorem Ren.compose_id_right {r : Ren T} : r ∘ id T = r := by simp [compose, id]
+theorem Ren.compose_id_right {r : Ren T} : r ∘ +0r = r := by simp [compose, id]
 
 @[simp]
 theorem Ren.compose_assoc {r1 r2 r3 : Ren T} : (r1 ∘ r2) ∘ r3 = r1 ∘ r2 ∘ r3 := by simp [compose]
 
 @[simp]
-theorem Ren.compose_pred_succ : succ T ∘ pred T = id T := by simp [succ, pred, id, compose]
+theorem Ren.compose_pred_succ : +1r ∘ -1r = id T := by simp [succ, pred, id, compose]
 
 @[simp]
-theorem Ren.compose_sub_add {k} : add T k ∘ sub T k = id T := by simp [sub, add, id, compose]
+theorem Ren.compose_sub_add {k} : +r k ∘ -r k = id T := by simp [sub, add, id, compose]
 
 @[grind =]
-theorem Ren.compose_add_succ_right {k} : add T (k + 1) = add T k ∘ succ T := by
+theorem Ren.compose_add_succ_right {k} : add T (k + 1) = +r k ∘ +1r := by
   simp [add, succ, compose]; grind
 
 @[grind =]
-theorem Ren.compose_add_succ_left {k} : add T (k + 1) = succ T ∘ add T k := by
+theorem Ren.compose_add_succ_left {k} : add T (k + 1) = +1r ∘ +r k := by
   simp [add, succ, compose]; grind
 
 def Subst.compose [SubstMap T T] : Subst T -> Subst T -> Subst T
@@ -385,7 +392,6 @@ infixr:85 " ◾ " => Subst.hcompose_ren
 theorem Subst.hcompose_ren_action [RenMap S T] {σ : Subst S} {r : Ren T} {x : Nat}
   : (σ ◾ r).act x = (σ.act x)⟨r⟩
 := by simp [hcompose_ren, act, SubstAction.act]
-
 ----------------------------------------------------------------------------------------------------
 ---- Lift
 ----------------------------------------------------------------------------------------------------

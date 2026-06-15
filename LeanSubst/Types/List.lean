@@ -27,6 +27,11 @@ instance [RenMap S T] [RenMapId S T] : RenMapId (List S) T where
 instance [RenMap S T] [RenMapCompose S T] : RenMapCompose (List S) T where
   apply_compose := by intro s σ τ; induction s <;> simp [*]
 
+@[simp]
+theorem List.rmap_append [RenMap S T] {xs ys : List S} {r : Ren T}
+  : (xs ++ ys)⟨r⟩ = xs⟨r⟩ ++ ys⟨r⟩
+:= by induction xs generalizing ys <;> simp [*]
+
 def List.smap [SubstMap S T] (σ : Subst T) : List S -> List S
 | [] => []
 | .cons x xs => x[σ] :: smap σ xs
