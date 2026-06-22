@@ -19,3 +19,13 @@ name = "Examples"
 [[lean_exe]]
 name = "lean-subst"
 root = "Main"
+
+[[require]]
+name = "batteries"
+scope = "leanprover-community"
+rev = "v4.29.0"
+
+[[require]]
+name = "Qq"
+scope = "leanprover-community"
+rev = "v4.29.0"
