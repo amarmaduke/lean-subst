@@ -183,7 +183,7 @@ structure MkMatcherInput where
 
 -/
 
-  #eval show MetaM Unit from do
+  elab "#test1" : command => Command.liftTermElabM do
     let env ← getEnv
     let lctx ← getLCtx
     let matcher ← mkMatcher {
@@ -217,8 +217,26 @@ structure MkMatcherInput where
 
     let func := mkAppN matcher.matcher #[motive, case_re, case_su]
 
+    let typeExpr := Expr.forallE `_ (mkAppN (Expr.const ``Action [0]) #[Expr.const ``Term []]) (Expr.const ``Term []) BinderInfo.default
+    let newDecl :=
+      Declaration.defnDecl (mkDefinitionValEx (`hi) [] typeExpr func ReducibilityHints.abbrev DefinitionSafety.safe [])
+
     IO.println s!"{func}"
+    Lean.addDecl newDecl
 
+  #test1
 
+  elab "#test2" : command => do
+    let stx : Syntax ← `(
+      @[coe]
+      def blah : Action Term -> Term
+      | re y => Term.var y
+      | su t => t
+    )
+    Command.elabDeclaration stx
+
+  #test2
+
+  #check blah
 
 end Examples.LambdaCalcAutomation
