@@ -217,9 +217,10 @@ structure MkMatcherInput where
     matcher.addMatcher
     Lean.logInfo matcher.matcher
 
-    let motive : Q(Nat → Type) := q(fun _ ↦ Nat)
-    let case : Q((x : Nat) → Nat) := q(fun x ↦ x)
-    let func := mkAppN matcher.matcher #[motive, case]
+    let motive : Q(Nat → Type) := q(fun _ ↦ Nat → Nat)
+    let case : Q(Nat → Nat → Nat) := q(fun _ x ↦ x)
+    let func := mkAppN matcher.matcher #[motive, q(0), case]
+    let func ← instantiateMVars func
 
     let typeExpr := q(Nat → Nat)
     let ctx ← getLCtx
@@ -239,11 +240,11 @@ structure MkMatcherInput where
     -- Lean.compileDecl newDecl -- Tried this, doesn't register definition
     -- Lean.addDecl newDecl -- Tried this, same metavariable error
 
-  #test0      -- Error: (kernel) declaration has metavariables 'foo'
+  #test0
 
-  #check foo  -- foo ([anonymous] : Nat) : Nat
+  #check foo
 
-  #eval foo 0 -- Error: Failed to find LCNF signature for foo
+  #eval foo 3
 
 
   elab "#test1" : command => Command.liftTermElabM do
