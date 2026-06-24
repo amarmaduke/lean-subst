@@ -182,60 +182,20 @@ structure MkMatcherInput where
   isSplitter  : Option Overlaps := none
 
 -/
-  open Lean Elab Command in
-  elab "#my_cmd" : command => Command.liftTermElabM do
-    let ctx: LocalContext ← getLCtx
-    let name := ctx.getUnusedName (.mkSimple "abcd")
-    -- how to add `name` as a new, free variable?
-    let fDecl := .inductDecl [] 0 [{ name, type := .sort 0, ctors := [] }] false
-    (addDecl fDecl)
 
-  #my_cmd
-
-  #check abcd
-
-
-  open Lean Elab Tactic Meta Match Qq in
   elab "#test0" : command => Command.liftTermElabM do
-    -- Want to register new definition:
-    -- def foo : Nat → Nat | x => x
-
-    let matcher ← mkMatcher {
-      matcherName := ← mkAuxDeclName `foo,
-      matchType := q(Nat → Nat),
-      discrInfos := #[{}],
-      lhss := [
-        ← withLocalDeclDQ `x q(Nat) fun x ↦ return {
-          ref := ← getRef
-          fvarDecls := ← [x].mapM (·.fvarId!.getDecl)
-          patterns := [
-            .var x.fvarId!
-          ]
-        }
-      ]
-    }
-    matcher.addMatcher
-    Lean.logInfo matcher.matcher
-
-    let motive : Q(Nat → Type) := q(fun _ ↦ Nat → Nat)
-    let case : Q(Nat → Nat → Nat) := q(fun _ x ↦ x)
-    let func := mkAppN matcher.matcher #[motive, q(0), case]
-    let func ← instantiateMVars func
-
+    let func := q(fun x : Nat ↦ x)
     let typeExpr := q(Nat → Nat)
-    let ctx ← getLCtx
     let newDecl :=
       Declaration.defnDecl (
         mkDefinitionValEx
-          (ctx.getUnusedName `foo)
+          (`foo)
           []
           typeExpr
           func
           ReducibilityHints.abbrev
           DefinitionSafety.safe
           [])
-
-    dbg_trace s!"func: {func}" -- func: _private.LeanSubst.Automation.Basic.0.foo_174.{?_uniq.24495} (fun (x : Nat) => Nat) (fun (x : Nat) => x)
     Lean.addAndCompile newDecl
     -- Lean.compileDecl newDecl -- Tried this, doesn't register definition
     -- Lean.addDecl newDecl -- Tried this, same metavariable error
@@ -248,42 +208,13 @@ structure MkMatcherInput where
 
 
   elab "#test1" : command => Command.liftTermElabM do
-    let lctx ← getLCtx
-    let matcher ← mkMatcher {
-      matcherName := ← mkAuxDeclName `blah,
-      matchType := q(Action Term → Term),
-      discrInfos := #[{}],
-      lhss := [
-        ← withLocalDeclDQ `y q(Nat) fun y ↦ return {
-          ref := ← getRef
-          fvarDecls := ← [y].mapM (·.fvarId!.getDecl)
-          patterns := [
-            .ctor ``re [0] [q(Term)] [.var y.fvarId!]
-          ]
-        },
-        ← withLocalDeclDQ `t q(Term) fun t ↦ return {
-          ref := ← getRef
-          fvarDecls := ← [t].mapM (·.fvarId!.getDecl)
-          patterns := [
-            .ctor ``su [0] [q(Term)] [.var t.fvarId!]
-          ]
-        }
-
-      ]
-    }
-    matcher.addMatcher
-    Lean.logInfo matcher.matcher
-
-    let motive : Q(Action Term → Type) := q(fun _ ↦ Term)
-    let case_re : Q((y : Nat) → Term) := q(fun y ↦ Term.var y)
-    let case_su : Q((t : Term) → Term) := q(fun t ↦ t)
-    let func := mkAppN matcher.matcher #[motive, case_re, case_su]
-
+    let name := `Term.from_action_auto
+    let func := q(fun | (re x) => Term.var x | (su x) => x)
     let typeExpr := q(Action Term → Term)
     let newDecl :=
       Declaration.defnDecl (
         mkDefinitionValEx
-          (`blah1)
+          name
           []
           typeExpr
           func
@@ -291,14 +222,14 @@ structure MkMatcherInput where
           DefinitionSafety.safe
           [])
 
-    dbg_trace s!"func: {func}"
-    -- Lean.compileDecl newDecl
-    -- Lean.addAndCompile newDecl
     Lean.addAndCompile newDecl
+
+    let coeStx ← `(coe)
+    Attribute.add `Term.from_action_auto `coe coeStx
 
   #test1
 
-  #eval blah1 (re 1)
+  #eval Term.from_action_auto (re 1)
 
   elab "#test2" : command => do
     Command.elabEvalCore
