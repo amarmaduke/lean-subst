@@ -29,3 +29,8 @@ rev = "v4.29.0"
 name = "Qq"
 scope = "leanprover-community"
 rev = "v4.29.0"
+
+[[require]]
+name = "aesop"
+scope = "leanprover-community"
+rev = "v4.29.0"

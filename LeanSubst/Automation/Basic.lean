@@ -125,6 +125,7 @@ namespace Examples.LambdaCalcAutomation
   | var : Nat -> Term
   | app : Term -> Term -> Term
   | lam : Term -> Term
+  deriving BEq
 
   prefix:100 ":λ " => Term.lam
   infixl:65 " :@ " => Term.app
@@ -143,27 +144,30 @@ namespace Examples.LambdaCalcAutomation
     | some (.inductInfo val) => return val.ctors
     | _ => throwError "Not an inductive type: {typeName}"
 
-  def isVar (env : Environment) (ctor : Name) : Bool := leanSubstVar.hasTag env ctor
+  def isVar (ctor : Name) : MetaM Bool := do
+    let env ← getEnv
+    pure $ leanSubstVar.hasTag env ctor
 
-  def getVarCtors (env : Environment) (type : Name) : MetaM (List Name) := do
+  def getVarCtors (type : Name) : MetaM (List Name) := do
     let ctors ← getConstructors type
-    return (List.filter (isVar env) ctors)
+    List.filterM (isVar) ctors
 
-  def isBinder (env : Environment) (ctor : Name) : Bool := leanSubstBinder.hasTag env ctor
+  def isBinder (ctor : Name) : MetaM Bool := do
+    let env ← getEnv
+    pure $ leanSubstBinder.hasTag env ctor
 
-  def getBinderCtors (env : Environment) (type : Name) : MetaM (List Name) := do
+  def getBinderCtors (type : Name) : MetaM (List Name) := do
     let ctors ← getConstructors type
-    return (List.filter (isBinder env) ctors)
+    List.filterM (isBinder) ctors
 
   #print Term.from_action
 
   #eval show MetaM Unit from do
-    let env ← getEnv
     let lctx ← getLCtx
     let ctors ← getConstructors ``Term
     for ctor in ctors do
-      let isVar := isVar env ctor
-      let isBinder := isBinder env ctor
+      let isVar ← isVar ctor
+      let isBinder ← isBinder ctor
       if isVar then
         IO.println s!"{ctor} is a var"
       else if isBinder then
@@ -173,23 +177,18 @@ namespace Examples.LambdaCalcAutomation
 
     _ := lctx.addDecl
 
-/-
-structure MkMatcherInput where
-  matcherName : Name
-  matchType   : Expr
-  discrInfos  : Array DiscrInfo
-  lhss        : List AltLHS
-  isSplitter  : Option Overlaps := none
 
--/
+  /- # Test 0 -/
+  -- Uses q antiquotation to define the function, then Declaration.defnDecl to declare the function as a definition in the environment.
 
-  elab "#test0" : command => Command.liftTermElabM do
-    let func := q(fun x : Nat ↦ x)
+  elab "#test0" ty:ident : command => Command.liftTermElabM do
+    let tyName ← realizeGlobalConstNoOverload ty.raw
+    let func := mkApp q(fun ty : Type ↦ fun x : ty ↦ x) (.const tyName [])
     let typeExpr := q(Nat → Nat)
     let newDecl :=
       Declaration.defnDecl (
         mkDefinitionValEx
-          (`foo)
+          (`foo0)
           []
           typeExpr
           func
@@ -200,15 +199,77 @@ structure MkMatcherInput where
     -- Lean.compileDecl newDecl -- Tried this, doesn't register definition
     -- Lean.addDecl newDecl -- Tried this, same metavariable error
 
-  #test0
+  #check foo0
 
-  #check foo
+  #test0 Nat
 
-  #eval foo 3
+  #check foo0
 
+  #eval foo0 3
+
+  /- # Test 0'-/
+  -- Uses mkMatcher to define the LHS patterns.
+
+  elab "#test0'" : command => Command.liftTermElabM do
+    -- Want to register new definition:
+    -- def foo : Nat → Nat | x => x
+
+    let matcher ← mkMatcher {
+      matcherName := ← mkAuxDeclName `foo0',
+      matchType := q(Nat → Nat),
+      discrInfos := #[{}],
+      lhss := [
+        ← withLocalDeclDQ `x q(Nat) fun x ↦ return {
+          ref := ← getRef
+          fvarDecls := ← [x].mapM (·.fvarId!.getDecl)
+          patterns := [
+            .var x.fvarId!
+          ]
+        }
+      ]
+    }
+    matcher.addMatcher
+    Lean.logInfo matcher.matcher
+
+    let motive : Q(Nat → Type) := q(fun _ ↦ Nat)
+    let case : Q(Nat → Nat) := q(fun x ↦ x)
+    let func := mkAppN matcher.matcher #[motive]
+    let func ← instantiateMVars func
+
+
+    let typeExpr := q(Nat → Nat)
+    let ctx ← getLCtx
+    let newDecl :=
+      Declaration.defnDecl (
+        mkDefinitionValEx
+          `foo0'
+          []
+          typeExpr
+          func
+          ReducibilityHints.abbrev
+          DefinitionSafety.safe
+          [])
+
+    dbg_trace s!"func: {func}" -- func: _private.LeanSubst.Automation.Basic.0.foo_174.{?_uniq.24495} (fun (x : Nat) => Nat) (fun (x : Nat) => x)
+    Lean.addAndCompile newDecl
+    -- Lean.compileDecl newDecl -- Tried this, doesn't register definition
+    -- Lean.addDecl newDecl -- Tried this, same metavariable error
+
+
+  #test0'
+
+  #check Nat.brecOn
+
+  #check foo0'
+
+  #eval foo0' 0
+
+
+  /- # Test 1 -/
+  -- Define actual from_action.
 
   elab "#test1" : command => Command.liftTermElabM do
-    let name := `Term.from_action_auto
+    let name := `Term.foo
     let func := q(fun | (re x) => Term.var x | (su x) => x)
     let typeExpr := q(Action Term → Term)
     let newDecl :=
@@ -229,26 +290,90 @@ structure MkMatcherInput where
 
   #test1
 
-  #eval Term.from_action_auto (re 1)
+  #eval Term.foo (re 1)
 
-  elab "#test2" : command => do
-    Command.elabEvalCore
-      false
-      Syntax.missing
-      (← `(discard do (Command.elabCommand $ ← `(
-        @[coe]
-        def blah2 : Action Term -> Term
-        | re y => Term.var y
-        | su t => t
-      ))))
-      (mkApp (mkConst ``Command.CommandElabM) (mkConst ``Unit))
+  /- # Test 2 -/
+  -- Name gets passed in; definition parametrized by name.
+  /-
+  @[simp, grind =]
+  theorem Term.from_action_id {n} : from_action (+0σ.act n) = var n := by
+    simp [from_action]
+  -/
 
-  #test2
+  elab "#test2" ty:ident : command => do
+    let tyName ← Command.liftCoreM $ realizeGlobalConstNoOverload ty.raw
 
-  #check blah2
+    let varCtors ← Command.liftTermElabM $ getVarCtors tyName
+    if let some varCtorName := varCtors[0]? then
+      let varCtor : Expr := .const varCtorName []
+
+      -- from_action
+      let fromActionAutoName := Name.str tyName "from_action_auto"
+      let fromActionType := mkApp q(fun term : Type ↦ Action term → term) (.const tyName [])
+      let fromActionAuto' := q(fun term : Type ↦ fun varCtor : Nat → term ↦ fun | (re x) => varCtor x | (su x) => x)
+      let fromActionAuto := mkAppN fromActionAuto' #[.const tyName [], varCtor]
+      let fromActionDecl :=
+        Declaration.defnDecl (
+          mkDefinitionValEx
+            fromActionAutoName
+            []
+            fromActionType
+            fromActionAuto
+            ReducibilityHints.abbrev
+            DefinitionSafety.safe
+            [])
+      Command.liftTermElabM $ Lean.addAndCompile fromActionDecl
+
+      -- from_action_id
+      let fromActionIdAutoType :=
+        mkAppN
+          q(
+            fun term : Type ↦
+            fun varCtor : Nat → term ↦
+            fun from_action : Action term → term ↦
+            (n : Nat) → from_action (+0σ.act n) = varCtor n)
+          #[.const tyName [], varCtor, Expr.const fromActionAutoName []]
+      let newMVarExpr ← Command.liftTermElabM $ mkFreshExprMVar (type? := some fromActionIdAutoType)
+      dbg_trace s!"new mvar: {newMVarExpr}"
+      let _ ← Command.liftTermElabM $ Term.runTactic (newMVarExpr.mvarId!) (← `(by simp)) Term.TacticMVarKind.term
+      let proof ← Command.liftTermElabM $ instantiateMVars newMVarExpr
+      let fromActionIdDecl :=
+        Declaration.thmDecl (
+          mkTheoremValEx
+            (.str tyName "from_action_id_auto")
+            []
+            fromActionIdAutoType
+            proof
+            []
+        )
+
+      Command.liftTermElabM $ Lean.addAndCompile fromActionIdDecl
+    else
+      throwUnsupportedSyntax -- need better error
+
+  #test2 Term
+
+  #print Term
+
+  #check Term.from_action_auto
+
+  #eval Term.from_action_auto (re 0)
+
+  #check Term.from_action_id_auto
+
+
+  elab "#stxtest" ty:ident : command => do
+    Command.elabDeclaration $ ← `(
+      def $(mkIdentFrom ty.raw $ Name.mkStr1 "myId") : $ty -> $ty
+      | x => x
+    )
+
+  #stxtest Term
+
+  #check myId
 
   open Lean.Elab.Command in run_cmd
-    elabCommand $ ← `(
+    Command.elabCommand $ ← `(
       @[coe]
       def blah3 : Action Term -> Term
       | re y => Term.var y
