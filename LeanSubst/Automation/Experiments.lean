@@ -73,7 +73,8 @@ namespace Experiment2
       def $(myId_ident) : $ty -> $ty
       | x => x
 
-      theorem $(myId_thm_ident) (n : $ty) : $(mkIdent (.str tyName "myId")) n = n := by simp
+      theorem $(myId_thm_ident) (n : $ty) : $myId_ident n = n := by
+        simp [$myId_ident:ident]
     )
 
   inductive Hi
