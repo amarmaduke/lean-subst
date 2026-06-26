@@ -2,6 +2,7 @@ import LeanSubst
 import Lean.Elab.Tactic
 import LeanSubst.Automation.Attributes
 import Qq
+import Aesop
 
 namespace Examples.LambdaCalc
   open LeanSubst
@@ -41,6 +42,11 @@ namespace Examples.LambdaCalc
   | .var x => .var (r.act x)
   | t1 :@ t2 => rmap r t1 :@ rmap r t2
   | :λ t => :λ rmap r.lift t
+
+  def rmap' (r : Ren Term) : Term → Term
+  | Term.var x => Term.var (r.act x)
+  | Term.app t1 t2 => Term.app (rmap r t1) (rmap r t2)
+  | Term.lam t => Term.lam (rmap r.lift t)
 
   instance : RenMap Term Term where
     rmap := rmap
@@ -119,7 +125,7 @@ end Examples.LambdaCalc
 
 
 namespace Examples.LambdaCalcAutomation
-  open Lean Elab Tactic Meta LeanSubst Match Qq
+  open Lean Elab Tactic Meta LeanSubst Command Aesop
 
   inductive Term where
   | var : Nat -> Term
@@ -132,11 +138,6 @@ namespace Examples.LambdaCalcAutomation
 
   attribute [leansubst_var] Term.var
   attribute [leansubst_binder] Term.lam
-
-  @[coe]
-  def Term.from_action : Action Term -> Term
-  | re y => var y
-  | su t => t
 
   def getConstructors (typeName : Name) : MetaM (List Name) := do
     let env ← getEnv
@@ -160,7 +161,9 @@ namespace Examples.LambdaCalcAutomation
     let ctors ← getConstructors type
     List.filterM (isBinder) ctors
 
-  #print Term.from_action
+  def getNonTaggedCtors (type : Name) : MetaM (List Name) := do
+    let ctors ← getConstructors type
+    List.filterM (fun n => do pure (¬ (← isVar n) ∧ ¬ (← isBinder n))) ctors
 
   #eval show MetaM Unit from do
     let lctx ← getLCtx
@@ -176,211 +179,153 @@ namespace Examples.LambdaCalcAutomation
         IO.println s!"{ctor} is neither a var nor a binder"
 
     _ := lctx.addDecl
-
-
-  /- # Test 0 -/
-  -- Uses q antiquotation to define the function, then Declaration.defnDecl to declare the function as a definition in the environment.
-
-  elab "#test0" ty:ident : command => Command.liftTermElabM do
-    let tyName ← realizeGlobalConstNoOverload ty.raw
-    let func := mkApp q(fun ty : Type ↦ fun x : ty ↦ x) (.const tyName [])
-    let typeExpr := q(Nat → Nat)
-    let newDecl :=
-      Declaration.defnDecl (
-        mkDefinitionValEx
-          (`foo0)
-          []
-          typeExpr
-          func
-          ReducibilityHints.abbrev
-          DefinitionSafety.safe
-          [])
-    Lean.addAndCompile newDecl
-    -- Lean.compileDecl newDecl -- Tried this, doesn't register definition
-    -- Lean.addDecl newDecl -- Tried this, same metavariable error
-
-  #check foo0
-
-  #test0 Nat
-
-  #check foo0
-
-  #eval foo0 3
-
-  /- # Test 0'-/
-  -- Uses mkMatcher to define the LHS patterns.
-
-  elab "#test0'" : command => Command.liftTermElabM do
-    -- Want to register new definition:
-    -- def foo : Nat → Nat | x => x
-
-    let matcher ← mkMatcher {
-      matcherName := ← mkAuxDeclName `foo0',
-      matchType := q(Nat → Nat),
-      discrInfos := #[{}],
-      lhss := [
-        ← withLocalDeclDQ `x q(Nat) fun x ↦ return {
-          ref := ← getRef
-          fvarDecls := ← [x].mapM (·.fvarId!.getDecl)
-          patterns := [
-            .var x.fvarId!
-          ]
-        }
-      ]
-    }
-    matcher.addMatcher
-    Lean.logInfo matcher.matcher
-
-    let motive : Q(Nat → Type) := q(fun _ ↦ Nat)
-    let case : Q(Nat → Nat) := q(fun x ↦ x)
-    let func := mkAppN matcher.matcher #[motive]
-    let func ← instantiateMVars func
-
-
-    let typeExpr := q(Nat → Nat)
-    let ctx ← getLCtx
-    let newDecl :=
-      Declaration.defnDecl (
-        mkDefinitionValEx
-          `foo0'
-          []
-          typeExpr
-          func
-          ReducibilityHints.abbrev
-          DefinitionSafety.safe
-          [])
-
-    dbg_trace s!"func: {func}" -- func: _private.LeanSubst.Automation.Basic.0.foo_174.{?_uniq.24495} (fun (x : Nat) => Nat) (fun (x : Nat) => x)
-    Lean.addAndCompile newDecl
-    -- Lean.compileDecl newDecl -- Tried this, doesn't register definition
-    -- Lean.addDecl newDecl -- Tried this, same metavariable error
-
-
-  #test0'
-
-  #check Nat.brecOn
-
-  #check foo0'
-
-  #eval foo0' 0
-
-
-  /- # Test 1 -/
-  -- Define actual from_action.
-
-  elab "#test1" : command => Command.liftTermElabM do
-    let name := `Term.foo
-    let func := q(fun | (re x) => Term.var x | (su x) => x)
-    let typeExpr := q(Action Term → Term)
-    let newDecl :=
-      Declaration.defnDecl (
-        mkDefinitionValEx
-          name
-          []
-          typeExpr
-          func
-          ReducibilityHints.abbrev
-          DefinitionSafety.safe
-          [])
-
-    Lean.addAndCompile newDecl
-
-    let coeStx ← `(coe)
-    Attribute.add `Term.from_action_auto `coe coeStx
-
-  #test1
-
-  #eval Term.foo (re 1)
-
-  /- # Test 2 -/
-  -- Name gets passed in; definition parametrized by name.
-  /-
+/-
   @[simp, grind =]
   theorem Term.from_action_id {n} : from_action (+0σ.act n) = var n := by
     simp [from_action]
-  -/
 
-  elab "#test2" ty:ident : command => do
-    let tyName ← Command.liftCoreM $ realizeGlobalConstNoOverload ty.raw
+  @[simp, grind =]
+  theorem Term.from_action_succ {n} : from_action (+1σ.act n) = var (n + 1) := by
+    simp [from_action]
 
-    let varCtors ← Command.liftTermElabM $ getVarCtors tyName
-    if let some varCtorName := varCtors[0]? then
-      let varCtor : Expr := .const varCtorName []
+  @[simp, grind =]
+  theorem Term.from_acton_re {n} : from_action (re n) = var n := by simp [from_action]
 
-      -- from_action
-      let fromActionAutoName := Name.str tyName "from_action_auto"
-      let fromActionType := mkApp q(fun term : Type ↦ Action term → term) (.const tyName [])
-      let fromActionAuto' := q(fun term : Type ↦ fun varCtor : Nat → term ↦ fun | (re x) => varCtor x | (su x) => x)
-      let fromActionAuto := mkAppN fromActionAuto' #[.const tyName [], varCtor]
-      let fromActionDecl :=
-        Declaration.defnDecl (
-          mkDefinitionValEx
-            fromActionAutoName
-            []
-            fromActionType
-            fromActionAuto
-            ReducibilityHints.abbrev
-            DefinitionSafety.safe
-            [])
-      Command.liftTermElabM $ Lean.addAndCompile fromActionDecl
+  @[simp, grind =]
+  theorem Term.from_action_su {t} : from_action (su t) = t := by simp [from_action]
 
-      -- from_action_id
-      let fromActionIdAutoType :=
-        mkAppN
-          q(
-            fun term : Type ↦
-            fun varCtor : Nat → term ↦
-            fun from_action : Action term → term ↦
-            (n : Nat) → from_action (+0σ.act n) = varCtor n)
-          #[.const tyName [], varCtor, Expr.const fromActionAutoName []]
-      let newMVarExpr ← Command.liftTermElabM $ mkFreshExprMVar (type? := some fromActionIdAutoType)
-      dbg_trace s!"new mvar: {newMVarExpr}"
-      let _ ← Command.liftTermElabM $ Term.runTactic (newMVarExpr.mvarId!) (← `(by simp)) Term.TacticMVarKind.term
-      let proof ← Command.liftTermElabM $ instantiateMVars newMVarExpr
-      let fromActionIdDecl :=
-        Declaration.thmDecl (
-          mkTheoremValEx
-            (.str tyName "from_action_id_auto")
-            []
-            fromActionIdAutoType
-            proof
-            []
-        )
+  instance instCoe_SubstActionTerm_Term : Coe (Action Term) Term where
+    coe := Term.from_action
+-/
+  def getForallBinderTypes : Expr → List Expr
+    | .forallE _ t b _ => t :: getForallBinderTypes b
+    | _ => []
 
-      Command.liftTermElabM $ Lean.addAndCompile fromActionIdDecl
-    else
-      throwUnsupportedSyntax -- need better error
+  elab "#leansubst_autogen" ty:ident : command => do
+    let tyName := ty.raw.getId
+    let tyStr := tyName.toString
+    let tyNameGlobal ← Command.liftCoreM $ realizeGlobalConstNoOverload ty.raw
 
-  #test2 Term
+    let qualify str := mkIdent $ .str tyName str
+    let pairWithTypes names : CommandElabM (List (Name × Expr)) :=
+      List.mapM
+        (fun name => do pure ⟨name, (← getConstInfo name).type⟩)
+        names
 
-  #print Term
+    let xN (n : Nat) := mkIdent (.mkStr1 $ s!"x{n}")
+    let xN_tm (n : Nat) : TSyntax `term := mkIdent (.mkStr1 $ s!"x{n}")
+    let x := mkIdent `x
+    let r := mkIdent `r
+    let n := mkIdent `n
+    let t := mkIdent `t
 
-  #check Term.from_action_auto
+    let varCtorNames ← liftCoreM $ runMetaMAsCoreM $ getVarCtors tyNameGlobal
+    let varName := varCtorNames[0]!
+    let varType := (← getConstInfo varName).type
+    let var := mkIdent varName
 
-  #eval Term.from_action_auto (re 0)
+    let binderCtorNames ← liftCoreM $ runMetaMAsCoreM $ getBinderCtors tyNameGlobal
+    let binderCtors := List.map mkIdent binderCtorNames
 
-  #check Term.from_action_id_auto
+    let nonTaggedCtorNames ← liftCoreM $ runMetaMAsCoreM $ getNonTaggedCtors tyNameGlobal
+    let nonTaggedCtors := List.map mkIdent nonTaggedCtorNames
+    let nonTaggedCtorsWithTypes : List (Name × Expr) ← pairWithTypes nonTaggedCtorNames
 
-
-  elab "#stxtest" ty:ident : command => do
-    Command.elabDeclaration $ ← `(
-      def $(mkIdentFrom ty.raw $ Name.mkStr1 "myId") : $ty -> $ty
-      | x => x
-    )
-
-  #stxtest Term
-
-  #check myId
-
-  open Lean.Elab.Command in run_cmd
-    Command.elabCommand $ ← `(
+    let from_action := qualify "from_action"
+    elabCommand $ ← `(
       @[coe]
-      def blah3 : Action Term -> Term
-      | re y => Term.var y
+      def $from_action : Action $ty → $ty
+      | re y => $var y
       | su t => t
     )
 
-  #check blah3
+    let from_action_id := qualify "from_action_id"
+    elabCommand $ ← `(
+      @[simp, grind =]
+      theorem $from_action_id {$n} : $from_action (+0σ.act $n) = $var $n := by
+        simp [$from_action:ident]
+    )
 
+    let from_action_succ := qualify "from_action_succ"
+    elabCommand $ ← `(
+      @[simp, grind =]
+      theorem $from_action_succ {$n} : $from_action (+1σ.act $n) = $var ($n + 1) := by
+        simp [$from_action:ident]
+    )
+
+    let from_action_re := qualify "from_action_re"
+    elabCommand $ ← `(
+      @[simp, grind =]
+      theorem $from_action_re {$n} : $from_action (re $n) = $var $n := by
+        simp [$from_action:ident]
+    )
+
+    let from_action_su := qualify "from_action_su"
+    elabCommand $ ← `(
+      @[simp, grind =]
+      theorem $from_action_su {$t} : $from_action (su $t) = $t := by
+        simp [$from_action:ident]
+    )
+
+    let instCoe_SubstActionTy_Ty := mkIdent $ .mkStr1 s!"instCoe_SubstAction{tyStr}_{tyStr}"
+    elabCommand $ ← `(
+      instance $instCoe_SubstActionTy_Ty:ident : Coe (Action $ty) $ty where
+        coe := $from_action
+    )
+
+    let rmap := qualify "rmap"
+    let handleNonTaggedCtor : Name × Expr → CommandElabM (TSyntax `Lean.Parser.Term.matchAlt) := fun ⟨ctorName, type⟩ ↦ do
+      let ctor := mkIdent ctorName
+      let argTypes := getForallBinderTypes type
+
+      let lhs : Array (TSyntax `term) := List.toArray $ List.map xN_tm $ List.range (List.length argTypes)
+
+      let blah := isDefEq
+      let lhs_types := Array.zip lhs argTypes.toArray
+      let rhs : Array (TSyntax `term) ←
+        Array.mapM
+          (fun ⟨t, ty⟩ ↦ do
+            let defEq ← liftCoreM $ runMetaMAsCoreM $ isDefEqGuarded ty (Expr.const tyNameGlobal [])
+            if defEq then `($rmap $r $t) else `($t))
+          lhs_types
+      `(Parser.Term.matchAltExpr| | $ctor $lhs* => $ctor $rhs*)
+
+
+    let nonTaggedPatterns := List.toArray $ ← List.mapM (handleNonTaggedCtor) nonTaggedCtorsWithTypes
+
+    let varPattern ← `($var $x)
+    let varCase ← `($var ($(r).act $x))
+    let defaultPattern ← `(_)
+    let defaultCase ← `(sorry)
+    let default ← `(Parser.Term.matchAltExpr| | $defaultPattern => $defaultCase)
+    let rmap := qualify "rmap"
+
+    elabCommand $ ← `(
+      def $rmap ($r : Ren $ty) : $ty → $ty
+      | $varPattern => $varCase
+    )
+
+/-
+  @[simp]
+  def rmap (r : Ren Term) : Term -> Term
+  | .var x => .var (r.act x)
+  | t1 :@ t2 => rmap r t1 :@ rmap r t2
+  | :λ t => :λ rmap r.lift t
+-/
+
+  #leansubst_autogen Term
+
+  #print Term.from_action
+
+  #print Term.from_action_id
+
+  #print Term.from_action_succ
+
+  #print Term.from_action_su
+
+  #print instCoe_SubstActionTerm_Term
+  #check instCoe_SubstActionTerm_Term.coe
+
+  #print Term.rmap
 
 end Examples.LambdaCalcAutomation
