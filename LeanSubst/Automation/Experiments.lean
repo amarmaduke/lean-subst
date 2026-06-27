@@ -97,3 +97,22 @@ namespace Experiment2
   #check Nat.myId_thm 0
 
 end Experiment2
+namespace Question
+  open Lean Elab Tactic Meta Command Aesop
+
+  elab "#test" : command => do
+    let zeroCase ← `(Parser.Term.matchAltExpr| | 0 => 0)
+    let succCase ← `(Parser.Term.matchAltExpr| | .succ n => n)
+    elabCommand $ ← `(
+      def $(mkIdent (.mkStr1 "myFun")) : Nat → Nat
+      $zeroCase:matchAlt
+      $succCase:matchAlt -- unexpected token ')'; expected ':=', 'where' or '|'
+    )
+
+  #test
+
+  #eval myFun 0
+  #eval myFun 1
+  #eval myFun 2
+
+end Question

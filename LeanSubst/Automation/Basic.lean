@@ -289,12 +289,11 @@ namespace Examples.LambdaCalcAutomation
             if defEq then `($rmap $r $t) else `($t))
           lhs_types
       `(Parser.Term.matchAltExpr| | $ctor $lhs* => $ctor $rhs*)
+    let nonTaggedCases := List.toArray $ ← List.mapM (handleNonTaggedCtor) nonTaggedCtorsWithTypes
 
+    let varCase : (TSyntax `Lean.Parser.Term.matchAlt) ←
+      `(Parser.Term.matchAltExpr| | $var $x => $var ($(r).act $x))
 
-    let nonTaggedPatterns := List.toArray $ ← List.mapM (handleNonTaggedCtor) nonTaggedCtorsWithTypes
-
-    let varPattern ← `($var $x)
-    let varCase ← `($var ($(r).act $x))
     let defaultPattern ← `(_)
     let defaultCase ← `(sorry)
     let default ← `(Parser.Term.matchAltExpr| | $defaultPattern => $defaultCase)
@@ -302,7 +301,9 @@ namespace Examples.LambdaCalcAutomation
 
     elabCommand $ ← `(
       def $rmap ($r : Ren $ty) : $ty → $ty
-      | $varPattern => $varCase
+        $[$nonTaggedCases:matchAlt]*
+        $varCase:matchAlt
+        $default:matchAlt
     )
 
 /-
