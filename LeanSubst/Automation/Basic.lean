@@ -225,11 +225,12 @@ namespace Examples.LambdaCalcAutomation
     let var := mkIdent varName
 
     let binderCtorNames ← liftCoreM $ runMetaMAsCoreM $ getBinderCtors tyNameGlobal
-    let binderCtors := List.map mkIdent binderCtorNames
+    let binderCtors := binderCtorNames.map mkIdent
+    let binderCtorsWithTypes ← pairWithTypes binderCtorNames
 
     let nonTaggedCtorNames ← liftCoreM $ runMetaMAsCoreM $ getNonTaggedCtors tyNameGlobal
-    let nonTaggedCtors := List.map mkIdent nonTaggedCtorNames
-    let nonTaggedCtorsWithTypes : List (Name × Expr) ← pairWithTypes nonTaggedCtorNames
+    let nonTaggedCtors := nonTaggedCtorNames.map mkIdent
+    let nonTaggedCtorsWithTypes ← pairWithTypes nonTaggedCtorNames
 
     let from_action := qualify "from_action"
     elabCommand $ ← `(
@@ -278,32 +279,43 @@ namespace Examples.LambdaCalcAutomation
       let ctor := mkIdent ctorName
       let argTypes := getForallBinderTypes type
 
-      let lhs : Array (TSyntax `term) := List.toArray $ List.map xN_tm $ List.range (List.length argTypes)
+      let lhs : List (TSyntax `term) := (List.range $ argTypes.length).map xN_tm
+      let lhs_types := lhs.zip argTypes
 
-      let blah := isDefEq
-      let lhs_types := Array.zip lhs argTypes.toArray
-      let rhs : Array (TSyntax `term) ←
-        Array.mapM
+      let rhs : List (TSyntax `term) ←
+        List.mapM
           (fun ⟨t, ty⟩ ↦ do
-            let defEq ← liftCoreM $ runMetaMAsCoreM $ isDefEqGuarded ty (Expr.const tyNameGlobal [])
+            let defEq ← liftCoreM $ runMetaMAsCoreM $ isDefEqGuarded ty (.const tyNameGlobal [])
             if defEq then `($rmap $r $t) else `($t))
           lhs_types
-      `(Parser.Term.matchAltExpr| | $ctor $lhs* => $ctor $rhs*)
-    let nonTaggedCases := List.toArray $ ← List.mapM (handleNonTaggedCtor) nonTaggedCtorsWithTypes
+      `(Parser.Term.matchAltExpr| | $ctor $(lhs.toArray)* => $ctor $(rhs.toArray)*)
+    let nonTaggedCases := (← nonTaggedCtorsWithTypes.mapM handleNonTaggedCtor).toArray
+
+    let handleBinderCtor : Name × Expr → CommandElabM (TSyntax `Lean.Parser.Term.matchAlt) := fun ⟨ctorName, type⟩ ↦ do
+      let ctor := mkIdent ctorName
+      let argTypes := getForallBinderTypes type
+
+      let lhs : List (TSyntax `term) := (List.range $ argTypes.length).map xN_tm
+      let lhs_types := lhs.zip argTypes
+
+      if let some lhs_head := lhs.head? then
+        let rhs_head ← `($rmap $(r).lift $lhs_head) -- For now, we assume the first argument is the body of the binder
+        let rhs_tail := lhs_types.tail.map Prod.fst -- For now, we just pass the non-binder arguments directly
+        let rhs := rhs_head :: rhs_tail
+        `(Parser.Term.matchAltExpr| | $ctor $(lhs.toArray)* => $ctor $(rhs.toArray)*)
+      else
+        throwUnsupportedSyntax -- TODO: better error
+    let binderCases := (← binderCtorsWithTypes.mapM handleBinderCtor).toArray
 
     let varCase : (TSyntax `Lean.Parser.Term.matchAlt) ←
       `(Parser.Term.matchAltExpr| | $var $x => $var ($(r).act $x))
 
-    let defaultPattern ← `(_)
-    let defaultCase ← `(sorry)
-    let default ← `(Parser.Term.matchAltExpr| | $defaultPattern => $defaultCase)
-    let rmap := qualify "rmap"
-
     elabCommand $ ← `(
+      @[simp]
       def $rmap ($r : Ren $ty) : $ty → $ty
-        $[$nonTaggedCases:matchAlt]*
         $varCase:matchAlt
-        $default:matchAlt
+        $[$nonTaggedCases:matchAlt]*
+        $[$binderCases:matchAlt]*
     )
 
 /-
