@@ -242,8 +242,23 @@ theorem Subst.compose_ren_right_assoc2
   cases z <;> simp
   congr
 
+theorem Subst.lift_of_0 [RenMap S S] [RenMapId S S] {σ : Subst S} : σ.lift 0 = σ := by simp [lift] ; congr
+
+theorem Subst.lift_of_succ [RenMap S S] [RenMapId S S] {k} {r : Subst S} : r.lift (k + 1) = (r.lift k).lift := by
+  induction k
+  case zero => simp
+  case succ n ih =>
+    sorry
+
+theorem Subst.lift_of_succ_rev [RenMap S S] [RenMapId S S] {k} {r : Subst S} : r.lift (1 + k) = r.lift.lift k := by
+  sorry
+
 @[grind =]
-theorem Subst.lift_of_add [RenMap S S] {a b} {σ : Subst S} : σ.lift (a + b) = (σ.lift a).lift b := sorry
+theorem Subst.lift_of_add [RenMap S S] [RenMapId S S] {a b} {σ : Subst S} : σ.lift (a + b) = (σ.lift a).lift b := by
+  induction a generalizing b
+  case zero _ => congr <;> simp
+  case succ a' ih => sorry
+
 
 @[simp]
 theorem Subst.ren_to_hcompose [SubstMap S T] {r : Ren S} {σ : Subst T} : r.to ◾ σ = r.to := sorry
