@@ -38,7 +38,7 @@ theorem Action.hrmap_re [RenMap S T] {r : Ren T} {x : Nat} : (@re S x)⟨r⟩ = 
   simp [RenMap.rmap]
 
 @[simp]
-theorem Actionh.rmap_su [RenMap S T] {r : Ren T} {t : S} : (su t)⟨r⟩ = su t⟨r⟩ := by
+theorem Action.hrmap_su [RenMap S T] {r : Ren T} {t : S} : (su t)⟨r⟩ = su t⟨r⟩ := by
   simp [RenMap.rmap]
 
 @[simp]
