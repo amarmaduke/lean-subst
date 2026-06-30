@@ -242,30 +242,35 @@ theorem Subst.compose_ren_right_assoc2
   cases z <;> simp
   congr
 
+-- Not needed but maybe useful
 theorem Subst.lift_of_0 [RenMap S S] [RenMapId S S] {σ : Subst S} : σ.lift 0 = σ := by simp [lift] ; congr
 
-theorem Subst.lift_of_succ [RenMap S S] [RenMapCompose S S] {k} {r : Subst S} : r.lift (k + 1) = (r.lift k).lift := by
+theorem Subst.lift_of_succ [RenMap S S] [RenMapCompose S S] {k} {σ : Subst S} : σ.lift (k + 1) = (σ.lift k).lift := by
   simp [lift]
-  funext n
-  induction n
+  funext n ; induction n
   case zero => simp
   case succ n' _  =>
     simp ; split
     · simp
     · simp [rmap] ; split <;> grind [Ren.add, Ren.succ, Ren.compose]
 
+theorem Subst.lift_of_succ_rev [RenMap S S] [RenMapCompose S S] {k} {σ : Subst S} : σ.lift (1 + k) = σ.lift.lift k := by
+  rw [Nat.add_comm, lift_of_succ]
+  simp [lift]
+  funext n ; induction n
+  case zero => simp [eq_comm]
+  case succ n' _ =>
+    repeat any_goals (simp ; split)
+    · simp ; omega
+    · grind [Ren.succ, Ren.add, Ren.compose]
+    · grind
+    · split <;>
+      · simp [Ren.succ, Ren.add, Ren.compose] ; grind
 
-
-
-theorem Subst.lift_of_succ_rev [RenMap S S] [RenMapId S S] {k} {r : Subst S} : r.lift (1 + k) = r.lift.lift k := by
-  sorry
 
 @[grind =]
-theorem Subst.lift_of_add [RenMap S S] [RenMapId S S] {a b} {σ : Subst S} : σ.lift (a + b) = (σ.lift a).lift b := by
-  induction a generalizing b
-  case zero _ => congr <;> simp
-  case succ a' ih => sorry
-
+theorem Subst.lift_of_add [RenMap S S] [RenMapId S S] [RenMapCompose S S] {a b} {σ : Subst S} : σ.lift (a + b) = (σ.lift a).lift b := by
+  induction a generalizing σ <;> grind [lift_of_succ_rev]
 
 @[simp]
 theorem Subst.ren_to_hcompose [SubstMap S T] {r : Ren S} {σ : Subst T} : r.to ◾ σ = r.to := sorry
