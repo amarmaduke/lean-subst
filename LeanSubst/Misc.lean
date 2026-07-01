@@ -298,38 +298,15 @@ theorem Subst.compose_lift_append_indirect {k}
   case cons hd tl _ =>
     sorry
 
-theorem Subst.compose_left_cons_lift_indirect_aux_aux {k}
-  [RenMap T T] [SubstMap T T] [RenMapId T T] [RenMapCompose T T]
-  {a : Action T} {σ τ : Subst T}
-  : σ.lift (k + 1) ∘ (a :: τ) = σ.lift k ∘ (a :: σ ∘ τ) := by
-  simp [lift, compose, Ren.add, act, SubstAction.act]
-  funext n
-  (repeat any_goals split) <;> try simp [act, SubstAction.act]
-  · sorry
-  · sorry
-  · sorry
-  · sorry
-
-theorem Subst.compose_left_cons_lift_indirect_aux {k}
-  [RenMap T T] [SubstMap T T] [RenMapId T T] [RenMapCompose T T]
-  {x : Action T} {xs : List $ Action T} {σ τ : Subst T}
-  : σ.lift (k + 1) ∘ (x :: xs ++ τ) = σ.lift k ∘ (x :: σ ∘ (xs ++ τ)) := compose_left_cons_lift_indirect_aux_aux
-
-
 theorem Subst.compose_left_cons_lift_indirect {k}
-  [RenMap T T] [SubstMap T T] [RenMapId T T] {ℓ : List $ Action T} {σ τ : Subst T} {h : k = ℓ.length}
+  [RenMap T T] [SubstMap T T] [RenMapId T T] [RenMapCompose T T] [SubstMapCompose T T] {ℓ : List $ Action T} {σ τ : Subst T} {h : k = ℓ.length}
   : σ.lift k ∘ (ℓ ++ τ) = ℓ ++ (σ ∘ τ) := by
   induction ℓ generalizing k
-  case nil =>
-    have kz : k = 0 := by grind
-    simp [kz, lift, compose]
+  case nil => simp_all
   case cons x xs ih =>
-    have kpred : k.pred = xs.length := by simp_all
-    have ih' := @ih k.pred kpred
+    have ih' := @ih k.pred (by simp_all)
     simp
-    simp [cons, compose]
-    funext n
-    simp [smap]
+    rw [← ih']
     sorry
 
 @[simp]
