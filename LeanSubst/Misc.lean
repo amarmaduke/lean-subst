@@ -242,53 +242,107 @@ theorem Subst.compose_ren_right_assoc2
   cases z <;> simp
   congr
 
+-- like rewrite_lift_succ but no [RenMapId S S]
+theorem Subst.lift_of_succ [RenMap S S] [RenMapCompose S S] {k} {σ : Subst S} : σ.lift (k + 1) = (σ.lift k).lift := by
+  simp [lift]
+  funext n ; induction n
+  case zero => simp
+  case succ n' _  =>
+    simp
+    split <;> simp [rmap]
+    split <;> grind [Ren.add, Ren.succ, Ren.compose]
+
+theorem Subst.lift_of_succ_rev [RenMap S S] [RenMapCompose S S] {k} {σ : Subst S} : σ.lift (1 + k) = σ.lift.lift k := by
+  rw [Nat.add_comm, lift_of_succ]
+  simp [lift]
+  funext n ; induction n
+  case zero => simp [eq_comm]
+  case succ n' _ =>
+    repeat any_goals (simp ; split)
+    · simp ; omega
+    · grind [Ren.succ, Ren.add, Ren.compose]
+    · grind
+    · split <;>
+      · simp [Ren.succ, Ren.add, Ren.compose] ; grind
+
 @[grind =]
-theorem Subst.lift_of_add [RenMap S S] {a b} {σ : Subst S} : σ.lift (a + b) = (σ.lift a).lift b := sorry
+theorem Subst.lift_of_add [RenMap S S] [RenMapId S S] [RenMapCompose S S] {a b} {σ : Subst S} : σ.lift (a + b) = (σ.lift a).lift b := by
+  induction a generalizing σ <;> grind [lift_of_succ_rev]
 
 @[simp]
-theorem Subst.ren_to_hcompose [SubstMap S T] {r : Ren S} {σ : Subst T} : r.to ◾ σ = r.to := sorry
+theorem Subst.ren_to_hcompose [SubstMap S T] {r : Ren S} {σ : Subst T} : r.to ◾ σ = r.to := by simp [hcompose, Ren.to]
 
 @[simp]
-theorem Subst.ren_to_hcompose_ren [RenMap S T] {r : Ren S} {k : Ren T} : r.to ◾ k = r.to := sorry
+theorem Subst.ren_to_hcompose_ren [RenMap S T] {r : Ren S} {k : Ren T} : r.to ◾ k = r.to := by simp [hcompose_ren, Ren.to]
 
 @[simp]
-theorem Subst.to_append {ℓ : List Nat} {r : Ren T} : (ℓ ++ r).to = ℓ ++ r.to := sorry
+theorem Subst.to_append {ℓ : List Nat} {r : Ren T} : (ℓ ++ r).to = ℓ ++ r.to := by
+  induction ℓ <;> simp_all [HAppend.hAppend, Ren.append, append_ren]
 
 @[simp, grind =]
-theorem Subst.ren_rewrite1 [RenMap T T] {r : Ren T} : id T ∘ r = r.to := sorry
+theorem Subst.ren_rewrite1 [RenMap T T] {r : Ren T} : id T ∘ r = r.to := by simp [Ren.to, compose_ren_right]
 
 @[simp, grind =]
-theorem Subst.ren_rewrite1_left {r : Ren T} : r ∘ id T = r.to := sorry
+theorem Subst.ren_rewrite1_left {r : Ren T} : r ∘ id T = r.to := by simp [Ren.to, compose_ren_left]
+
+-- Not used but maybe useful
+theorem Subst.rmap_of_succ_smap
+  [RenMap T T] [RenMapId T T]
+  [SubstMap T T] [SubstMapCompose T T] [SubstMapRenComposeLeft T T]
+  {x : Action T} {τ : Subst T} {t : T}
+  : t⟨Ren.succ T⟩[x :: τ] = t[τ] := by simp
+
+theorem Subst.compose_compose_left_succ
+  [RenMap T T] [RenMapId T T]
+  [SubstMap T T] [SubstMapCompose T T] [SubstMapRenComposeLeft T T]
+  {x : Action T} {σ τ : Subst T}
+  : (σ ∘ Ren.succ T) ∘ (x :: τ) = σ ∘ τ := by
+  simp [compose, smap]
+  congr ; funext n
+  generalize zdef : σ.act n = z
+  induction z <;> simp
+
+theorem Subst.compose_left_cons_lift1_indirect
+  [RenMap T T] [RenMapId T T]
+  [SubstMap T T] [SubstMapCompose T T] [SubstMapRenComposeLeft T T]
+  {x : Action T} {σ τ : Subst T}
+  : σ.lift ∘ (x :: τ) = x :: (σ ∘ τ) := by
+  rw [rewrite_lift, rewrite3_cons, Action.smap_re, cons_action0]
+  congr 1
+  exact compose_compose_left_succ
+
+theorem Subst.compose_left_cons_lift_indirect {k}
+  [RenMap T T] [RenMapId T T] [RenMapCompose T T]
+  [SubstMap T T] [SubstMapCompose T T] [SubstMapRenComposeLeft T T]
+  {ℓ : List $ Action T} {σ τ : Subst T} {h : k = ℓ.length}
+  : σ.lift k ∘ (ℓ ++ τ) = ℓ ++ (σ ∘ τ) := by
+  induction ℓ generalizing k <;> simp [*]
+  case cons x xs ih => rw [lift_of_succ, compose_left_cons_lift1_indirect, ← @ih xs.length rfl]
 
 theorem Subst.compose_lift_append_indirect {k}
   [RenMap S S] [RenMapId S S] [RenMapCompose S S]
-  [SubstMap S S] [SubstMapId S S]
-  [SubstMapRenComposeLeft S S] [SubstMapCompose S S]
+  [SubstMap S S] [SubstMapId S S] [SubstMapRenComposeLeft S S] [SubstMapCompose S S]
   {ℓ1 ℓ2 : List (Action S)} (h : k = ℓ2.length)
-  : (ℓ1 ++ Subst.id S).lift k ∘ (ℓ2 ++ Subst.id S) = (ℓ2 ++ ℓ1) ++ Subst.id S
-:= by
-  sorry
-
-theorem Subst.compose_left_cons_lift_indirect {k}
-  [RenMap T T] [SubstMap T T] {ℓ : List $ Action T} {σ τ : Subst T} {h : k = ℓ.length}
-  : σ.lift k ∘ (ℓ ++ τ) = ℓ ++ (σ ∘ τ)
-:= sorry
+  : (ℓ1 ++ Subst.id S).lift k ∘ (ℓ2 ++ Subst.id S) = (ℓ2 ++ ℓ1) ++ Subst.id S := by grind [compose_left_cons_lift_indirect]
 
 @[simp]
 theorem Subst.List.smap_append [SubstMap S T] {a b : List S} {σ : Subst T}
-  : (a ++ b)[σ] = a[σ] ++ b[σ]
-:= sorry
+  : (a ++ b)[σ] = a[σ] ++ b[σ] := by induction a <;> grind
 
 @[simp]
-theorem Subst.List.rmap_reverse [RenMap S T] {ℓ : List S} {r : Ren T} : ℓ.reverse⟨r⟩ = ℓ⟨r⟩.reverse := sorry
+theorem Subst.List.rmap_reverse [RenMap S T] {ℓ : List S} {r : Ren T} : ℓ.reverse⟨r⟩ = ℓ⟨r⟩.reverse := by
+  induction ℓ <;> simp ; grind
 
 @[simp]
-theorem Subst.List.smap_reverse [SubstMap S T] {ℓ : List S} {σ : Subst T} : ℓ.reverse[σ] = ℓ[σ].reverse := sorry
+theorem Subst.List.smap_reverse [SubstMap S T] {ℓ : List S} {σ : Subst T} : ℓ.reverse[σ] = ℓ[σ].reverse := by
+  induction ℓ <;> simp ; grind
 
 @[simp]
-theorem Subst.List.rmap_map_su [RenMap T T] {ℓ : List T} {r : Ren T} : (List.map su ℓ)⟨r⟩ = List.map su ℓ⟨r⟩ := sorry
+theorem Subst.List.rmap_map_su [RenMap T T] {ℓ : List T} {r : Ren T} : (List.map su ℓ)⟨r⟩ = List.map su ℓ⟨r⟩ := by
+  induction ℓ <;> simp ; grind
 
 @[simp]
-theorem Subst.List.smap_map_su [SubstMap T T] {ℓ : List T} {σ : Subst T} : (List.map su ℓ)[σ] = List.map su ℓ[σ] := sorry
+theorem Subst.List.smap_map_su [SubstMap T T] {ℓ : List T} {σ : Subst T} : (List.map su ℓ)[σ] = List.map su ℓ[σ] := by
+  induction ℓ <;> simp ; grind
 
 end LeanSubst
