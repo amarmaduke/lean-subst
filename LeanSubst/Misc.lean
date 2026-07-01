@@ -287,12 +287,14 @@ theorem Subst.ren_rewrite1_left {r : Ren T} : r ∘ id T = r.to := by simp [Ren.
 
 -- Not used but maybe useful
 theorem Subst.rmap_of_succ_smap
-  [RenMap T T] [SubstMap T T] [RenMapId T T] [SubstMapCompose T T] [SubstMapRenComposeLeft T T]
+  [RenMap T T] [RenMapId T T]
+  [SubstMap T T] [SubstMapCompose T T] [SubstMapRenComposeLeft T T]
   {x : Action T} {τ : Subst T} {t : T}
   : t⟨Ren.succ T⟩[x :: τ] = t[τ] := by simp
 
 theorem Subst.compose_compose_left_succ
-  [RenMap T T] [SubstMap T T] [RenMapId T T] [SubstMapCompose T T] [SubstMapRenComposeLeft T T]
+  [RenMap T T] [RenMapId T T]
+  [SubstMap T T] [SubstMapCompose T T] [SubstMapRenComposeLeft T T]
   {x : Action T} {σ τ : Subst T}
   : (σ ∘ Ren.succ T) ∘ (x :: τ) = σ ∘ τ := by
   simp [compose, smap]
@@ -301,7 +303,8 @@ theorem Subst.compose_compose_left_succ
   induction z <;> simp
 
 theorem Subst.compose_left_cons_lift1_indirect
-  [RenMap T T] [SubstMap T T] [RenMapId T T] [SubstMapCompose T T] [SubstMapRenComposeLeft T T]
+  [RenMap T T] [RenMapId T T]
+  [SubstMap T T] [SubstMapCompose T T] [SubstMapRenComposeLeft T T]
   {x : Action T} {σ τ : Subst T}
   : σ.lift ∘ (x :: τ) = x :: (σ ∘ τ) := by
   rw [rewrite_lift, rewrite3_cons, Action.smap_re, cons_action0]
@@ -309,7 +312,8 @@ theorem Subst.compose_left_cons_lift1_indirect
   exact compose_compose_left_succ
 
 theorem Subst.compose_left_cons_lift_indirect {k}
-  [RenMap T T] [SubstMap T T] [RenMapId T T] [RenMapCompose T T] [SubstMapCompose T T] [SubstMapRenComposeLeft T T]
+  [RenMap T T] [RenMapId T T] [RenMapCompose T T]
+  [SubstMap T T] [SubstMapCompose T T] [SubstMapRenComposeLeft T T]
   {ℓ : List $ Action T} {σ τ : Subst T} {h : k = ℓ.length}
   : σ.lift k ∘ (ℓ ++ τ) = ℓ ++ (σ ∘ τ) := by
   induction ℓ generalizing k <;> simp [*]
@@ -317,8 +321,7 @@ theorem Subst.compose_left_cons_lift_indirect {k}
 
 theorem Subst.compose_lift_append_indirect {k}
   [RenMap S S] [RenMapId S S] [RenMapCompose S S]
-  [SubstMap S S] [SubstMapId S S]
-  [SubstMapRenComposeLeft S S] [SubstMapCompose S S]
+  [SubstMap S S] [SubstMapId S S] [SubstMapRenComposeLeft S S] [SubstMapCompose S S]
   {ℓ1 ℓ2 : List (Action S)} (h : k = ℓ2.length)
   : (ℓ1 ++ Subst.id S).lift k ∘ (ℓ2 ++ Subst.id S) = (ℓ2 ++ ℓ1) ++ Subst.id S := by grind [compose_left_cons_lift_indirect]
 
