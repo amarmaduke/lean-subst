@@ -94,13 +94,11 @@ theorem Ren.cons_add_succ {T n} : n :: Ren.add T (n + 1) = Ren.add T n := by
     simp [cons, add]
     funext n ; split <;> omega
 
-theorem Ren.range_eq_append_last {a b} {h : a ≤ b} : a..(b + 1) = a..b ++ [b] := by simp_all [Ren.range]
-
 theorem Ren.assoc {T} {xs ys : List Nat} {r : Ren T} : xs ++ (ys ++ r) = (xs ++ ys) ++ r := by
   induction xs generalizing ys r <;> simp_all
 
 theorem Ren.append_range_succ_succ {T s e} {r : Ren T} {h : s ≤ e + 1} : s..(e + 2) ++ r = s..(e + 1) ++ ((e + 1) :: r) := by
-  simp_all [Ren.range_eq_append_last, ← Ren.assoc]
+  simp_all [Ren.range, ← Ren.assoc]
 
 theorem Subst.rewrite1_append_ren_le {T s e} : s..e ++ +r e = .add T (min s e) := by
   induction e generalizing s ; simp
