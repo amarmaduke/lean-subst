@@ -84,52 +84,66 @@ theorem Ren.to_cons {x} {r : Ren T} : (x::r).to = re x :: r.to := by
   simp [to, cons, Subst.cons]; funext; case _ x =>
   cases x <;> simp
 
-theorem Ren.cons_add_succ {T n} : n :: Ren.add T (n + 1) = Ren.add T n := by
+theorem Ren.cons_add_succ {T n} : n :: add T (n + 1) = add T n := by
   induction n
   case zero =>
     simp [cons]
-    congr ; funext n ; split
-    repeat simp
-  case succ n ih =>
+    congr ; funext ; split <;> simp
+  case succ =>
     simp [cons, add]
-    funext n ; split <;> omega
+    funext ; split <;> omega
 
-theorem Ren.assoc {T} {xs ys : List Nat} {r : Ren T} : xs ++ (ys ++ r) = (xs ++ ys) ++ r := by
-  induction xs generalizing ys r <;> simp_all
+theorem Ren.assoc {T} {xs ys : List Nat} {r : Ren T} : xs ++ (ys ++ r) = xs ++ ys ++ r := by
+  induction xs <;> simp_all
 
 theorem Ren.append_range_succ_succ {T s e} {r : Ren T} {h : s ≤ e + 1} : s..(e + 2) ++ r = s..(e + 1) ++ ((e + 1) :: r) := by
   simp_all [Ren.range, ← Ren.assoc]
 
 theorem Subst.rewrite1_append_ren_le {T s e} : s..e ++ +r e = .add T (min s e) := by
   induction e generalizing s ; simp
-  case _ e ih =>
+  case succ e ih =>
     cases Nat.decLt s (e + 1)
-    case _ h => simp_all
-    case _ h =>
+    case isFalse => simp_all
+    case isTrue h =>
       cases (by omega : s ≤ e)
-      case _ => simp [Ren.cons, Ren.add] ; funext n ; split <;> grind
-      case _ n _ =>
+      case refl => simp [Ren.cons, Ren.add] ; funext n ; split <;> grind
+      case step n _ =>
         replace ih := @ih s
-        simp_all [Nat.min_eq_left (by omega : s ≤ n + 1 + 1)]
+        simp_all [Nat.min_eq_left (by omega : s ≤ n + 2)]
         simp [Nat.min_eq_left (by omega : s ≤ n + 1)] at ih
-        rw [← ih, @Ren.append_range_succ_succ (h := by omega), Ren.cons_add_succ]
+        rw [← ih, @Ren.append_range_succ_succ (h := (by omega : s + 1 ≤ n + 1)), Ren.cons_add_succ]
         simp [@Ren.range_lt_cons (h := (by omega : s < n + 1))]
 
+theorem subst_append_assoc_nat {T} {xs ys : List Nat} {σ : Subst T} : xs ++ (ys ++ σ) = xs ++ ys ++ σ := by
+  induction xs <;> simp_all
+
+theorem Subst.append_range_succ_succ {T s e} {σ : Subst T} {h : s ≤ e + 1} : s..(e + 2) ++ σ = s..(e + 1) ++ ((re $ e + 1) :: σ) := by
+  simp_all [Ren.range, subst_append_assoc_nat]
+
+theorem Subst.cons_add_succ {T n} : re n :: add T (n + 1) = add T n := by
+  induction n
+  case zero =>
+    simp [cons]
+    congr ; funext n ; split <;> simp
+  case succ n _ =>
+    simp [cons, add]
+    funext ; split <;> congr 1 <;> omega
+
 theorem Subst.rewrite1_append_le {T s e} : s..e ++ +σ e = add T (min s e) := by
-  induction e generalizing s; simp
-  case _ e ih =>
-  cases Nat.decLt s (e + 1)
-  case _ h1 =>
-    have lem : s ≥ e + 1 := by omega
-    rw [Ren.range_ge_nil (h := lem)]; simp
-    rw [Nat.min_eq_right lem]
-  case _ h1 =>
-    rw [Ren.range_lt_cons (h := h1)]
-    rw [Nat.min_eq_left (by omega)]
-    simp
-    have lem : (s + 1)..(e + 1) ++ add T (e + 1) = .succ T ∘ (s..e ++ add T e) := sorry
-    rw [lem, ih, Nat.min_eq_left (by omega)]
-    sorry
+  induction e generalizing s ; simp
+  case succ e ih =>
+    cases Nat.decLt s (e + 1)
+    case isFalse => simp_all
+    case isTrue h1 =>
+      cases (by omega : s ≤ e)
+      case refl => simp [Subst.cons, Subst.add] ; funext n ; split <;> grind
+      case step n _ =>
+        replace ih := @ih s
+        simp_all [Nat.min_eq_left (by omega : s ≤ n + 2)]
+        simp [Nat.min_eq_left (by omega : s ≤ n + 1)] at ih
+        rw [← ih, @Subst.append_range_succ_succ (h := (by omega : s + 1 ≤ n + 1)), cons_add_succ]
+        simp [@Ren.range_lt_cons (h := (by omega : s < n + 1))]
+
 
 @[simp, grind =]
 theorem Subst.rewrite1_append_ren {e} : 0..e ++ +r e = .id T := by
