@@ -94,8 +94,6 @@ theorem Ren.cons_add_succ {T n} : n :: Ren.add T (n + 1) = Ren.add T n := by
     simp [cons, add]
     funext n ; split <;> omega
 
-theorem Ren.append_singleton {T n} {r : Ren T} : [n] ++ r = n :: r := by simp
-
 theorem Ren.range_eq_append_last {a b} {h : a ≤ b} : a..(b + 1) = a..b ++ [b] := by simp_all [Ren.range]
 
 theorem Ren.assoc {T} {xs ys : List Nat} {r : Ren T} : xs ++ (ys ++ r) = (xs ++ ys) ++ r := by
