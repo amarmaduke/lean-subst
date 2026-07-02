@@ -84,21 +84,37 @@ theorem Ren.to_cons {x} {r : Ren T} : (x::r).to = re x :: r.to := by
   simp [to, cons, Subst.cons]; funext; case _ x =>
   cases x <;> simp
 
+theorem Ren.cons_add_succ {T n} : n :: Ren.add T (n + 1) = Ren.add T n := by
+  induction n
+  case zero =>
+    simp [cons]
+    congr ; funext n ; split
+    repeat simp
+  case succ n ih =>
+    simp [cons, add]
+    funext n ; split <;> omega
+
+theorem Ren.append_singleton {T n} {r : Ren T} : [n] ++ r = n :: r := by simp
+
+theorem Ren.append_range_succ_succ {T s e} {r : Ren T} : s..(e + 2) ++ r = s..(e + 1) ++ ((e + 1) :: r) := by sorry
+
+-- Not actually needed for Subst.rewrite1_append_ren_le but I feel like it's important (if not already proven somewhere else).
+theorem Ren.assoc {T} {xs ys : List Nat} {r : Ren T} : xs ++ (ys ++ r) = (xs ++ ys) ++ r := by sorry
+
 theorem Subst.rewrite1_append_ren_le {T s e} : s..e ++ +r e = .add T (min s e) := by
-  induction e generalizing s; simp
+  induction e generalizing s ; simp
   case _ e ih =>
-  cases Nat.decLt s (e + 1)
-  case _ h1 =>
-    have lem : s ≥ e + 1 := by omega
-    rw [Ren.range_ge_nil (h := lem)]; simp
-    rw [Nat.min_eq_right lem]
-  case _ h1 =>
-    rw [Ren.range_lt_cons (h := h1)]
-    rw [Nat.min_eq_left (by omega)]
-    simp
-    have lem : (s + 1)..(e + 1) ++ Ren.add T (e + 1) = .succ T ∘ (s..e ++ Ren.add T e) := sorry
-    rw [lem, ih, Nat.min_eq_left (by omega)]
-    sorry
+    cases Nat.decLt s (e + 1)
+    case _ h => simp_all
+    case _ h =>
+      cases (by omega : s ≤ e)
+      case _ => simp [Ren.cons, Ren.add] ; funext n ; split <;> grind
+      case _ n _ =>
+        replace ih := @ih s
+        simp_all [Nat.min_eq_left (by omega : s ≤ n + 1 + 1)]
+        simp [Nat.min_eq_left (by omega : s ≤ n + 1)] at ih
+        rw [← ih, Ren.append_range_succ_succ, Ren.cons_add_succ]
+        simp [@Ren.range_lt_cons (h := (by omega : s < n + 1))]
 
 theorem Subst.rewrite1_append_le {T s e} : s..e ++ +σ e = add T (min s e) := by
   induction e generalizing s; simp
