@@ -96,10 +96,13 @@ theorem Ren.cons_add_succ {T n} : n :: Ren.add T (n + 1) = Ren.add T n := by
 
 theorem Ren.append_singleton {T n} {r : Ren T} : [n] ++ r = n :: r := by simp
 
-theorem Ren.append_range_succ_succ {T s e} {r : Ren T} : s..(e + 2) ++ r = s..(e + 1) ++ ((e + 1) :: r) := by sorry
+theorem Ren.range_eq_append_last {a b} {h : a ≤ b} : a..(b + 1) = a..b ++ [b] := by simp_all [Ren.range]
 
--- Not actually needed for Subst.rewrite1_append_ren_le but I feel like it's important (if not already proven somewhere else).
-theorem Ren.assoc {T} {xs ys : List Nat} {r : Ren T} : xs ++ (ys ++ r) = (xs ++ ys) ++ r := by sorry
+theorem Ren.assoc {T} {xs ys : List Nat} {r : Ren T} : xs ++ (ys ++ r) = (xs ++ ys) ++ r := by
+  induction xs generalizing ys r <;> simp_all
+
+theorem Ren.append_range_succ_succ {T s e} {r : Ren T} {h : s ≤ e + 1} : s..(e + 2) ++ r = s..(e + 1) ++ ((e + 1) :: r) := by
+  simp_all [Ren.range_eq_append_last, ← Ren.assoc]
 
 theorem Subst.rewrite1_append_ren_le {T s e} : s..e ++ +r e = .add T (min s e) := by
   induction e generalizing s ; simp
@@ -113,7 +116,7 @@ theorem Subst.rewrite1_append_ren_le {T s e} : s..e ++ +r e = .add T (min s e) :
         replace ih := @ih s
         simp_all [Nat.min_eq_left (by omega : s ≤ n + 1 + 1)]
         simp [Nat.min_eq_left (by omega : s ≤ n + 1)] at ih
-        rw [← ih, Ren.append_range_succ_succ, Ren.cons_add_succ]
+        rw [← ih, @Ren.append_range_succ_succ (h := by omega), Ren.cons_add_succ]
         simp [@Ren.range_lt_cons (h := (by omega : s < n + 1))]
 
 theorem Subst.rewrite1_append_le {T s e} : s..e ++ +σ e = add T (min s e) := by
