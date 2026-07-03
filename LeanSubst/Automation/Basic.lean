@@ -283,7 +283,7 @@ namespace Examples.LambdaCalcAutomation
 
     -- TODO: I'm pretty sure the codomain of these mk functions could be abstracted to CommandElabM ?x.
     let mkVarComputation
-      : (ty : Type) → (Ident → Ident → List (Ident × Expr) → CommandElabM ty)
+      : (ty : Type) → ((ctor : Ident) → (varArg : Ident) → (otherArgs : List (Ident × Expr)) → CommandElabM ty)
         → CommandElabM ty := fun _ f ↦ do
       let argTypes := getForallBinderTypes varType
       let argIdents := (List.range $ argTypes.length).map xN'
@@ -294,7 +294,7 @@ namespace Examples.LambdaCalcAutomation
         throwAbortCommand -- TODO: better error?
 
     let mkNonTaggedComputation
-      : (ty : Type) → (Ident → List (Ident × Expr) → CommandElabM ty)
+      : (ty : Type) → ((ctor : Ident) → (args : List (Ident × Expr)) → CommandElabM ty)
         → CommandElabM (List ty) := fun _ f ↦ do
       nonTaggedCtorsWithTypes.mapM (fun ⟨ctor, type⟩ ↦ do
         let argTypes := getForallBinderTypes type
@@ -304,7 +304,7 @@ namespace Examples.LambdaCalcAutomation
 
     let mkBinderComputation
       : (ty : Type)
-        → (Ident → Ident × Expr → List (Ident × Expr) → CommandElabM ty)
+        → ((ctor : Ident) → (binderArgWithType : Ident × Expr) → (otherArgs : List (Ident × Expr)) → CommandElabM ty)
         → CommandElabM (List ty) := fun _ f ↦ do
       binderCtorsWithTypes.mapM (fun ⟨ctor, type⟩ ↦ do
         let argTypes := getForallBinderTypes type
@@ -327,19 +327,19 @@ namespace Examples.LambdaCalcAutomation
       `(Parser.Term.matchAltExpr| | $ctor $((args.map Prod.fst).toArray)* => $ctor $(rhs.toArray)*)
     )
 
-    let binderCases := List.toArray $ ← mkBinderComputation (TSyntax `Lean.Parser.Term.matchAlt) (fun ctor ⟨binderIdent, _⟩ args ↦ do
-      let lhs := List.cons binderIdent (args.map Prod.fst)
-      let rhs_binder ← `($rmap $(r).lift $binderIdent)
-      let rhs_rest := args.tail.map Prod.fst
-      let rhs := List.cons rhs_binder $ ← rhs_rest.mapM identToTerm
+    let binderCases := List.toArray $ ← mkBinderComputation (TSyntax `Lean.Parser.Term.matchAlt) (fun ctor ⟨binderIdent, _⟩ otherArgs ↦ do
+      let lhs := List.cons binderIdent (otherArgs.map Prod.fst)
+      let binderRhs ← `($rmap $(r).lift $binderIdent)
+      let binderOther := otherArgs.tail.map Prod.fst
+      let rhs := List.cons binderRhs $ ← binderOther.mapM identToTerm
       `(Parser.Term.matchAltExpr| | $ctor $(lhs.toArray)* => $ctor $(rhs.toArray)*)
     )
 
-    let varCase := ← mkVarComputation (TSyntax `Lean.Parser.Term.matchAlt) (fun ctor varIdent args ↦ do
-      let lhs := List.cons varIdent (args.map Prod.fst)
-      let rhs_binder ← `($(r).act $varIdent)
-      let rhs_rest := args.tail.map Prod.fst
-      let rhs := List.cons rhs_binder $ ← rhs_rest.mapM identToTerm
+    let varCase := ← mkVarComputation (TSyntax `Lean.Parser.Term.matchAlt) (fun ctor varIdent otherArgs ↦ do
+      let lhs := List.cons varIdent (otherArgs.map Prod.fst)
+      let rhsVar ← `($(r).act $varIdent)
+      let rhsOther := otherArgs.tail.map Prod.fst
+      let rhs := List.cons rhsVar $ ← rhsOther.mapM identToTerm
       `(Parser.Term.matchAltExpr| | $ctor $(lhs.toArray)* => $ctor $(rhs.toArray)*)
     )
 
@@ -356,17 +356,36 @@ namespace Examples.LambdaCalcAutomation
         rmap := $rmap
     )
 
-    let ren_var := qualify "ren_var"
-    elabCommand $ ← `(
-      @[simp, grind =]
-      theorem $ren_var {$x} {$r : Ren $ty} : ($var $x)⟨$r⟩ = $var ($(r).act $x) := by
-        simp [RenMap.rmap]
-    )
-
     _ ← mkNonTaggedComputation Unit (fun ctor args ↦ do
       let ren_ctor := qualify s!"ren_{ctor.getId.components.getLast!}"
       let lhs := mapFst args
       let rhs ← List.mapM (fun ⟨t, _⟩ ↦ `($(t)⟨$r⟩)) args
+      elabCommand $ ← `(
+        @[simp, grind =]
+        theorem $ren_ctor {$(lhs.toArray)*} {$r : Ren $ty} : ($ctor $(lhs.toArray)*)⟨$r⟩ = $ctor $(rhs.toArray)* := by
+          simp [RenMap.rmap]
+      )
+    )
+
+    _ ← mkBinderComputation Unit (fun ctor ⟨binderArg, _⟩ otherArgs ↦ do
+      let ren_ctor := qualify s!"ren_{ctor.getId.components.getLast!}"
+      let lhs := binderArg :: mapFst otherArgs
+      let rhsBinder ← `($binderArg⟨$(r).lift⟩)
+      let rhsOther ← List.mapM (fun ⟨t, _⟩ ↦ `($(t)⟨$r⟩)) otherArgs
+      let rhs := rhsBinder :: rhsOther
+      elabCommand $ ← `(
+        @[simp, grind =]
+        theorem $ren_ctor {$(lhs.toArray)*} {$r : Ren $ty} : ($ctor $(lhs.toArray)*)⟨$r⟩ = $ctor $(rhs.toArray)* := by
+          simp [RenMap.rmap]
+      )
+    )
+
+    _ ← mkVarComputation Unit (fun ctor varArg otherArgs ↦ do
+      let ren_ctor := qualify s!"ren_{ctor.getId.components.getLast!}"
+      let lhs := varArg :: mapFst otherArgs
+      let rhsVar ← `($(r).act $varArg)
+      let rhsOther ← List.mapM (fun ⟨t, _⟩ ↦ `($(t)⟨$r⟩)) otherArgs
+      let rhs := rhsVar :: rhsOther
       elabCommand $ ← `(
         @[simp, grind =]
         theorem $ren_ctor {$(lhs.toArray)*} {$r : Ren $ty} : ($ctor $(lhs.toArray)*)⟨$r⟩ = $ctor $(rhs.toArray)* := by
@@ -418,6 +437,10 @@ namespace Examples.LambdaCalcAutomation
 
   #print Term.rmap
 
-  #print Term.ren_app
+  #check Term.ren_app
+
+  #check Term.ren_lam
+
+  #check Term.ren_var
 
 end Examples.LambdaCalcAutomation
