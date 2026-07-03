@@ -459,7 +459,7 @@ namespace Examples.LambdaCalcAutomation
         apply_id := by subst_solve_id
 
       instance : SubstMapStable $ty $ty where
-        apply_stable := by sorry -- by subst_solve_stable
+        apply_stable := by subst_solve_stable
 
       instance : SubstMapRenComposeLeft $ty $ty where
         apply_ren_compose_left := by subst_solve_compose
