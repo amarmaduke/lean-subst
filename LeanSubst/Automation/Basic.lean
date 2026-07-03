@@ -110,7 +110,7 @@ namespace Examples.LambdaCalc
     apply_id := by subst_solve_id
 
   instance : SubstMapStable Term Term where
-    apply_stable := sorry -- by subst_solve_stable
+    apply_stable := by subst_solve_stable
 
   instance : SubstMapRenComposeLeft Term Term where
     apply_ren_compose_left := by subst_solve_compose
