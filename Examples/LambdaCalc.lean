@@ -93,7 +93,7 @@ namespace Examples.LambdaCalc
   theorem Term.from_action_compose_ren {x : Nat} {σ : Subst Term} {r : Ren Term}
     : (from_action (σ.act x))⟨r⟩ = from_action ((σ ∘ r).act x)
   := by
-    simp [Term.from_action]
+    simp [from_action]
     generalize zdef : σ.act x = z
     cases z <;> simp
 
