@@ -1,118 +1,122 @@
-import Lean.Elab.Tactic
-import Qq
-import Aesop
+import LeanSubst
+import LeanSubst.Automation.Basic
 
-/- # Experiment 1 -/
+namespace LambdaCalcTest
 
-namespace Experiment1
-  open Lean Elab Tactic Meta Aesop Command
+  inductive Term where
+  | var : Nat -> Term
+  | app : Term -> Term -> Term
+  | lam : Term -> Term
+  deriving BEq
 
-  def tacticMToCommandM {α} (tac : TacticM α) (mvarExpr : Option Expr := none) : CommandElabM α := do
-    if let some mvarExpr := mvarExpr then
-      liftTermElabM $ runTacticMAsTermElabM mvarExpr.mvarId! $ tac
-    else
-      let newMVarExpr ← liftTermElabM $ mkFreshExprMVar none
-      liftTermElabM $ runTacticMAsTermElabM newMVarExpr.mvarId! $ tac
+  prefix:100 ":λ " => Term.lam
+  infixl:65 " :@ " => Term.app
 
-  elab "#thmtest" ty:ident : command => do
-    let tyName ← liftCoreM $ realizeGlobalConstNoOverload ty.raw
-    let ns ← getCurrNamespace
+  attribute [leansubst_var] Term.var
+  attribute [leansubst_binder' 0] Term.lam
 
-    -- def myId : ty → ty | x => x
-    let def_myId_name := .mkStr3 ns.toString tyName.toString "myId"
-    IO.println s!"{def_myId_name}"
-    let def_myId_type ← liftTermElabM $ Term.elabType (← `($ty → $ty))
-    let def_myId ← liftTermElabM $ Term.elabTermEnsuringType (← `(fun x : $ty => x)) (some def_myId_type)
-    let def_myId_decl :=
-      Declaration.defnDecl (
-        mkDefinitionValEx
-          def_myId_name
-          []
-          def_myId_type
-          def_myId
-          ReducibilityHints.abbrev
-          DefinitionSafety.safe
-          [])
-    liftTermElabM $ addAndCompile def_myId_decl
+  #leansubst_autogen Term
 
-    -- theorem my_id_thm : (n : ty) → my_id n = n
-    -- let thm_myId_name := .str tyName "myId_thm"
-    -- let thm_myId ← tacticMToCommandM $ Term.elabType (← `((n : $ty) → $(mkIdent def_myId_name) n = n))
-    -- let newMVarExpr ← liftTermElabM $ mkFreshExprMVar (type? := some def_myId_type)
-    -- liftCoreM $ runMetaMAsCoreM (do let _ ← runTactic newMVarExpr.mvarId! (← `(tactic| grind)))
-    -- let proof ← liftTermElabM $ instantiateMVars newMVarExpr
-    -- let fromActionIdDecl :=
-    --   Declaration.thmDecl (
-    --     mkTheoremValEx
-    --       thm_myId_name
-    --       []
-    --       thm_myId
-    --       proof
-    --       [])
-    -- liftTermElabM $ addAndCompile fromActionIdDecl
+  #print Term.from_action
+  #print Term.from_action_id
+  #print Term.from_action_succ
+  #print Term.from_action_su
 
-  #thmtest Nat
+  #print instCoe_SubstActionTerm_Term
+  #check instCoe_SubstActionTerm_Term.coe
 
-  #check Nat.myId
+  #print Term.rmap
+  #check Term.ren_app
+  #check Term.ren_lam
+  #check Term.ren_var
 
-  #eval Experiment1.Nat.myId 1
+  #print Term.smap
+  #check Term.subst_app
+  #check Term.subst_lam
+  #check Term.subst_var
 
-end Experiment1
+  #check Term.from_action_compose
+  #check Term.from_action_compose_ren
 
-/- # Experiment 2 -/
+end LambdaCalcTest
 
-namespace Experiment2
-  open Lean Elab Command
+namespace SystemFTest
 
-  elab "#elabtest" ty:ident : command => do
-    let tyName := ty.raw.getId
-    let myId_ident := mkIdentFrom ty $ .str tyName "myId"
-    let myId_thm_ident := mkIdentFrom ty $ .str tyName "myId_thm"
-    elabCommand $ ← `(
-      @[simp]
-      def $(myId_ident) : $ty -> $ty
-      | x => x
+  inductive Ty where
+  | var : Nat -> Ty
+  | arr : Ty -> Ty -> Ty
+  | all : Ty -> Ty
 
-      theorem $(myId_thm_ident) (n : $ty) : $myId_ident n = n := by
-        simp [$myId_ident:ident]
-    )
+  attribute [leansubst_var] Ty.var
+  attribute [leansubst_binder' 0] Ty.all
 
-  inductive Hi
-  | Blah
+  prefix:max "t#" => Ty.var
+  infixr:85 "-:>" => Ty.arr
+  notation ":∀" t => Ty.all t
 
-  #elabtest Hi
+  inductive Term where
+  | var : Nat -> Term
+  | app : Term -> Term -> Term
+  | lam : Ty -> Term -> Term
+  | tapp : Term -> Ty -> Term
+  | tlam : Term -> Term
 
-  #check Hi.myId
+  attribute [leansubst_var] Term.var
+  attribute [leansubst_binder' 0] Term.tlam
+  attribute [leansubst_binder' 1] Term.lam
 
-  #eval Hi.myId Hi.Blah
+  prefix:max "#" => Term.var
+  infixl:65 "•" => Term.app
+  notation:100 "λ[" A "]" t => Term.lam A t
+  notation:65 f "•[" a "]" => Term.tapp f a
+  notation:100 "Λ" t => Term.tlam t
 
-  #check Hi.myId_thm Hi.Blah
+  -- Ty --
+  #leansubst_autogen Ty
 
-  #elabtest Nat
+  #print Ty.from_action
+  #print Ty.from_action_id
+  #print Ty.from_action_succ
+  #print Ty.from_action_su
 
-  #check Nat.myId
+  #print instCoe_SubstActionTy_Ty
+  #check instCoe_SubstActionTy_Ty.coe
 
-  #eval Nat.myId 0
+  #print Ty.rmap
+  #check Ty.ren_arr
+  #check Ty.ren_all
+  #check Ty.ren_var
 
-  #check Nat.myId_thm 0
+  #print Ty.smap
+  #check Ty.subst_arr
+  #check Ty.subst_all
+  #check Ty.subst_var
 
-end Experiment2
-namespace Question
-  open Lean Elab Tactic Meta Command Aesop
+  #check Ty.from_action_compose
+  #check Ty.from_action_compose_ren
 
-  elab "#test" : command => do
-    let zeroCase ← `(Parser.Term.matchAltExpr| | 0 => 0)
-    let succCase ← `(Parser.Term.matchAltExpr| | .succ n => n)
-    elabCommand $ ← `(
-      def $(mkIdent (.mkStr1 "myFun")) : Nat → Nat
-      $zeroCase:matchAlt
-      $succCase:matchAlt -- unexpected token ')'; expected ':=', 'where' or '|'
-    )
+  -- Term --
+  #leansubst_autogen Term
 
-  #test
+  #print Term.from_action
+  #print Term.from_action_id
+  #print Term.from_action_succ
+  #print Term.from_action_su
 
-  #eval myFun 0
-  #eval myFun 1
-  #eval myFun 2
+  #print instCoe_SubstActionTerm_Term
+  #check instCoe_SubstActionTerm_Term.coe
 
-end Question
+  #print Term.rmap
+  #check Term.ren_app
+  #check Term.ren_lam
+  #check Term.ren_var
+
+  #print Term.smap
+  #check Term.subst_app
+  #check Term.subst_lam
+  #check Term.subst_var
+
+  #check Term.from_action_compose
+  #check Term.from_action_compose_ren
+
+end SystemFTest

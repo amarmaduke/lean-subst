@@ -1,69 +1,34 @@
 import LeanSubst
 import Lean.Elab.Tactic
 import LeanSubst.Automation.Attributes
-import Qq
 import Aesop
 
-namespace Examples.LambdaCalcAutomation
+namespace Automation
   open Lean Elab Tactic Meta LeanSubst Command Aesop
 
-  inductive Term where
-  | var : Nat -> Term
-  | app : Term -> Term -> Term
-  | lam : Term -> Term
-  deriving BEq
-
-  prefix:100 ":λ " => Term.lam
-  infixl:65 " :@ " => Term.app
-
-  attribute [leansubst_var] Term.var
-  attribute [leansubst_binder] Term.lam
-  attribute [leansubst_binder' 2] Term.lam
-
   def getConstructors (typeName : Name) : MetaM (List Name) := do
-    let env ← getEnv
-    match env.find? typeName with
+    match (← getEnv).find? typeName with
     | some (.inductInfo val) => return val.ctors
     | _ => throwError "Not an inductive type: {typeName}"
 
   def isVar (ctor : Name) : MetaM Bool := do
-    let env ← getEnv
-    pure $ leanSubstVar.hasTag env ctor
+    pure $ leanSubstVar.hasTag (← getEnv) ctor
 
   def getVarCtors (type : Name) : MetaM (List Name) := do
-    let ctors ← getConstructors type
-    List.filterM (isVar) ctors
+    List.filterM (isVar) (← getConstructors type)
+
+  def getBinderParam (ctor : Name) : MetaM (Option Nat) := do
+    pure (leanSubstBinder'.getParam? (← getEnv) ctor)
 
   def isBinder (ctor : Name) : MetaM Bool := do
-    let env ← getEnv
-    pure $ leanSubstBinder.hasTag env ctor
+    if let some _ := ← getBinderParam ctor then pure true else pure false
 
-  def isBinder' (ctor : Name) : MetaM (Option Nat) := do
-    let env ← getEnv
-    let blah := leanSubstBinder'.getParam? env ctor
-    pure blah
-
-  def getBinderCtors (type : Name) : MetaM (List Name) := do
-    let ctors ← getConstructors type
-    List.filterM (isBinder) ctors
+  def getBinderCtors (type : Name) : MetaM (List (Name × Nat)) := do
+    (← getConstructors type).filterMapM
+      (fun ctor ↦ do if let some i := ← getBinderParam ctor then pure $ some ⟨ctor, i⟩ else pure none)
 
   def getNonTaggedCtors (type : Name) : MetaM (List Name) := do
-    let ctors ← getConstructors type
-    List.filterM (fun n => do pure (¬ (← isVar n) ∧ ¬ (← isBinder n))) ctors
-
-  #eval show MetaM Unit from do
-    let lctx ← getLCtx
-    let ctors ← getConstructors ``Term
-    for ctor in ctors do
-      let isVar ← isVar ctor
-      let isBinder ← isBinder ctor
-      let isBinder' ← isBinder' ctor
-      if isVar then
-        IO.println s!"{ctor} is a var"
-      else if let some i := isBinder' then
-        IO.println s!"{ctor} is a binder with param {i}"
-      else
-        IO.println s!"{ctor} is neither a var nor a binder"
+    List.filterM (fun n => do pure (¬ (← isVar n) ∧ ¬ (← isBinder n))) (← getConstructors type)
 
   def mapFst {α β} (ℓ : List (α × β)) := ℓ.map Prod.fst
 
@@ -83,11 +48,20 @@ namespace Examples.LambdaCalcAutomation
     let tyStr := tyName.toString
     let tyNameGlobal ← Command.liftCoreM $ realizeGlobalConstNoOverload ty.raw
 
+
+    let isDefEqTy ty' := liftCoreM $ runMetaMAsCoreM $ isDefEqGuarded ty' (.const tyNameGlobal [])
+
     let qualify str := mkIdent $ .str tyName str
     let pairWithTypes names : CommandElabM (List (Ident × Expr)) :=
       List.mapM
         (fun name => do pure ⟨name, (← getConstInfo name.getId).type⟩)
         names
+
+    let pairWithTypes' namesAndParams : CommandElabM (List (Ident × Expr × Nat)) :=
+      List.mapM
+        (fun ⟨name, i⟩ => do pure ⟨name, (← getConstInfo name.getId).type, i⟩)
+        namesAndParams
+
 
     let xN (n : Nat) : TSyntax `term := mkIdent (.mkStr1 $ s!"x{n}")
     let xN' (n : Nat) : TSyntax `ident := mkIdent (.mkStr1 $ s!"x{n}")
@@ -106,15 +80,15 @@ namespace Examples.LambdaCalcAutomation
     let varType := (← getConstInfo varName).type
     let var := mkIdent varName
 
-    let binderCtorNames ← liftCoreM $ runMetaMAsCoreM $ getBinderCtors tyNameGlobal
-    let binderCtors := binderCtorNames.map mkIdent
-    let binderCtorsWithTypes ← pairWithTypes binderCtors
+    let binderCtorNamesWithParams ← liftCoreM $ runMetaMAsCoreM $ getBinderCtors tyNameGlobal
+    let binderCtorsWithParams : List (Ident × Nat) := binderCtorNamesWithParams.map (fun ⟨name, i⟩ ↦ ⟨mkIdent name, i⟩)
+    let binderCtorsWithTypesAndParams ← pairWithTypes' binderCtorsWithParams
 
     let nonTaggedCtorNames ← liftCoreM $ runMetaMAsCoreM $ getNonTaggedCtors tyNameGlobal
     let nonTaggedCtors := nonTaggedCtorNames.map mkIdent
     let nonTaggedCtorsWithTypes ← pairWithTypes nonTaggedCtors
 
-    let mkVarComputation
+    let doVarComputation
       : (ty : Type) → ((ctor : Ident) → (varArg : Ident) → (otherArgs : List (Ident × Expr)) → CommandElabM ty)
         → CommandElabM ty := fun _ f ↦ do
       let argTypes := getForallBinderTypes varType
@@ -125,7 +99,7 @@ namespace Examples.LambdaCalcAutomation
       else
         throwAbortCommand -- TODO: better error?
 
-    let mkNonTaggedComputation
+    let doNonTaggedComputation
       : (ty : Type) → ((ctor : Ident) → (args : List (Ident × Expr)) → CommandElabM ty)
         → CommandElabM (List ty) := fun _ f ↦ do
       nonTaggedCtorsWithTypes.mapM (fun ⟨ctor, type⟩ ↦ do
@@ -134,19 +108,37 @@ namespace Examples.LambdaCalcAutomation
         f ctor $ argIdents.zip argTypes
       )
 
-    let mkBinderComputation
+    let doBinderComputation
       : (ty : Type)
-        → ((ctor : Ident) → (binderArgWithType : Ident × Expr) → (otherArgs : List (Ident × Expr)) → CommandElabM ty)
+        → ((ctor : Ident) → (binderArgWithType : Ident × Expr) → (otherArgs : List (Ident × Expr)) → (binderPos : Nat) → CommandElabM ty)
         → CommandElabM (List ty) := fun _ f ↦ do
-      binderCtorsWithTypes.mapM (fun ⟨ctor, type⟩ ↦ do
+      binderCtorsWithTypesAndParams.mapM (fun ⟨ctor, type, i⟩ ↦ do
         let argTypes := getForallBinderTypes type
         let argIdents := (List.range $ argTypes.length).map xN'
         let argIdentsWithTypes := argIdents.zip argTypes
         if let some ⟨argIdent_hd, argType_hd⟩ := argIdentsWithTypes.head? then
-          f ctor ⟨argIdent_hd, argType_hd⟩ (argIdents.tail.zip argTypes.tail)
+          f ctor ⟨argIdent_hd, argType_hd⟩ (argIdents.tail.zip argTypes.tail) i
         else
           throwAbortCommand -- TODO: better error?
       )
+
+    let mkBinderStx
+      (ctor : Ident) (binderArg : TSyntax `term) (otherArgs : List $ TSyntax `term) (i : Nat) : CommandElabM $ TSyntax `term := do
+      let beforeBinderArgs := (otherArgs.take i).toArray
+      let afterBinderArgs := (otherArgs.drop i).toArray
+      `($ctor $beforeBinderArgs* $binderArg $afterBinderArgs*)
+
+    let mkBinderStx'
+      (ctor : Ident) (binderArg : TSyntax `term) (otherArgs : List $ TSyntax `ident) (i : Nat) : CommandElabM $ TSyntax `term := do
+      let beforeBinderArgs := (otherArgs.take i).toArray
+      let afterBinderArgs := (otherArgs.drop i).toArray
+      `($ctor $beforeBinderArgs* $binderArg $afterBinderArgs*)
+
+    let mkBinderArgs
+      (ty : Name) (binderArg : TSyntax ty) (otherArgs : List $ TSyntax ty) (i : Nat) : TSyntaxArray ty :=
+      let beforeBinderArgs := (otherArgs.take i).toArray
+      let afterBinderArgs := (otherArgs.drop i).toArray
+      beforeBinderArgs ++ [binderArg] ++ afterBinderArgs
 
     -- from_action --
     let from_action := qualify "from_action"
@@ -194,32 +186,29 @@ namespace Examples.LambdaCalcAutomation
 
     let doMapStuff : MapType → CommandElabM Unit :=
       fun mapType ↦ do
+        let leanSubstQualify s := .mkStr2 "LeanSubst" s
         let ⟨defIdent, typeIdent, instanceIdent, instanceFieldIdent, rσ, thmPfxStr⟩ : Ident × Ident × Ident × Ident × Ident × String :=
           match mapType with
           | .is_rmap =>
-            ⟨qualify "rmap", mkIdent $ .mkStr1 "Ren", mkIdent $ .mkStr1 "RenMap", mkIdent $ .mkStr1 "rmap", r, "ren"⟩
+            ⟨qualify "rmap", mkIdent $ leanSubstQualify "Ren", mkIdent $ leanSubstQualify "RenMap", mkIdent $ .mkStr1 "rmap", r, "ren"⟩
           | .is_smap =>
-            ⟨qualify "smap", mkIdent $ .mkStr1 "Subst", mkIdent $ .mkStr1 "SubstMap", mkIdent $ .mkStr1 "smap", σ, "subst"⟩
+            ⟨qualify "smap", mkIdent $ leanSubstQualify "Subst", mkIdent $ leanSubstQualify "SubstMap", mkIdent $ .mkStr1 "smap", σ, "subst"⟩
 
-        let nonTaggedCases := List.toArray $ ← mkNonTaggedComputation (TSyntax `Lean.Parser.Term.matchAlt) (fun ctor args ↦ do
+        let nonTaggedCases := List.toArray $ ← doNonTaggedComputation (TSyntax `Lean.Parser.Term.matchAlt) (fun ctor args ↦ do
           let rhs : List (TSyntax `term) ←
-            List.mapM
-              (fun ⟨t, ty⟩ ↦ do
-                let defEq ← liftCoreM $ runMetaMAsCoreM $ isDefEqGuarded ty (.const tyNameGlobal [])
-                if defEq then `($defIdent $rσ $t) else `($t))
-              args
+            List.mapM (fun ⟨t, ty⟩ ↦ do if ← isDefEqTy ty then `($defIdent $rσ $t) else `($t)) args
           `(Parser.Term.matchAltExpr| | $ctor $((args.map Prod.fst).toArray)* => $ctor $(rhs.toArray)*)
         )
 
-        let binderCases := List.toArray $ ← mkBinderComputation (TSyntax `Lean.Parser.Term.matchAlt) (fun ctor ⟨binderIdent, _⟩ otherArgs ↦ do
-          let lhs := List.cons binderIdent (otherArgs.map Prod.fst)
+        let binderCases := List.toArray $ ← doBinderComputation (TSyntax `Lean.Parser.Term.matchAlt) (fun ctor ⟨binderIdent, _⟩ otherArgs i ↦ do
+          let otherArgs := mapFst otherArgs
+          let lhs ← mkBinderStx' ctor binderIdent otherArgs i
           let binderRhs ← `($defIdent $(rσ).lift $binderIdent)
-          let binderOther := otherArgs.tail.map Prod.fst
-          let rhs := List.cons binderRhs $ ← binderOther.mapM identToTerm
-          `(Parser.Term.matchAltExpr| | $ctor $(lhs.toArray)* => $ctor $(rhs.toArray)*)
+          let rhs ← mkBinderStx' ctor binderRhs otherArgs i
+          `(Parser.Term.matchAltExpr| | $lhs => $rhs)
         )
 
-        let varCase := ← mkVarComputation (TSyntax `Lean.Parser.Term.matchAlt) (fun ctor varIdent otherArgs ↦ do
+        let varCase := ← doVarComputation (TSyntax `Lean.Parser.Term.matchAlt) (fun ctor varIdent otherArgs ↦ do
           let lhs := List.cons varIdent (otherArgs.map Prod.fst)
           let rhsVar ← `($(rσ).act $varIdent)
           let rhsOther := otherArgs.tail.map Prod.fst
@@ -246,7 +235,7 @@ namespace Examples.LambdaCalcAutomation
             $instanceFieldIdent:ident := $defIdent
         )
 
-        _ ← mkNonTaggedComputation Unit (fun ctor args ↦ do
+        _ ← doNonTaggedComputation Unit (fun ctor args ↦ do
           let thmName := qualify s!"{thmPfxStr}_{ctor.getId.components.getLast!}"
 
           let lhsArgs := mapFst args
@@ -254,10 +243,9 @@ namespace Examples.LambdaCalcAutomation
           | .is_rmap => `(($ctor $(lhsArgs.toArray)*)⟨$rσ⟩)
           | .is_smap => `(($ctor $(lhsArgs.toArray)*)[$rσ])
 
-          -- TODO: only push rmap/smap through to Term args
           let rhsArgs ← match mapType with
-          | .is_rmap => List.mapM (fun ⟨t, _⟩ ↦ `($t⟨$rσ⟩)) args
-          | .is_smap => List.mapM (fun ⟨t, _⟩ ↦ `($t[$rσ])) args
+          | .is_rmap => List.mapM (fun ⟨t, ty⟩ ↦ do if ← isDefEqTy ty then `($t⟨$rσ⟩) else `($t)) args
+          | .is_smap => List.mapM (fun ⟨t, ty⟩ ↦ do if ← isDefEqTy ty then `($t[$rσ]) else `($t)) args
           let rhs ← `($ctor $(rhsArgs.toArray)*)
 
           elabCommand $ ← `(
@@ -267,29 +255,28 @@ namespace Examples.LambdaCalcAutomation
           )
         )
 
-        _ ← mkBinderComputation Unit (fun ctor ⟨binderArg, _⟩ otherArgs ↦ do
+        _ ← doBinderComputation Unit (fun ctor ⟨binderArg, _⟩ otherArgs i ↦ do
           let thmName := qualify s!"{thmPfxStr}_{ctor.getId.components.getLast!}"
+          let otherArgs := mapFst otherArgs
 
-          let lhsArgs := binderArg :: mapFst otherArgs
+          let lhsArgs := mkBinderArgs `ident binderArg otherArgs i
           let lhs ← match mapType with
-          | .is_rmap => `(($ctor $(lhsArgs.toArray)*)⟨$rσ⟩)
-          | .is_smap => `(($ctor $(lhsArgs.toArray)*)[$rσ])
+          | .is_rmap => `(($ctor $lhsArgs*)⟨$rσ⟩)
+          | .is_smap => `(($ctor $lhsArgs*)[$rσ])
 
           let rhsBinder ← match mapType with
           | .is_rmap => `($binderArg⟨$(rσ).lift⟩)
           | .is_smap => `($binderArg[$(rσ).lift])
-          let rhsOther ← List.mapM (fun ⟨t, _⟩ ↦ `($t)) otherArgs
-          let rhsArgs := rhsBinder :: rhsOther
-          let rhs ← `($ctor $(rhsArgs.toArray)*)
+          let rhs ← mkBinderStx' ctor rhsBinder otherArgs i
 
           elabCommand $ ← `(
             @[simp, grind =]
-            theorem $thmName {$(lhsArgs.toArray)*} {$rσ : $typeIdent $ty} : $lhs = $rhs := by
+            theorem $thmName {$lhsArgs*} {$rσ : $typeIdent $ty} : $lhs = $rhs := by
               $simpCall:tactic
           )
         )
 
-        _ ← mkVarComputation Unit (fun ctor varArg otherArgs ↦ do
+        _ ← doVarComputation Unit (fun ctor varArg otherArgs ↦ do
           let thmName := qualify s!"{thmPfxStr}_{ctor.getId.components.getLast!}"
           let lhsArgs := varArg :: mapFst otherArgs
           let lhs ← match mapType with
@@ -356,27 +343,4 @@ namespace Examples.LambdaCalcAutomation
         apply_compose := by subst_solve_compose
     )
 
-  #leansubst_autogen Term
-
-  #print Term.from_action
-  #print Term.from_action_id
-  #print Term.from_action_succ
-  #print Term.from_action_su
-
-  #print instCoe_SubstActionTerm_Term
-  #check instCoe_SubstActionTerm_Term.coe
-
-  #print Term.rmap
-  #check Term.ren_app
-  #check Term.ren_lam
-  #check Term.ren_var
-
-  #print Term.smap
-  #check Term.subst_app
-  #check Term.subst_lam
-  #check Term.subst_var
-
-  #check Term.from_action_compose
-  #check Term.from_action_compose_ren
-
-end Examples.LambdaCalcAutomation
+end Automation
