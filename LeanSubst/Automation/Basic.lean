@@ -184,6 +184,7 @@ namespace Automation
         coe := $from_action
     )
 
+    -- rmap and smap --
     let doMapStuff : MapType → CommandElabM Unit :=
       fun mapType ↦ do
         let leanSubstQualify s := .mkStr2 "LeanSubst" s
@@ -300,6 +301,7 @@ namespace Automation
     doMapStuff .is_rmap
     doMapStuff .is_smap
 
+    -- from_action --
     let from_action_compose := qualify "from_action_compose"
     let from_action_compose_ren := qualify "from_action_compose_ren"
     elabCommand $ ← `(
@@ -320,6 +322,7 @@ namespace Automation
         cases $z:ident <;> simp
     )
 
+    -- instances --
     elabCommand $ ← `(
       instance : RenMapId $ty $ty where
         apply_id := by subst_solve_id
