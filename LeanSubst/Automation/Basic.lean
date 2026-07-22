@@ -1,10 +1,34 @@
 import LeanSubst
 import Lean.Elab.Tactic
+import Lean.Elab.Term.TermElabM
 import LeanSubst.Automation.Attributes
 import Aesop
 
 namespace Automation
   open Lean Elab Tactic Meta LeanSubst Command Aesop
+
+  def r1 : Ren Nat := sorry
+  def r2 : Ren Bool := sorry
+
+  #eval do
+    let stx1 ← ``(r1)
+    let stx2 ← ``(r2)
+
+    let ⟨expr1, _⟩ ← Term.TermElabM.run $ Term.elabTerm stx1 none
+    let ⟨expr2, _⟩ ← Term.TermElabM.run $ Term.elabTerm stx2 none
+
+    let type1 ← inferType expr1
+    let type2 ← inferType expr2
+
+    let type1' := match type1 with
+    | .app _ ty => some ty
+    | _ => none
+    let type2' := match type2 with
+    | .app _ ty => some ty
+    | _ => none
+
+    dbg_trace s!"{[type1', type2']}"
+
 
   def getConstructors (typeName : Name) : MetaM (List Name) := do
     match (← getEnv).find? typeName with
@@ -47,6 +71,9 @@ namespace Automation
     let tyName := ty.raw.getId
     let tyStr := tyName.toString
     let tyNameGlobal ← Command.liftCoreM $ realizeGlobalConstNoOverload ty.raw
+
+    let blah := Term.TermElabM.run $ Term.elabTypeOf sorry none
+    let blah2 := Term.elabTypeOf
 
 
     let isDefEqTy ty' := liftCoreM $ runMetaMAsCoreM $ isDefEqGuarded ty' (.const tyNameGlobal [])
