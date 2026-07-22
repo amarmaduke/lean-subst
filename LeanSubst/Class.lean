@@ -1,13 +1,16 @@
 import LeanSubst.Basic
 import LeanSubst.Ops
 
+open Lilac
+
 namespace LeanSubst
 
 universe u1 u2 u3
 variable {S : Type u1} {T : Type u2} {U : Type u3}
+variable {n : Nat} {V : Vec (Type u2) n}
 
-class RenMapId (S : Type u1) (T : Type u2) [RenMap S T] where
-  apply_id {s : S} : s⟨.id T⟩ = s
+class RenMapId (S : Type u1) (T : Type u2) [RenMap S V] where
+  apply_id {s : S} : s⟨Ren.id T⟩ = s
 
 class RenMapCompose (S : Type u1) (T : Type u2) [RenMap S T] where
   apply_compose {s : S} {r1 r2 : Ren T} : s⟨r1⟩⟨r2⟩ = s⟨r1 ∘ r2⟩
