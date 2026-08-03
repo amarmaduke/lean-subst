@@ -144,6 +144,18 @@ theorem Action.smap0_re [SubstMap S V] {σ : SubstVec V} {x : Var S} : (@re S x)
 theorem Action.smap0_su [SubstMap S V] {σ : SubstVec V} {t : S} : (su t)[σ,] = su t[σ,] := by
   simp [SubstMap.smap]
 ----------------------------------------------------------------------------------------------------
+---- Subst
+----------------------------------------------------------------------------------------------------
+def Subst.rmap [RenMap S V] (r : RenVec V) (σ : Subst S) : Subst S := .mk λ n => (σ.act n)⟨r,⟩
+
+instance [RenMap S V] : RenMap (Subst S) V where
+  rmap := Subst.rmap
+
+def Subst.smap [SubstMap S V] (τ : SubstVec V) (σ : Subst S) : Subst S := .mk λ n => (σ.act n)[τ,]
+
+instance [SubstMap S V] : SubstMap (Subst S) V where
+  smap := Subst.smap
+----------------------------------------------------------------------------------------------------
 ---- Identity
 ----------------------------------------------------------------------------------------------------
 def Ren.id T : Ren T := ⟨λ x => x⟩
@@ -520,9 +532,10 @@ theorem Subst.compose_ren_right_action [RenMap T [T]] {σ : Subst T} {r : Ren T}
 def Ren.lift (r : Ren T) (k : Nat := 1) : Ren T := .mk λ n =>
   if n < k then n else r.act (n - k) + k
 
-def RenVec.lift : {V : List (Type u2)} -> RenVec V -> (k : Nat := 1) -> RenVec V
+def RenVec.lift : {V : List (Type u2)} -> RenVec V -> List Nat -> RenVec V
 | [], _, _ => .unit
-| .cons _ _, (t, ts), k => (t.lift k, ts.lift k)
+| .cons _ _, (t, ts), [] => (t, ts)
+| .cons _ _, (t, ts), (.cons k ks) => (t.lift k, ts.lift ks)
 
 @[simp, grind <-]
 theorem Ren.lift_action_lt {r : Ren T} {k i} (h : i < k) : (lift r k).act i = i := by

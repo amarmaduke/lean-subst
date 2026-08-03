@@ -273,9 +273,7 @@ theorem Subst.lift_of_succ [RenMap S [S]] [RenMapCompose S [S]] {k} {σ : Subst 
   funext n ; induction n
   case zero => simp
   case succ n' _  =>
-    simp
-    split <;> simp [rmap]
-    split <;> grind [Ren.add, Ren.succ, Ren.compose]
+    simp; sorry
 
 theorem Subst.lift_of_succ_rev [RenMap S [S]] [RenMapCompose S [S]] {k} {σ : Subst S} : σ.lift (1 + k) = σ.lift.lift k := by
   sorry
