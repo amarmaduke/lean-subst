@@ -26,11 +26,6 @@ scope = "leanprover-community"
 rev = "v4.32.2"
 
 [[require]]
-name = "Qq"
-scope = "leanprover-community"
-rev = "v4.32.2"
-
-[[require]]
 name = "aesop"
 scope = "leanprover-community"
-rev = "v4.32.2"
+rev = "v4.32.0"

@@ -12,8 +12,10 @@ namespace LambdaCalcTest
   prefix:100 ":λ " => Term.lam
   infixl:65 " :@ " => Term.app
 
-  attribute [leansubst_var] Term.var
   attribute [leansubst_binder' 0] Term.lam
+  -- attribute [leansubst_binder (Term, 0, fun _ => 0)] Term.lam
+  #leansubst var Term.var
+  #leansubst bind 1 of Term in Term.lam at_pos 0
 
   #leansubst_autogen Term
 
