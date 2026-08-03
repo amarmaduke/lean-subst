@@ -23,14 +23,14 @@ root = "Main"
 [[require]]
 name = "batteries"
 scope = "leanprover-community"
-rev = "v4.29.0"
+rev = "v4.32.2"
 
 [[require]]
 name = "Qq"
 scope = "leanprover-community"
-rev = "v4.29.0"
+rev = "v4.32.2"
 
 [[require]]
 name = "aesop"
 scope = "leanprover-community"
-rev = "v4.29.0"
+rev = "v4.32.2"
