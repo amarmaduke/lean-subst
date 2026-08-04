@@ -15,10 +15,25 @@ inductive Term where
 | app : Term -> Term -> Term
 | lam (A : Ty) (t : Term) : Term -- binds Term in t
 | tapp : Term -> Ty -> Term
+
 | tlam (t : Term) : Term -- binds Ty in t (does it make sense to allow a user to give a name instead of a position?)
 | zero : Term
 | succ : Term -> Term
 | nrec (motive : Ty) (z : Term) (s : Term) (n : Term) : Term -- binds 2 Term's in s
+
+/-
+
+#leansubst var Ty.var
+#leansubst bind 1 of Ty in Ty.all at pos 0
+
+#leansubst var Term.var
+#leansubst bind 1 of Term in Term.lam at pos 1
+#leansubst bind 1 of Ty in Term.tlam at pos 0
+#leansubst bind 2 of Term in Term.nrec at pos 2
+
+#leansubst generate Ty, Term
+
+-/
 
 ----------------------------------------------------------------------------------------------------
 -- Ty Renaming & Substitution
