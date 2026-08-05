@@ -72,11 +72,9 @@ namespace LeanSubstAttributes
   | _ => throwUnsupportedSyntax
 
 
-  elab "#leansubst" "var" ctor:ident : command => do
+  elab "#leansubst" " markvar " ctor:ident : command => do
     elabCommand $ ← `(
       attribute [_leansubst_var] $ctor
     )
-
-  elab "#leansubst" "generate" term,* : command => sorry
 
 end LeanSubstAttributes

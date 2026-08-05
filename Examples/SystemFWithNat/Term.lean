@@ -79,10 +79,12 @@ theorem Term.from_action_succ {n} : from_action (𝐬1.act n) = .var (n + 1) := 
   simp [from_action]
 
 @[simp, grind =]
-theorem Term.from_acton_re {n} : from_action (re n) = .var n := by simp [from_action]
+theorem Term.from_acton_re {n} : from_action (re n) = .var n := by
+  simp [from_action]
 
 @[simp, grind =]
-theorem Term.from_action_su {t} : from_action (su t) = t := by simp [from_action]
+theorem Term.from_action_su {t} : from_action (su t) = t := by
+  simp [from_action]
 
 instance : Coe (Action Term) Term where
   coe := Term.from_action

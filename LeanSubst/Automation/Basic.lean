@@ -5,7 +5,7 @@ import LeanSubst.Automation.Attributes
 import Aesop
 
 namespace Automation
-  open Lean Elab Tactic Meta LeanSubst Command Aesop
+  open Lean Elab Tactic Meta LeanSubst Command Aesop LeanSubstAttributes
 
   def getConstructors (typeName : Name) : MetaM (List Name) := do
     match (← getEnv).find? typeName with
@@ -43,15 +43,72 @@ namespace Automation
   | is_rmap
   | is_smap
 
-  -- elab "#leansubst_autogen" ty:ident : command => do
-  --   -- Setup --
-  --   let tyName := ty.raw.getId
-  --   let tyStr := tyName.toString
-  --   let tyNameGlobal ← Command.liftCoreM $ realizeGlobalConstNoOverload ty.raw
+  def genTy (ty : TSyntax `term) (tys : TSyntaxArray `term) : CommandElabM Unit := do
+    let tyName := ty.raw.getId
+    let tyStr := tyName.toString
+    let tyNameGlobal ← Command.liftCoreM $ realizeGlobalConstNoOverload ty.raw
 
-  --   let blah := Term.TermElabM.run $ Term.elabTypeOf sorry none
-  --   let blah2 := Term.elabTypeOf
+    let tyArr ← `([$tys,*])
+    let tyNameGlobalArr ← tys.mapM (Command.liftCoreM $ realizeGlobalConstNoOverload ·.raw)
 
+    let qualify str := mkIdent $ .str tyName str
+
+    let xN (n : Nat) : TSyntax `term := mkIdent (.mkStr1 $ s!"x{n}")
+    let xN' (n : Nat) : TSyntax `ident := mkIdent (.mkStr1 $ s!"x{n}")
+    let x := mkIdent `x
+    let y := mkIdent `y
+    let z := mkIdent `z
+    let r := mkIdent `r
+    let n := mkIdent `n
+    let t := mkIdent `t
+    let σ := mkIdent `σ
+    let τ := mkIdent `τ
+
+    let varCtorNames ← liftCoreM $ runMetaMAsCoreM $ getVarCtors tyNameGlobal
+    let varName := varCtorNames[0]!
+    let varType := (← getConstInfo varName).type
+    let var := mkIdent varName
+
+    let from_action := qualify "from_action"
+    let from_action_id := qualify "from_action_id"
+    let from_action_succ := qualify "from_action_succ"
+    let from_action_re := qualify "from_action_re"
+    let from_action_su := qualify "from_action_su"
+    elabCommand $ ← `(
+      @[coe]
+      def $from_action : Action $ty → $ty
+      | re $y => .var $y
+      | su $t => $t
+
+      @[simp, grind =]
+      theorem $from_action_id {$n} : $from_action (𝐬0.act $n) = $var $n := by
+        simp [$from_action:ident]
+
+      @[simp, grind =]
+      theorem $from_action_succ {$n} : $from_action (𝐬1.act $n) = $var ($n + 1) := by
+        simp [$from_action:ident]
+
+      @[simp, grind =]
+      theorem $from_action_re {$n} : $from_action (re $n) = $var $n := by
+        simp [$from_action:ident]
+
+      @[simp, grind =]
+      theorem $from_action_su {$n} : $from_action (su $n) = $n := by
+        simp [$from_action:ident]
+
+      instance : Coe (Action $ty) $ty where
+        coe := $from_action
+    )
+
+  elab "#leansubst" "generate" tys:term,* : command =>
+    for ty in tys.getElems do
+      genTy ty tys.getElems
+
+  elab "#leansubst_autogen" ty:ident : command => do
+    -- Setup --
+    let tyName := ty.raw.getId
+    let tyStr := tyName.toString
+    let tyNameGlobal ← Command.liftCoreM $ realizeGlobalConstNoOverload ty.raw
 
   --   let isDefEqTy ty' := liftCoreM $ runMetaMAsCoreM $ isDefEqGuarded ty' (.const tyNameGlobal [])
 
