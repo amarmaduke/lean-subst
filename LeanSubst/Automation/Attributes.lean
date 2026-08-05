@@ -77,6 +77,6 @@ namespace LeanSubstAttributes
       attribute [leansubst_var] $ctor
     )
 
-  elab "#leansubst" "generate" : command => sorry
+  elab "#leansubst" "generate" term,* : command => sorry
 
 end LeanSubstAttributes
