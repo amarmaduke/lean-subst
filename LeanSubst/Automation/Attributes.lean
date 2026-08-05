@@ -5,7 +5,7 @@ namespace LeanSubstAttributes
 
   open Lean Elab Tactic Meta Command
 
-  initialize leanSubstVar : TagAttribute ← registerTagAttribute `leansubst_var "Indicates that a constructor is a variable constructor."
+  initialize leanSubstVar : TagAttribute ← registerTagAttribute `_leansubst_var "Indicates that a constructor is a variable constructor."
 
   #check Lean.Parser.Command.classAbbrev
   #check Lean.Parser.Term.attrInstance
@@ -19,13 +19,13 @@ namespace LeanSubstAttributes
 
   syntax "(" term "," term "," num ")" : leansubst_attr
 
-  syntax (name := leansubst_binder_attr) "leansubst_binder" "[" term,* "]" "[" term,* "]" "[" num,* "]" : attr
+  syntax (name := leansubst_binder_attr) "_leansubst_binder" "[" term,* "]" "[" term,* "]" "[" num,* "]" : attr
 
   initialize leanSubstBinder : ParametricAttribute $ List (Term × Term × Nat) ← registerParametricAttribute {
     name := `leansubst_binder_attr,
     descr := "Blah",
     getParam := fun
-    | name, stx@`(attr| leansubst_binder [ $closures,* ] [ $tys,* ] [ $ps,* ]) => do
+    | name, stx@`(attr| _leansubst_binder [ $closures,* ] [ $tys,* ] [ $ps,* ]) => do
       let ret := Array.zip closures.getElems (Array.zip tys.getElems ps.getElems)
       pure $ ret.toList.map (fun (a, b, c) => (a, b, c.getNat))
     | _, _ => throwUnsupportedSyntax
@@ -66,7 +66,7 @@ namespace LeanSubstAttributes
     let ps : Array (TSyntax `num) := data.map (·.2.2)
     dbg_trace "Elabbing command"
     elabCommand $ ← `(
-      attribute [leansubst_binder [$closures,*] [$tys,*] [$ps,*]] $ctor
+      attribute [_leansubst_binder [$closures,*] [$tys,*] [$ps,*]] $ctor
     )
     dbg_trace "Done!"
   | _ => throwUnsupportedSyntax
@@ -74,7 +74,7 @@ namespace LeanSubstAttributes
 
   elab "#leansubst" "var" ctor:ident : command => do
     elabCommand $ ← `(
-      attribute [leansubst_var] $ctor
+      attribute [_leansubst_var] $ctor
     )
 
   elab "#leansubst" "generate" term,* : command => sorry
