@@ -68,24 +68,22 @@ instance : SubstMap Ty [Ty] where
 
 @[coe]
 def Term.from_action : Action Term -> Term
-| re y => .var y
+| re y => var y
 | su t => t
 
 @[simp, grind =]
-theorem Term.from_action_id {n} : from_action (𝐬0.act n) = .var n := by
+theorem Term.from_action_id {n} : from_action (𝐬0.act n) = var n := by
   simp [from_action]
 
 @[simp, grind =]
-theorem Term.from_action_succ {n} : from_action (𝐬1.act n) = .var (n + 1) := by
+theorem Term.from_action_succ {n} : from_action (𝐬1.act n) = var (n + 1) := by
   simp [from_action]
 
 @[simp, grind =]
-theorem Term.from_action_re {n} : from_action (re n) = .var n := by
-  simp [from_action]
+theorem Term.from_action_re {n} : from_action (re n) = var n := by simp [from_action]
 
 @[simp, grind =]
-theorem Term.from_action_su {t} : from_action (su t) = t := by
-  simp [from_action]
+theorem Term.from_action_su {t} : from_action (su t) = t := by simp [from_action]
 
 instance : Coe (Action Term) Term where
   coe := Term.from_action
@@ -93,7 +91,7 @@ instance : Coe (Action Term) Term where
 -- Defining the rmap/smap using the Tuple form might make more sense for a macro, dunno
 @[simp]
 def Term.rmap (r : RenVec [Term, Ty]) : Term -> Term
-| .var x => .var (r.1.act x)
+| var x => var (r.1.act x)
 | app t1 t2 => app (t1.rmap r) (t2.rmap r)
 | lam A t => lam A⟨r.2.1⟩ (t.rmap $ r.lift [1, 0])
 | tapp t A => tapp (t.rmap r) A⟨r.2.1⟩
@@ -113,7 +111,7 @@ instance : RenMap Term [Ty] where
 
 @[simp]
 def Term.smap (σ : Subst Term) (τ : Subst Ty) : Term -> Term
-| .var x => σ.act x
+| var x => σ.act x
 | app t1 t2 => app (t1.smap σ τ) (t2.smap σ τ)
 | lam A t => lam A[τ] (t.smap σ.lift τ)
 | tapp t A => tapp (t.smap σ τ) A[τ]
