@@ -43,7 +43,47 @@ namespace Automation
   | is_rmap
   | is_smap
 
-  def genTy (ty : TSyntax `term) (tys : TSyntaxArray `term) : CommandElabM Unit := do
+  def xN (n : Nat) : TSyntax `term := mkIdent (.mkStr1 $ s!"x{n}")
+  def xN' (n : Nat) : TSyntax `ident := mkIdent (.mkStr1 $ s!"x{n}")
+  def x := mkIdent `x
+  def y := mkIdent `y
+  def z := mkIdent `z
+  def r := mkIdent `r
+  def n := mkIdent `n
+  def t := mkIdent `t
+  def σ := mkIdent `σ
+  def τ := mkIdent `τ
+
+  def CtorArgBindData := List $ Term × Term
+
+  inductive ArgData
+  | binder : List (Term × Ident) → ArgData -- (Term × Ident) corresponds to ([num bound closure] × [type being bound])
+  | var
+  | none
+
+  def getCtorArgData (ctor : Name) (p : Nat) : CommandElabM $ ArgData := do
+    if let some data := leanSubstBinder.getParam? (← getEnv) ctor then
+      pure $ .binder $ data |> .filter (fun (_, _, p') => p' = p) |> .map (fun (t1, t2, _) => (t1, t2))
+    else
+      pure .none
+
+  def mkCase (f : Expr → ArgData → Ident → Term) (ctor : Name) : CommandElabM $ TSyntax `Lean.Parser.Term.matchAltExpr := do
+    let ctorType := (← getConstInfo ctor).type
+    let argTypes := getForallBinderTypes ctorType
+    let argTypesWithData ←
+      argTypes
+      |> (.zip · (List.range $ List.length argTypes))
+      |> List.mapM (fun (ty, p) ↦ do pure (ty, ← getCtorArgData ctor p, xN' p))
+    let (argIdents, mappedArgs) := (argTypesWithData.toArray.map (fun (ty, data, x) ↦ (x, f ty data x))).unzip
+    let lhs ← `($(mkIdent ctor) $argIdents*)
+    let rhs ← `($(mkIdent ctor) $mappedArgs*)
+    `(Parser.Term.matchAltExpr| | $lhs => $rhs)
+
+  def mkAllCases (f : Expr → ArgData → Ident → Term) (ty : Name) : CommandElabM $ TSyntaxArray `Lean.Parser.Term.matchAltExpr := do
+    let ctors ← liftCoreM $ runMetaMAsCoreM $ getConstructors ty
+    ctors.toArray.mapM (mkCase f)
+
+  def genTy (ty : TSyntax `ident) (tys : TSyntaxArray `ident) : CommandElabM Unit := do
     let tyName := ty.raw.getId
     let tyStr := tyName.toString
     let tyNameGlobal ← Command.liftCoreM $ realizeGlobalConstNoOverload ty.raw
@@ -52,17 +92,6 @@ namespace Automation
     let tyNameGlobalArr ← tys.mapM (Command.liftCoreM $ realizeGlobalConstNoOverload ·.raw)
 
     let qualify str := mkIdent $ .str tyName str
-
-    let xN (n : Nat) : TSyntax `term := mkIdent (.mkStr1 $ s!"x{n}")
-    let xN' (n : Nat) : TSyntax `ident := mkIdent (.mkStr1 $ s!"x{n}")
-    let x := mkIdent `x
-    let y := mkIdent `y
-    let z := mkIdent `z
-    let r := mkIdent `r
-    let n := mkIdent `n
-    let t := mkIdent `t
-    let σ := mkIdent `σ
-    let τ := mkIdent `τ
 
     let varCtorNames ← liftCoreM $ runMetaMAsCoreM $ getVarCtors tyNameGlobal
     let varName := varCtorNames[0]!
@@ -100,7 +129,9 @@ namespace Automation
         coe := $from_action
     )
 
-  elab "#leansubst" "generate" tys:term,* : command =>
+
+
+  elab "#leansubst" &"generate" tys:ident,* : command =>
     for ty in tys.getElems do
       genTy ty tys.getElems
 

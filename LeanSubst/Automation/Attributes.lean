@@ -15,13 +15,9 @@ namespace LeanSubstAttributes
 
   #check mkElabAttribute
 
-  declare_syntax_cat leansubst_attr
+  syntax (name := leansubst_binder_attr) "_leansubst_binder" "[" term,* "]" "[" ident,* "]" "[" num,* "]" : attr
 
-  syntax "(" term "," term "," num ")" : leansubst_attr
-
-  syntax (name := leansubst_binder_attr) "_leansubst_binder" "[" term,* "]" "[" term,* "]" "[" num,* "]" : attr
-
-  initialize leanSubstBinder : ParametricAttribute $ List (Term × Term × Nat) ← registerParametricAttribute {
+  initialize leanSubstBinder : ParametricAttribute $ List (Term × Ident × Nat) ← registerParametricAttribute {
     name := `leansubst_binder_attr,
     descr := "Blah",
     getParam := fun
@@ -42,23 +38,21 @@ namespace LeanSubstAttributes
       pure 0
   }
 
-  declare_syntax_cat bind_data
+  declare_syntax_cat bind_data (behavior := symbol)
 
-  syntax term " of " term " at " " pos " num : bind_data
+  syntax term &" of " term &" at " &" pos " num : bind_data
 
-  syntax term " at " " pos " num : bind_data
+  syntax term &" at " &" pos " num : bind_data
 
-  macro ty:term " at " " pos " p:num : bind_data => `(bind_data| 1 of $ty at pos $p)
+  declare_syntax_cat bind_decl (behavior := symbol)
 
-  declare_syntax_cat bind_decl
-
-  syntax " bind " bind_data,+ " in " ident : bind_decl
+  syntax " bind " bind_data,+ &" in " ident : bind_decl
 
   elab "#leansubst" stx:bind_decl : command => stx |> fun
-  | `(bind_decl| bind $data,* in $ctor) => do
+  | `(bind_decl| bind $data:bind_data,* in $ctor) => do
     let mapfun := fun
-    | `(bind_data| $closure:term of $ty:term at pos $p) => pure (closure, ty, p)
-    | `(bind_data| $ty:term at pos $p) => pure (Syntax.mkNatLit 1, ty, p) -- I thought the macros would be expanded, but this seems necessary
+    | `(bind_data| $closure:term of $ty:ident at pos $p) => pure (closure, ty, p)
+    | `(bind_data| $ty:ident at pos $p) => pure (Syntax.mkNatLit 1, ty, p)
     | _ => throwUnsupportedSyntax
     let data ← data.getElems.mapM mapfun
     let closures := data.map (·.1)
@@ -72,7 +66,7 @@ namespace LeanSubstAttributes
   | _ => throwUnsupportedSyntax
 
 
-  elab "#leansubst" " markvar " ctor:ident : command => do
+  elab "#leansubst" &" var " ctor:ident : command => do
     elabCommand $ ← `(
       attribute [_leansubst_var] $ctor
     )

@@ -1,6 +1,7 @@
 
 import LeanSubst
 import LeanSubst.Automation.Attributes
+import LeanSubst.Automation.Basic
 
 open LeanSubst
 
@@ -79,7 +80,7 @@ theorem Term.from_action_succ {n} : from_action (𝐬1.act n) = .var (n + 1) := 
   simp [from_action]
 
 @[simp, grind =]
-theorem Term.from_acton_re {n} : from_action (re n) = .var n := by
+theorem Term.from_action_re {n} : from_action (re n) = .var n := by
   simp [from_action]
 
 @[simp, grind =]
