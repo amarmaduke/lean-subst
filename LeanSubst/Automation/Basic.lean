@@ -61,34 +61,50 @@ namespace Automation
   | var
   | none
 
+  def getClosureFromArgData (ty : Ident) : ArgData → Option Term
+  | .binder xs => (xs.find? (fun (_, ty') => BEq.beq ty' ty)).map (·.1)
+  | _ => none
+
   def getCtorArgData (ctor : Name) (p : Nat) : CommandElabM $ ArgData := do
     if let some data := leanSubstBinder.getParam? (← getEnv) ctor then
       pure $ .binder $ data |> .filter (fun (_, _, p') => p' = p) |> .map (fun (t1, t2, _) => (t1, t2))
+    else if ← liftCoreM $ runMetaMAsCoreM $ isVar ctor then
+      pure .var
     else
       pure .none
 
-  def mkCase (f : Expr → ArgData → Ident → Term) (ctor : Name) : CommandElabM $ TSyntax `Lean.Parser.Term.matchAltExpr := do
+  def mkCase (f : Expr → ArgData → Ident → List Ident → CommandElabM Term) (ctor : Name) : CommandElabM $ TSyntax `Lean.Parser.Term.matchAltExpr := do
     let ctorType := (← getConstInfo ctor).type
     let argTypes := getForallBinderTypes ctorType
     let argTypesWithData ←
       argTypes
       |> (.zip · (List.range $ List.length argTypes))
       |> List.mapM (fun (ty, p) ↦ do pure (ty, ← getCtorArgData ctor p, xN' p))
-    let (argIdents, mappedArgs) := (argTypesWithData.toArray.map (fun (ty, data, x) ↦ (x, f ty data x))).unzip
-    let lhs ← `($(mkIdent ctor) $argIdents*)
-    let rhs ← `($(mkIdent ctor) $mappedArgs*)
-    `(Parser.Term.matchAltExpr| | $lhs => $rhs)
+    let xs : List Ident := argTypesWithData.map (fun (_, _, x) ↦ x)
+    let mappedXs ← (argTypesWithData.toArray.mapM (fun (ty, data, x) ↦ (f ty data x xs)))
+    let rhs ← `($(mkIdent ctor) $mappedXs*)
+    `(Parser.Term.matchAltExpr| | $(mkIdent ctor) $(xs.toArray)* => $rhs)
 
-  def mkAllCases (f : Expr → ArgData → Ident → Term) (ty : Name) : CommandElabM $ TSyntaxArray `Lean.Parser.Term.matchAltExpr := do
+  def mkAllCases (f : Expr → ArgData → Ident → List Ident → CommandElabM Term) (ty : Name) : CommandElabM $ TSyntaxArray `Lean.Parser.Term.matchAltExpr := do
     let ctors ← liftCoreM $ runMetaMAsCoreM $ getConstructors ty
     ctors.toArray.mapM (mkCase f)
 
-  def genTy (ty : TSyntax `ident) (tys : TSyntaxArray `ident) : CommandElabM Unit := do
+  def renOfTy (r : Ident) (tys : Array Ident) (ty : Ident) : CommandElabM Term := do
+    let pos := tys.idxOf ty
+    if pos = 0 then
+      `($(r).1)
+    else
+      let sndList : List Term ← List.mapM (fun _ ↦ `((·.2))) (List.range pos)
+      let stxList := sndList ++ [← `((·.1))]
+      List.foldlM (fun s1 s2 ↦ `($s2 $s1)) (← `($r)) stxList
+
+  def genTy (tys : List Ident) : CommandElabM Unit := do
+    let ty := tys[0]!
     let tyName := ty.raw.getId
     let tyStr := tyName.toString
     let tyNameGlobal ← Command.liftCoreM $ realizeGlobalConstNoOverload ty.raw
 
-    let tyArr ← `([$tys,*])
+    let tyArr ← `([$tys.toArray,*])
     let tyNameGlobalArr ← tys.mapM (Command.liftCoreM $ realizeGlobalConstNoOverload ·.raw)
 
     let qualify str := mkIdent $ .str tyName str
@@ -106,7 +122,7 @@ namespace Automation
     elabCommand $ ← `(
       @[coe]
       def $from_action : Action $ty → $ty
-      | re $y => .var $y
+      | re $y => $var $y
       | su $t => $t
 
       @[simp, grind =]
@@ -129,11 +145,60 @@ namespace Automation
         coe := $from_action
     )
 
+    let getLiftOfTy (data : ArgData) (xs : List Ident) (ty : Ident)  : CommandElabM $ Term := do
+      let closure := getClosureFromArgData ty data
+      if let some closure := closure then
+        let closureTypeExpr ← liftTermElabM $ inferType (← liftTermElabM $ Term.elabTerm closure none)
+        if closureTypeExpr.isForall || closureTypeExpr.isArrow then -- does .isForall subsume .isArrow?
+          let closureApp ← `(term| $closure $(xs.toArray)*)
+          let closureAppExpr ← liftTermElabM $ Term.elabTerm closureApp none
+          let closureAppExprReduced ← liftCoreM $ runMetaMAsCoreM $ reduce closureAppExpr
+          liftTermElabM closureAppExprReduced.toSyntax
+        else
+          pure closure
+      else
+        liftTermElabM $ (mkNatLit 0).toSyntax
 
+    let mkLiftArr (data : ArgData) (xs : List Ident) : CommandElabM $ Option Term :=
+      match data with
+      | .binder _ => do
+        let lifts ← tys.mapM $ getLiftOfTy data xs
+        let blah ← `([$lifts.toArray,*])
+        pure blah
+      | _ => do
+        pure none
+
+    let rmap := qualify "rmap"
+    let f ty' data x xs := match data with
+    | .var => `($(r).1.act $x) -- NOTE: assumes that the type being generated is the first type in [tys]
+    | _ => do
+      let tyExpr ← liftTermElabM $ Term.elabTerm ty none
+      if ← liftCoreM $ runMetaMAsCoreM $ isDefEq tyExpr ty' then
+        if let some liftArr ← mkLiftArr data xs then
+          `($rmap ($(r).lift $liftArr) $x)
+        else
+          `($rmap $r $x)
+      else if let some theTy ← List.findM? (fun ty ↦ do pure (← liftCoreM $ runMetaMAsCoreM $ isDefEq (← liftTermElabM $ Term.elabTerm ty.raw none) ty')) tys then
+        let ren ← renOfTy r tys.toArray theTy
+        `($x⟨$ren⟩)
+      else
+        `($x)
+
+    let rmapCases ← mkAllCases f tyNameGlobal
+    elabCommand $ ← `(
+      @[simp]
+      def $rmap ($r : RenVec [$tys.toArray,*]) : $ty → $ty
+      $rmapCases:matchAlt*
+    )
+
+  def genAllTys : List Ident → CommandElabM Unit
+  | [] => pure ()
+  | .cons ty tys => do
+    genTy (ty :: tys)
+    genAllTys tys
 
   elab "#leansubst" &"generate" tys:ident,* : command =>
-    for ty in tys.getElems do
-      genTy ty tys.getElems
+    genAllTys tys.getElems.toList
 
   elab "#leansubst_autogen" ty:ident : command => do
     -- Setup --

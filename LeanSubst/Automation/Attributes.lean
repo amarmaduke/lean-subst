@@ -34,7 +34,7 @@ namespace LeanSubstAttributes
     | name, stx@`(Lean.Parser.Attr.simple| $_ $n:num) => do
       pure n.getNat
     | name, stx@`(Lean.Parser.Term.attrInstance| $_) => do
-      dbg_trace s!"aw fuck {name}, {stx}"
+      dbg_trace s!"oh no {name}, {stx}"
       pure 0
   }
 

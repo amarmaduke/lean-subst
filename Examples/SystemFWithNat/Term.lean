@@ -18,7 +18,7 @@ inductive Term where
 | app : Term -> Term -> Term
 | lam (A : Ty) (t : Term) : Term -- binds Term in t
 | tapp : Term -> Ty -> Term
-| tlam (t : Term) : Term -- binds Ty in t (does it make sense to allow a user to give a name instead of a position?)
+| tlam (t : Term) : Term -- binds Ty in t (does it make sense to allow a user to give a name sinstead of a position?)
 | zero : Term
 | succ : Term -> Term
 | nrec (motive : Ty) (z : Term) (s : Term) (n : Term) : Term -- binds 2 Term's in s
@@ -35,6 +35,8 @@ inductive Term where
 #leansubst bind 2 of Term at pos 2 in Term.nrec
 
 #leansubst generate Term, Ty
+
+#print Ty.rmap._f
 
 /-
 
@@ -93,7 +95,7 @@ instance : Coe (Action Term) Term where
 def Term.rmap (r : RenVec [Term, Ty]) : Term -> Term
 | var x => var (r.1.act x)
 | app t1 t2 => app (t1.rmap r) (t2.rmap r)
-| lam A t => lam A⟨r.2.1⟩ (t.rmap $ r.lift [1, 0])
+| lam A t => lam A⟨r.2.1⟩ (rmap (r.lift [1, 0]) t)
 | tapp t A => tapp (t.rmap r) A⟨r.2.1⟩
 | tlam t => tlam (t.rmap $ r.lift [0, 1])
 | zero => zero
