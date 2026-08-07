@@ -34,9 +34,13 @@ inductive Term where
 #leansubst bind Ty at pos 0 in Term.tlam
 #leansubst bind 2 of Term at pos 2 in Term.nrec
 
-#leansubst generate Term, Ty
+#leansubst generate Ty, Term
 
+#print Ty.rmap
 #print Ty.rmap._f
+
+#print Term.rmap
+#print Term.rmap._f
 
 /-
 

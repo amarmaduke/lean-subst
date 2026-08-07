@@ -83,6 +83,7 @@ namespace Automation
     let xs : List Ident := argTypesWithData.map (fun (_, _, x) ↦ x)
     let mappedXs ← (argTypesWithData.toArray.mapM (fun (ty, data, x) ↦ (f ty data x xs)))
     let rhs ← `($(mkIdent ctor) $mappedXs*)
+    -- dbg_trace s!"CASE {ctor}: {← `(Parser.Term.matchAltExpr| | $(mkIdent ctor) $(xs.toArray)* => $rhs)}"
     `(Parser.Term.matchAltExpr| | $(mkIdent ctor) $(xs.toArray)* => $rhs)
 
   def mkAllCases (f : Expr → ArgData → Ident → List Ident → CommandElabM Term) (ty : Name) : CommandElabM $ TSyntaxArray `Lean.Parser.Term.matchAltExpr := do
@@ -103,6 +104,8 @@ namespace Automation
     let tyName := ty.raw.getId
     let tyStr := tyName.toString
     let tyNameGlobal ← Command.liftCoreM $ realizeGlobalConstNoOverload ty.raw
+
+    dbg_trace s!"Generating {ty} with list {tys}"
 
     let tyArr ← `([$tys.toArray,*])
     let tyNameGlobalArr ← tys.mapM (Command.liftCoreM $ realizeGlobalConstNoOverload ·.raw)
@@ -146,6 +149,7 @@ namespace Automation
     )
 
     let getLiftOfTy (data : ArgData) (xs : List Ident) (ty : Ident)  : CommandElabM $ Term := do
+      dbg_trace s!"Computing lift of {ty}\n"
       let closure := getClosureFromArgData ty data
       if let some closure := closure then
         let closureTypeExpr ← liftTermElabM $ inferType (← liftTermElabM $ Term.elabTerm closure none)
@@ -153,16 +157,19 @@ namespace Automation
           let closureApp ← `(term| $closure $(xs.toArray)*)
           let closureAppExpr ← liftTermElabM $ Term.elabTerm closureApp none
           let closureAppExprReduced ← liftCoreM $ runMetaMAsCoreM $ reduce closureAppExpr
+          dbg_trace s!"Lift is the closure applied to args: {closureAppExprReduced}\n"
           liftTermElabM closureAppExprReduced.toSyntax
         else
+          dbg_trace s!"Lift is just the closure: {closure}\n"
           pure closure
       else
-        liftTermElabM $ (mkNatLit 0).toSyntax
+        pure (Syntax.mkNatLit 0)
 
     let mkLiftArr (data : ArgData) (xs : List Ident) : CommandElabM $ Option Term :=
       match data with
       | .binder _ => do
         let lifts ← tys.mapM $ getLiftOfTy data xs
+        dbg_trace s!"LIFTS: {lifts}\n\n---\n"
         let blah ← `([$lifts.toArray,*])
         pure blah
       | _ => do
@@ -189,16 +196,22 @@ namespace Automation
       @[simp]
       def $rmap ($r : RenVec [$tys.toArray,*]) : $ty → $ty
       $rmapCases:matchAlt*
+
+    )
+    elabCommand $ ← `(
+      instance : RenMap $ty [$tys.toArray,*] where
+        rmap := $rmap
     )
 
   def genAllTys : List Ident → CommandElabM Unit
   | [] => pure ()
   | .cons ty tys => do
-    genTy (ty :: tys)
     genAllTys tys
+    genTy (ty :: tys)
 
   elab "#leansubst" &"generate" tys:ident,* : command =>
-    genAllTys tys.getElems.toList
+    dbg_trace s!"{tys.getElems.toList}"
+    genAllTys tys.getElems.toList.reverse
 
   elab "#leansubst_autogen" ty:ident : command => do
     -- Setup --
