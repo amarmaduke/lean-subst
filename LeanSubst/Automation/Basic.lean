@@ -176,29 +176,27 @@ namespace Automation
         pure none
 
     let rmap := qualify "rmap"
-    let f ty' data x xs := match data with
+    let f useRmapStx ty' data x xs := match data with
     | .var => `($(r).1.act $x) -- NOTE: assumes that the type being generated is the first type in [tys]
     | _ => do
       let tyExpr ← liftTermElabM $ Term.elabTerm ty none
       if ← liftCoreM $ runMetaMAsCoreM $ isDefEq tyExpr ty' then
         if let some liftArr ← mkLiftArr data xs then
-          `($rmap ($(r).lift $liftArr) $x)
+          if useRmapStx then `($x⟨$(r).lift $liftArr⟩) else `($rmap ($(r).lift $liftArr) $x)
         else
-          `($rmap $r $x)
+          if useRmapStx then `($x⟨$r⟩) else `($rmap $r $x)
       else if let some theTy ← List.findM? (fun ty ↦ do pure (← liftCoreM $ runMetaMAsCoreM $ isDefEq (← liftTermElabM $ Term.elabTerm ty.raw none) ty')) tys then
         let ren ← renOfTy r tys.toArray theTy
         `($x⟨$ren⟩)
       else
         `($x)
 
-    let rmapCases ← mkAllCases f tyNameGlobal
+    let rmapCases ← mkAllCases (f false) tyNameGlobal
     elabCommand $ ← `(
       @[simp]
       def $rmap ($r : RenVec [$tys.toArray,*]) : $ty → $ty
       $rmapCases:matchAlt*
 
-    )
-    elabCommand $ ← `(
       instance : RenMap $ty [$tys.toArray,*] where
         rmap := $rmap
     )
