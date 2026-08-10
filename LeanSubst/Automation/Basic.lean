@@ -73,7 +73,17 @@ namespace Automation
     else
       pure .none
 
-  def mkCase (f : Expr → ArgData → Ident → List Ident → CommandElabM Term) (ctor : Name) : CommandElabM $ TSyntax `Lean.Parser.Term.matchAltExpr := do
+  def mkCtorLhs (ctor : Name) : CommandElabM $ Term := do
+    let ctorType := (← getConstInfo ctor).type
+    let argTypes := getForallBinderTypes ctorType
+    let argTypesWithData ←
+      argTypes
+      |> (.zip · (List.range $ List.length argTypes))
+      |> List.mapM (fun (ty, p) ↦ do pure (ty, ← getCtorArgData ctor p, xN' p))
+    let xs : List Ident := argTypesWithData.map (fun (_, _, x) ↦ x)
+    `($(mkIdent ctor) $(xs.toArray)*)
+
+  def mkCtorRhs (f : Expr → ArgData → Ident → List Ident → CommandElabM Term) (ctor : Name) : CommandElabM $ Term := do
     let ctorType := (← getConstInfo ctor).type
     let argTypes := getForallBinderTypes ctorType
     let argTypesWithData ←
@@ -82,13 +92,28 @@ namespace Automation
       |> List.mapM (fun (ty, p) ↦ do pure (ty, ← getCtorArgData ctor p, xN' p))
     let xs : List Ident := argTypesWithData.map (fun (_, _, x) ↦ x)
     let mappedXs ← (argTypesWithData.toArray.mapM (fun (ty, data, x) ↦ (f ty data x xs)))
-    let rhs ← `($(mkIdent ctor) $mappedXs*)
-    -- dbg_trace s!"CASE {ctor}: {← `(Parser.Term.matchAltExpr| | $(mkIdent ctor) $(xs.toArray)* => $rhs)}"
-    `(Parser.Term.matchAltExpr| | $(mkIdent ctor) $(xs.toArray)* => $rhs)
+    `($(mkIdent ctor) $mappedXs*)
+
+  def mkCtorCase (f : Expr → ArgData → Ident → List Ident → CommandElabM Term) (ctor : Name) : CommandElabM $ TSyntax `Lean.Parser.Term.matchAltExpr := do
+    let lhs ← mkCtorLhs ctor
+    let rhs ← mkCtorRhs f ctor
+    `(Parser.Term.matchAltExpr| | $lhs => $rhs)
+
+  def mkCtorEq (fLhs : Term → CommandElabM Term) (fRhs : Expr → ArgData → Ident → List Ident → CommandElabM Term) (ctor : Name) : CommandElabM $ Term := do
+    let lhs ← mkCtorLhs ctor >>= fLhs
+    let rhs ← mkCtorRhs fRhs ctor
+    -- dbg_trace s!"lhs: {lhs}"
+    -- dbg_trace s!"rhs: {rhs}"
+    `($lhs = $rhs)
+
+  def mkCtorArgs (ctor : Name) : CommandElabM $ List Ident := do
+    let ctorType := (← getConstInfo ctor).type
+    let argTypes := getForallBinderTypes ctorType
+    pure $ List.map xN' $ List.range $ List.length argTypes
 
   def mkAllCases (f : Expr → ArgData → Ident → List Ident → CommandElabM Term) (ty : Name) : CommandElabM $ TSyntaxArray `Lean.Parser.Term.matchAltExpr := do
     let ctors ← liftCoreM $ runMetaMAsCoreM $ getConstructors ty
-    ctors.toArray.mapM (mkCase f)
+    ctors.toArray.mapM (mkCtorCase f)
 
   def renOfTy (r : Ident) (tys : Array Ident) (ty : Ident) : CommandElabM Term := do
     let pos := tys.idxOf ty
@@ -149,7 +174,6 @@ namespace Automation
     )
 
     let getLiftOfTy (data : ArgData) (xs : List Ident) (ty : Ident)  : CommandElabM $ Term := do
-      dbg_trace s!"Computing lift of {ty}\n"
       let closure := getClosureFromArgData ty data
       if let some closure := closure then
         let closureTypeExpr ← liftTermElabM $ inferType (← liftTermElabM $ Term.elabTerm closure none)
@@ -157,10 +181,8 @@ namespace Automation
           let closureApp ← `(term| $closure $(xs.toArray)*)
           let closureAppExpr ← liftTermElabM $ Term.elabTerm closureApp none
           let closureAppExprReduced ← liftCoreM $ runMetaMAsCoreM $ reduce closureAppExpr
-          dbg_trace s!"Lift is the closure applied to args: {closureAppExprReduced}\n"
           liftTermElabM closureAppExprReduced.toSyntax
         else
-          dbg_trace s!"Lift is just the closure: {closure}\n"
           pure closure
       else
         pure (Syntax.mkNatLit 0)
@@ -169,25 +191,27 @@ namespace Automation
       match data with
       | .binder _ => do
         let lifts ← tys.mapM $ getLiftOfTy data xs
-        dbg_trace s!"LIFTS: {lifts}\n\n---\n"
-        let blah ← `([$lifts.toArray,*])
-        pure blah
+        -- Check if all lifts are syntactically just 0
+        if List.all lifts (fun stx ↦ BEq.beq stx $ Syntax.mkNatLit 0) then
+          pure none
+        else
+          pure $ ← `([$lifts.toArray,*])
       | _ => do
         pure none
 
     let rmap := qualify "rmap"
-    let f useRmapStx ty' data x xs := match data with
+    let f useTCSyntax ty' data x xs := match data with
     | .var => `($(r).1.act $x) -- NOTE: assumes that the type being generated is the first type in [tys]
     | _ => do
       let tyExpr ← liftTermElabM $ Term.elabTerm ty none
       if ← liftCoreM $ runMetaMAsCoreM $ isDefEq tyExpr ty' then
         if let some liftArr ← mkLiftArr data xs then
-          if useRmapStx then `($x⟨$(r).lift $liftArr⟩) else `($rmap ($(r).lift $liftArr) $x)
+          if useTCSyntax then `(($x)⟨$(r).lift $liftArr⟩) else `($rmap ($(r).lift $liftArr) $x)
         else
-          if useRmapStx then `($x⟨$r⟩) else `($rmap $r $x)
+          if useTCSyntax then `(($x)⟨$(r),⟩) else `($rmap $r $x)
       else if let some theTy ← List.findM? (fun ty ↦ do pure (← liftCoreM $ runMetaMAsCoreM $ isDefEq (← liftTermElabM $ Term.elabTerm ty.raw none) ty')) tys then
         let ren ← renOfTy r tys.toArray theTy
-        `($x⟨$ren⟩)
+        `(($x)⟨$ren⟩)
       else
         `($x)
 
@@ -201,6 +225,24 @@ namespace Automation
         rmap := $rmap
     )
 
+    for ctor in ← liftCoreM $ runMetaMAsCoreM $ getConstructors tyNameGlobal do
+      let thmName := qualify s!"rmap_{ctor.components.getLast!}"
+      let fRhs := f false
+      let fLhs lhs := `(($lhs)⟨$(r),⟩)
+      let eq ← mkCtorEq fLhs fRhs ctor
+      let args ← mkCtorArgs ctor
+      elabCommand $ ← `(
+        @[simp, grind =]
+        theorem $thmName {$args.toArray*} {$r : RenVec [$tys.toArray,*]} : $eq := rfl
+      )
+
+    for ty' in tys do
+      elabCommand $ ← `(
+        instance : RenMap $ty [$ty']
+      )
+
+      sorry
+
   def genAllTys : List Ident → CommandElabM Unit
   | [] => pure ()
   | .cons ty tys => do
@@ -208,7 +250,7 @@ namespace Automation
     genTy (ty :: tys)
 
   elab "#leansubst" &"generate" tys:ident,* : command =>
-    dbg_trace s!"{tys.getElems.toList}"
+    -- dbg_trace s!"{tys.getElems.toList}"
     genAllTys tys.getElems.toList.reverse
 
   elab "#leansubst_autogen" ty:ident : command => do

@@ -58,13 +58,26 @@ namespace LeanSubstAttributes
     let closures := data.map (·.1)
     let tys := data.map (·.2.1)
     let ps : Array (TSyntax `num) := data.map (·.2.2)
-    dbg_trace "Elabbing command"
     elabCommand $ ← `(
       attribute [_leansubst_binder [$closures,*] [$tys,*] [$ps,*]] $ctor
     )
-    dbg_trace "Done!"
   | _ => throwUnsupportedSyntax
 
+  declare_syntax_cat var_decl (behavior := symbol)
+
+  syntax " var " ident : var_decl
+
+  syntax " var " ident &" at " &" pos " num : var_decl
+
+  elab "#leansubst" stx:var_decl : command => stx |> fun
+  | `(var_decl| var $ctor at pos $n) => do
+    elabCommand $ ← `(
+      attribute [_leansubst_var $n] $ctor
+    )
+  |  `(var_decl| var $ctor) => do
+    elabCommand $ ← `(
+      attribute [_leansubst_var 0] $ctor
+    )
 
   elab "#leansubst" &" var " ctor:ident : command => do
     elabCommand $ ← `(
