@@ -8,6 +8,53 @@ variable {S : Type u1} {T T1 T2 : Type u2} {U : Type u3}
 variable {V : List (Type u2)}
 
 ----------------------------------------------------------------------------------------------------
+---- RenVec & SubstVec; Map & GetElem
+----------------------------------------------------------------------------------------------------
+inductive Subst.TupleMap (F : Type u2 -> Type u2) : List (Type u2) -> Type _ where
+| nil : Subst.TupleMap F []
+| cons {T Ts} : F T -> Subst.TupleMap F Ts -> Subst.TupleMap F (T::Ts)
+
+syntax (name := «term𝐭[_,]») "𝐭[" withoutPosition(term,*,?) "]" : term
+open Lean in
+macro_rules
+| `(𝐭[ $elems,* ]) => do
+  let rec expand_tuple_lit (i : Nat) (skip : Bool) (result : TSyntax `term) : MacroM Syntax := do
+    match i, skip with
+    | 0,     _     => pure result
+    | i + 1, true  => expand_tuple_lit i false result
+    | i + 1, false =>
+      expand_tuple_lit i true (<- ``(Subst.TupleMap.cons $(⟨elems.elemsAndSeps[i]!⟩) $result))
+  let size := elems.elemsAndSeps.size
+  expand_tuple_lit size (size % 2 == 0) (<- ``(Subst.TupleMap.nil))
+
+def RenVec.map
+  : {V : List (Type u2)} -> Subst.TupleMap (λ T => Ren T -> Ren T) V -> RenVec V -> RenVec V
+| [], .nil, r => r
+| .cons _ _, .cons f fs, (r, rs) => (f r, rs.map fs)
+
+def SubstVec.map
+  : {V : List (Type u2)} -> Subst.TupleMap (λ T => Subst T -> Subst T) V -> SubstVec V -> SubstVec V
+| [], .nil, r => r
+| .cons _ _, .cons f fs, (σ, σs) => (f σ, σs.map fs)
+
+@[implicit_reducible]
+def List.getp {A} : (ℓ : List A) -> (n : Nat) -> (h : n < ℓ.length := by grind) -> A
+| .cons x xs, 0, _ => x
+| .cons x xs, n + 1, _ => List.getp xs n
+
+def RenVec.get
+  : {V : List (Type u2)} -> (n : Nat) -> (h : n < V.length := by grind) ->
+    RenVec V -> Ren (List.getp V n)
+| .cons _ _, 0, _, (σ, _) => σ
+| .cons _ _, n + 1, _, (_, σs) => σs.get n
+
+def SubstVec.get
+  : {V : List (Type u2)} -> (n : Nat) -> (h : n < V.length := by grind) ->
+    SubstVec V -> Subst (List.getp V n)
+| .cons _ _, 0, _, (σ, _) => σ
+| .cons _ _, n + 1, _, (_, σs) => σs.get n
+
+----------------------------------------------------------------------------------------------------
 ---- RenMapAll & SubstMapAll
 ----------------------------------------------------------------------------------------------------
 set_option synthInstance.checkSynthOrder false in
@@ -150,6 +197,20 @@ def Subst.rmap [RenMap S V] (r : RenVec V) (σ : Subst S) : Subst S := .mk λ n 
 
 instance [RenMap S V] : RenMap (Subst S) V where
   rmap := Subst.rmap
+
+def SubstVec.rmap (r : RenVec V) (A : Type u2) [RenMap A V] : {S : List (Type u2)} -> (n : Nat) -> (S[n]? = some A) -> SubstVec S -> SubstVec S
+| .nil, _, _, _ => .unit
+| .cons x xs, 0, h, (σ, σs) => by simp at h; subst h; exact (σ⟨r,⟩, σs)
+| .cons x xs, n + 1, h, (σ, σs) =>
+  have h' : xs[n]? = some A := by simp at h; exact h
+  (σ, rmap r A n h' σs)
+
+-- def SubstVec.rmap (r : RenVec V) : {S : List (Type u2)} -> (i : Fin S.length) -> [RenMap S[i] V] -> SubstVec S -> SubstVec S
+-- | .nil, _, _ , _ => .unit
+-- | .cons x xs, i, j, (σ, σs) => by
+--   cases i using Fin.cases with
+--   | zero => simp at j; exact (σ⟨r,⟩, σs)
+--   | succ i => simp at j; exact (σ, rmap r i σs)
 
 def Subst.smap [SubstMap S V] (τ : SubstVec V) (σ : Subst S) : Subst S := .mk λ n => (σ.act n)[τ,]
 
@@ -579,9 +640,10 @@ theorem Ren.lift_compose {k} {r1 r2 : Ren T} : (r1 >> r2).lift k = r1.lift k >> 
 def Subst.lift [RenMap T [T]] (σ : Subst T) (k : Nat := 1) : Subst T := .mk λ n =>
   if n < k then re n else (σ.act (n - k))⟨Ren.add T k⟩
 
-def SubstVec.lift : {V : List (Type u2)} -> [RenMapAll V] -> (σ : SubstVec V) -> (k : Nat := 1) -> SubstVec V
+def SubstVec.lift : {V : List (Type u2)} -> [RenMapAll V] -> (σ : SubstVec V) -> List Nat -> SubstVec V
 | [], _, _, _ => .unit
-| .cons _ _, _, (t, ts), k => (t.lift k, ts.lift k)
+| .cons _ _, _, (t, ts), [] => (t, ts)
+| .cons _ _, _, (t, ts), .cons k ks => (t.lift k, ts.lift ks)
 
 @[simp, grind <-]
 theorem Subst.lift_action_lt [RenMap T [T]] {σ : Subst T} {k i} (h : i < k)

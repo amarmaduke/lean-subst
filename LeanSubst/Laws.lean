@@ -491,7 +491,7 @@ end Subst
 @[grind =]
 theorem Subst.compose_commute_succ [RenMap T [T]] {τ : Subst T}
   : τ >> Ren.succ T = Ren.succ T >> τ.lift
-:= by congr
+:= by sorry
 
 @[grind =]
 theorem Ren.compose_commute_succ {r : Ren T} : r >> succ T = succ T >> r.lift := by

@@ -1,5 +1,6 @@
 
 import Lean.Elab.Term
+import Lean.Meta
 import Lean.Elab.SyntheticMVars
 
 namespace LeanSubst
@@ -35,7 +36,7 @@ end Subst.Syntax
 set_option linter.unusedVariables false in
 abbrev Var (T : Type u2) := Nat
 
-structure Ren (T : Type u2) where
+structure Ren (T : Type u2) : Type u2 where
   act : Nat -> Nat
 
 @[implicit_reducible]
@@ -52,7 +53,24 @@ class RenMapAll (V : List (Type u2)) where
 export RenMap (rmap)
 
 macro:max (name := «term_⟨_,⟩») t:term noWs "⟨" r:term ",⟩" : term => `(rmap $r $t)
+-- syntax:max (name := «term_⟨_,⟩») term noWs "⟨" term ",⟩" : term
 syntax:max (name := «term_⟨_,+⟩») term noWs "⟨" term ,+ "⟩" : term
+
+-- open Lean.Meta in
+-- open Lean.Elab.Term in
+-- open Subst.Syntax in
+-- elab_rules : term
+-- | `($t⟨ $r ,⟩) => do
+--   let t' <- elabTermAndSynthesize t none
+--   let t_ty <- inferType t'
+--   let r' <- elabTermAndSynthesize r none
+--   let r_ty <- inferType r' |> get_ty_arg
+--   let inst_ty : Lean.TSyntax `term <- `(RenMap $(<- exprToSyntax t_ty) $(<- exprToSyntax r_ty))
+--   let inst_ty <- elabTermAndSynthesize inst_ty none
+--   let (result, _) <- simp inst_ty default
+--   let inst <- synthInstance result.expr
+--   let stx : Lean.TSyntax `term <- `(@rmap _ _ $(<- exprToSyntax inst) $r $t)
+--   elabTermAndSynthesize stx none
 
 open Lean.Meta in
 open Lean.Elab.Term in
