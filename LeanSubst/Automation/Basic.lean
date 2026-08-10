@@ -10,13 +10,21 @@ namespace Automation
   def getConstructors (typeName : Name) : MetaM (List Name) := do
     match (← getEnv).find? typeName with
     | some (.inductInfo val) => return val.ctors
-    | _ => throwError "Not an inductive type: {typeName}"
+    | _ => throwError "Could not get constructors of: {typeName}"
 
   def isVar (ctor : Name) : MetaM Bool := do
     pure $ leanSubstVar.hasTag (← getEnv) ctor
 
-  def getVarCtors (type : Name) : MetaM (List Name) := do
-    List.filterM (isVar) (← getConstructors type)
+  def isNotVar (ctor : Name) : MetaM Bool := do
+    pure $ ¬ leanSubstVar.hasTag (← getEnv) ctor
+
+  def getNonVarConstructors (typeName : Name) : MetaM (List Name) := do
+    match (← getEnv).find? typeName with
+    | some (.inductInfo val) => val.ctors.filterM isNotVar
+    | _ => throwError "Could not get constructors of: {typeName}"
+
+  def getVarCtor (type : Name) : MetaM (Option Name) := do
+    List.findM? (isVar) (← getConstructors type)
 
   def getBinderParam (ctor : Name) : MetaM (Option Nat) := do
     pure (leanSubstBinder'.getParam? (← getEnv) ctor)
@@ -83,6 +91,11 @@ namespace Automation
     let xs : List Ident := argTypesWithData.map (fun (_, _, x) ↦ x)
     `($(mkIdent ctor) $(xs.toArray)*)
 
+  def mkCtorArgs (ctor : Name) : CommandElabM $ List Ident := do
+    let ctorType := (← getConstInfo ctor).type
+    let argTypes := getForallBinderTypes ctorType
+    pure $ List.map xN' $ List.range $ List.length argTypes
+
   def mkCtorRhs (f : Expr → ArgData → Ident → List Ident → CommandElabM Term) (ctor : Name) : CommandElabM $ Term := do
     let ctorType := (← getConstInfo ctor).type
     let argTypes := getForallBinderTypes ctorType
@@ -99,30 +112,35 @@ namespace Automation
     let rhs ← mkCtorRhs f ctor
     `(Parser.Term.matchAltExpr| | $lhs => $rhs)
 
+  def mkVarCtorRhs (f : List Ident → CommandElabM Term) (ctor : Name) : CommandElabM $ Term := do
+    f $ ← mkCtorArgs ctor
+
+  def mkVarCtorCase (f : List Ident → CommandElabM Term) (ctor : Name) : CommandElabM $ TSyntax `Lean.Parser.Term.matchAltExpr := do
+    let lhs ← mkCtorLhs ctor
+    let rhs ← mkVarCtorRhs f ctor
+    `(Parser.Term.matchAltExpr| | $lhs => $rhs)
+
   def mkCtorEq (fLhs : Term → CommandElabM Term) (fRhs : Expr → ArgData → Ident → List Ident → CommandElabM Term) (ctor : Name) : CommandElabM $ Term := do
     let lhs ← mkCtorLhs ctor >>= fLhs
     let rhs ← mkCtorRhs fRhs ctor
-    -- dbg_trace s!"lhs: {lhs}"
-    -- dbg_trace s!"rhs: {rhs}"
     `($lhs = $rhs)
 
-  def mkCtorArgs (ctor : Name) : CommandElabM $ List Ident := do
-    let ctorType := (← getConstInfo ctor).type
-    let argTypes := getForallBinderTypes ctorType
-    pure $ List.map xN' $ List.range $ List.length argTypes
-
-  def mkAllCases (f : Expr → ArgData → Ident → List Ident → CommandElabM Term) (ty : Name) : CommandElabM $ TSyntaxArray `Lean.Parser.Term.matchAltExpr := do
-    let ctors ← liftCoreM $ runMetaMAsCoreM $ getConstructors ty
-    ctors.toArray.mapM (mkCtorCase f)
-
-  def renOfTy (r : Ident) (tys : Array Ident) (ty : Ident) : CommandElabM Term := do
-    let pos := tys.idxOf ty
-    if pos = 0 then
-      `($(r).1)
+  -- Need to give the option of handling the var case by doing more than just mapping each argument
+  def mkAllCases (f : Expr → ArgData → Ident → List Ident → CommandElabM Term) (ty : Name) (fVar : Option (List Ident → CommandElabM Term) := none) : CommandElabM $ TSyntaxArray `Lean.Parser.Term.matchAltExpr := do
+    if let some fVar := fVar then
+      let nonVarCtors ← liftCoreM $ runMetaMAsCoreM $ getNonVarConstructors ty
+      let nonVarCases ← nonVarCtors.toArray.mapM (mkCtorCase f)
+      if let some varCtor ← liftCoreM $ runMetaMAsCoreM $ getVarCtor ty then
+        let varCase ← mkVarCtorCase fVar varCtor
+        pure $ Array.append #[varCase] nonVarCases
+      else throwError "ruh roh"
     else
-      let sndList : List Term ← List.mapM (fun _ ↦ `((·.2))) (List.range pos)
-      let stxList := sndList ++ [← `((·.1))]
-      List.foldlM (fun s1 s2 ↦ `($s2 $s1)) (← `($r)) stxList
+      let ctors ← liftCoreM $ runMetaMAsCoreM $ getConstructors ty
+      ctors.toArray.mapM (mkCtorCase f)
+
+  def getTy (rσ : Ident) (tys : Array Ident) (ty : Ident) : CommandElabM Term := do
+    let pos := tys.idxOf ty
+    `($(rσ).get $(Syntax.mkNatLit pos))
 
   def genTy (tys : List Ident) : CommandElabM Unit := do
     let ty := tys[0]!
@@ -137,8 +155,10 @@ namespace Automation
 
     let qualify str := mkIdent $ .str tyName str
 
-    let varCtorNames ← liftCoreM $ runMetaMAsCoreM $ getVarCtors tyNameGlobal
-    let varName := varCtorNames[0]!
+    let varCtorName ← liftCoreM $ runMetaMAsCoreM $ getVarCtor tyNameGlobal
+    let varName ← match varCtorName with
+    | some name => pure name
+    | none => throwError "ruh roh"
     let varType := (← getConstInfo varName).type
     let var := mkIdent varName
 
@@ -173,6 +193,7 @@ namespace Automation
         coe := $from_action
     )
 
+    -- rmap
     let getLiftOfTy (data : ArgData) (xs : List Ident) (ty : Ident)  : CommandElabM $ Term := do
       let closure := getClosureFromArgData ty data
       if let some closure := closure then
@@ -200,8 +221,8 @@ namespace Automation
         pure none
 
     let rmap := qualify "rmap"
-    let f useTCSyntax ty' data x xs := match data with
-    | .var => `($(r).1.act $x) -- NOTE: assumes that the type being generated is the first type in [tys]
+    let rmap_f useTCSyntax ty' data x xs := match data with
+    | .var => `(($(r).get 0).act $x) -- NOTE: assumes that the type being generated is the first type in [tys]
     | _ => do
       let tyExpr ← liftTermElabM $ Term.elabTerm ty none
       if ← liftCoreM $ runMetaMAsCoreM $ isDefEq tyExpr ty' then
@@ -210,12 +231,12 @@ namespace Automation
         else
           if useTCSyntax then `(($x)⟨$(r),⟩) else `($rmap $r $x)
       else if let some theTy ← List.findM? (fun ty ↦ do pure (← liftCoreM $ runMetaMAsCoreM $ isDefEq (← liftTermElabM $ Term.elabTerm ty.raw none) ty')) tys then
-        let ren ← renOfTy r tys.toArray theTy
-        `(($x)⟨$ren⟩)
+        let r' ← getTy r tys.toArray theTy
+        `(($x)⟨$r'⟩)
       else
         `($x)
 
-    let rmapCases ← mkAllCases (f false) tyNameGlobal
+    let rmapCases ← mkAllCases (rmap_f false) tyNameGlobal
     elabCommand $ ← `(
       @[simp]
       def $rmap ($r : RenVec [$tys.toArray,*]) : $ty → $ty
@@ -227,7 +248,7 @@ namespace Automation
 
     for ctor in ← liftCoreM $ runMetaMAsCoreM $ getConstructors tyNameGlobal do
       let thmName := qualify s!"rmap_{ctor.components.getLast!}"
-      let fRhs := f false
+      let fRhs := rmap_f false
       let fLhs lhs := `(($lhs)⟨$(r),⟩)
       let eq ← mkCtorEq fLhs fRhs ctor
       let args ← mkCtorArgs ctor
@@ -237,11 +258,58 @@ namespace Automation
       )
 
     for ty' in tys do
+      let tyList ← (tys.map (·.raw)).mapM (fun `($ty'') ↦ do
+        let ty'Expr ← liftTermElabM $ Term.elabTerm ty' none
+        let ty''Expr ← liftTermElabM $ Term.elabTerm ty'' none
+        if ← liftCoreM $ runMetaMAsCoreM $ isDefEq ty'Expr ty''Expr then
+          `($(r).1)
+        else
+          `(Ren.id $ty''))
+      let tyArr := (tyList.append [← `(.unit)]).toArray
       elabCommand $ ← `(
-        instance : RenMap $ty [$ty']
+        instance : RenMap $ty [$ty'] where
+          rmap $r:ident :=  $rmap ⟨ $tyArr:term,* ⟩
       )
 
-      sorry
+    -- smap
+    let mkMapArr (data : ArgData) (xs : List Ident) : CommandElabM $ Option Term :=
+      match data with
+      | .binder _ => do
+        let lifts ← tys.mapM $ getLiftOfTy data xs
+        -- Check if all lifts are syntactically just 0
+        if List.all lifts (fun stx ↦ BEq.beq stx $ Syntax.mkNatLit 0) then
+          pure none
+        else
+          let ops ← (lifts.map (·.raw)).mapM (fun | `(0) => `(id) | `(1) => `(.lift) | `($t) => `(.lift (k := $t)))
+          pure $ ← `(𝐭[$ops.toArray,*])
+      | _ => pure none
+
+    let smap := qualify "smap"
+    let smap_f useTCSyntax ty' data x xs := match data with
+    | .var => throwError "smap var case"
+    | _ => do
+      let tyExpr ← liftTermElabM $ Term.elabTerm ty none
+      if ← liftCoreM $ runMetaMAsCoreM $ isDefEq tyExpr ty' then
+        if let some liftArr ← mkMapArr data xs then
+          if useTCSyntax then `(($x)[$(σ).map $liftArr]) else `($smap ($(σ).map $liftArr) $x)
+        else
+          if useTCSyntax then `(($x)[$(σ),]) else `($smap $σ $x)
+      else if let some theTy ← List.findM? (fun ty ↦ do pure (← liftCoreM $ runMetaMAsCoreM $ isDefEq (← liftTermElabM $ Term.elabTerm ty.raw none) ty')) tys then
+        let σ' ← getTy σ tys.toArray theTy
+        `(($x)[$σ'])
+      else
+        `($x)
+    let smap_fVar xs := `(($(σ).get 0).act $(xs[0]!):ident) -- TODO: At the moment, this doesn't generalize to vars with data
+    let smapCases ← mkAllCases (smap_f false) tyNameGlobal (fVar := some smap_fVar)
+
+    elabCommand $ ← `(
+      @[simp]
+      def $smap ($σ : SubstVec [$tys.toArray,*]) : $ty → $ty
+      $smapCases:matchAlt*
+
+      instance : SubstMap $ty [$tys.toArray,*] where
+        smap := $smap
+    )
 
   def genAllTys : List Ident → CommandElabM Unit
   | [] => pure ()

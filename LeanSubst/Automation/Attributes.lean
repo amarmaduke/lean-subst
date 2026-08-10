@@ -69,15 +69,16 @@ namespace LeanSubstAttributes
 
   syntax " var " ident &" at " &" pos " num : var_decl
 
-  elab "#leansubst" stx:var_decl : command => stx |> fun
-  | `(var_decl| var $ctor at pos $n) => do
-    elabCommand $ ← `(
-      attribute [_leansubst_var $n] $ctor
-    )
-  |  `(var_decl| var $ctor) => do
-    elabCommand $ ← `(
-      attribute [_leansubst_var 0] $ctor
-    )
+  -- elab "#leansubst" stx:var_decl : command => stx |> fun
+  -- | `(var_decl| var $ctor at pos $n) => do
+  --   elabCommand $ ← `(
+  --     attribute [_leansubst_var $n] $ctor
+  --   )
+  -- |  `(var_decl| var $ctor) => do
+  --   elabCommand $ ← `(
+  --     attribute [_leansubst_var 0] $ctor
+  --   )
+  -- | _ => throwUnsupportedSyntax
 
   elab "#leansubst" &" var " ctor:ident : command => do
     elabCommand $ ← `(

@@ -45,6 +45,8 @@ inductive Term where
 #print Ty.rmap_all
 #print Ty.rmap_nat
 
+#print Ty.smap
+
 -- Term --
 #print Term.rmap
 #print Term.rmap._f
@@ -57,6 +59,8 @@ inductive Term where
 #print Term.rmap_zero
 #print Term.rmap_succ
 #print Term.rmap_nrec
+
+#print Term.smap
 
 
 ----------------------------------------------------------------------------------------------------
@@ -97,18 +101,18 @@ inductive Term where
 -- instance : Coe (Action Term) Term where
 --   coe := Term.from_action
 
+@[simp]
 def Term.rmap' (r : RenVec [Term, Ty]) : Term -> Term
 | var x => var ((r.get 0).act x)
 | app t1 t2 => app (t1.rmap' r) (t2.rmap' r)
-| lam A t => lam A⟨r.get 1⟩ (t.rmap' $ r.map 𝐭[.lift, id])
+| lam A t => lam A⟨r.get 1⟩ (rmap' (r.lift [1, 0]) t)
 | tapp t A => tapp (t.rmap' r) A⟨r.get 1⟩
-| tlam t => tlam (t.rmap' $ r.map 𝐭[id, .lift])
+| tlam t => tlam (t.rmap' $ r.lift [0, 1])
 | zero => zero
 | succ t => succ (t.rmap' r)
-| nrec motive z s n => nrec motive⟨r.get 1⟩ (z.rmap' r) (s.rmap' $ r.map 𝐭[.lift (k := 2), id]) (n.rmap' r)
+| nrec motive z s n => nrec motive⟨r.get 1⟩ (z.rmap' r) (s.rmap' $ r.lift [2, 0]) (n.rmap' r)
 
-@[simp]
-theorem blah : Term.rmap' = Term.rmap := by
+theorem rmap_correct : Term.rmap' = Term.rmap := by
   funext r t
   induction t generalizing r
   case var n => simp
@@ -125,25 +129,38 @@ instance : RenMap Term [Term, Ty] where
 
 theorem Term.rmap_var' {x0} (r : RenVec [Term, Ty]) : (var x0)⟨r,⟩ = var (r.1.act (x0)) := rfl
 
-instance : RenMap Term [Term] where
-  rmap r := Term.rmap (r.1, Ren.id Ty, .unit)
+-- instance : RenMap Term [Term] where
+  -- rmap r := Term.rmap ⟨r.1, Ren.id Ty, .unit⟩
 
-instance : RenMap Term [Ty] where
-  rmap r := Term.rmap (Ren.id Term, r.1, .unit)
+-- instance : RenMap Term [Ty] where
+  -- rmap r := Term.rmap ⟨Ren.id Term, r.1, .unit⟩
 
-instance : SubstMap Ty [Ty] where
-  smap := sorry
+-- instance : SubstMap Ty [Ty] where
+  -- smap := sorry
 
 @[simp]
-def Term.smap (σ : SubstVec [Term, Ty]) : Term -> Term
+def Term.smap' (σ : SubstVec [Term, Ty]) : Term -> Term
 | var x => (σ.get 0).act x
-| app t1 t2 => app (t1.smap σ) (t2.smap σ)
-| lam A t => lam A[σ.get 1] (t.smap $ σ.map 𝐭[.lift, id])
-| tapp t A => tapp (t.smap σ) A[σ.get 1]
-| tlam t => tlam (t.smap $ σ.map 𝐭[(·⟨𝐫1(Ty)⟩), .lift])
+| app t1 t2 => app (t1.smap' σ) (t2.smap' σ)
+| lam A t => lam A[σ.get 1] (t.smap' $ σ.map 𝐭[.lift, id])
+| tapp t A => tapp (t.smap' σ) A[σ.get 1]
+| tlam t => tlam (t.smap' $ σ.map 𝐭[(·⟨𝐫1(Ty)⟩), .lift])
 | zero => zero
-| succ t => succ (t.smap σ)
-| nrec motive z s n => nrec motive[σ.get 1] (z.smap σ) (s.smap $ σ.map 𝐭[.lift (k := 2), id]) (n.smap σ)
+| succ t => succ (t.smap' σ)
+| nrec motive z s n => nrec motive[σ.get 1] (z.smap' σ) (s.smap' $ σ.map 𝐭[.lift (k := 2), id]) (n.smap' σ)
+
+theorem smap_correct : Term.smap' = Term.smap := by
+  funext σ t
+  induction t generalizing σ
+  case var n => simp
+  case app t1 t2 ih1 ih2 => simp [ih1, ih2]
+  case tapp t' A ih => simp [ih]
+  case lam A t' ih => simp [ih]
+  case tlam t' ih => -- TODO: Still need to increment the substitution since Ty is bound in Term
+    simp [ih]
+    sorry
+  case zero => simp
+  case nrec motive z s n ih1 ih2 ih3 => simp [ih1, ih2, ih3]
 
 -- @[simp]
 -- def Term.smap (σ : Subst Term) (τ : Subst Ty) : Term -> Term
@@ -157,17 +174,5 @@ def Term.smap (σ : SubstVec [Term, Ty]) : Term -> Term
 -- | zero => zero
 -- | succ t => succ (t.smap σ τ)
 -- | nrec motive z s n => nrec motive[τ] (z.smap σ τ) (s.smap (σ.lift 2) τ) (n.smap σ τ)
-
-@[simp]
-def Term.smap' (σ : SubstVec [Term, Ty]) : Term -> Term
-| var x => σ.1.act x
-| app t1 t2 => app (t1.smap' σ) (t2.smap' σ)
-| lam A t => lam A[σ.2.1] (t.smap' σ)
-| tapp t A => tapp (t.smap' σ) A[σ.2.1]
-| tlam t => tlam (t.smap' $ (σ.1⟨𝐫1(Ty)⟩, σ.2.lift))
-| zero => zero
-| succ t => succ (t.smap' σ)
-| nrec motive z s n => nrec motive[σ.2.1] (z.smap' σ) (s.smap' (σ.1.lift 2, σ.2)) (n.smap' σ)
-
 
 end SystemFWithNat
