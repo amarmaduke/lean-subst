@@ -323,7 +323,6 @@ namespace Automation
           let ops ← (incOps.zip liftOps).mapM (fun
             | ⟨some incOp, liftOp⟩ => match liftOp with | `(id) => `(($incOp)) | _ => `(($incOp) ∘ $liftOp)
             | ⟨none, liftOp⟩ => `($liftOp))
-
           pure $ ← `(𝐭[$ops.toArray,*])
       | _ => pure none
 
