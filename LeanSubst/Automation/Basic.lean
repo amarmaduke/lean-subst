@@ -295,6 +295,7 @@ namespace Automation
       let increments : List (Ident × Term) ←
         tysLiftsZip.mapM
           (fun ⟨ty', lift⟩ ↦ do
+            -- Is there a better way to check if two names are equal?
             let ty'_eq_ty ← liftCoreM $ runMetaMAsCoreM $ isDefEq (← liftTermElabM $ Term.elabTerm (mkIdent ty') none) (← liftTermElabM $ Term.elabTerm (mkIdent ty) none)
             if (← isBoundIn ty' ty) ∧ ¬ ty'_eq_ty then
               pure ⟨mkIdent ty', lift⟩
@@ -311,12 +312,18 @@ namespace Automation
           pure none
         else
           let incrementsList ← tysNamesGlobal.mapM $ getIncrementsOfTy lifts
-          let incOps : List Term ← incrementsList.mapM (fun incs ↦ do
+          let incOps : List $ Option Term ← incrementsList.mapM (fun incs ↦ do
             let incOps ← incs.mapM (fun ⟨ty, inc⟩ ↦ `(Ren.add $ty:ident $inc))
-            incOps.foldlM (fun t1 t2 ↦ `($t1⟨$t2⟩)) (← `(·))
+            if 0 < incOps.length then
+              pure $ some $ ← incOps.foldlM (fun t1 t2 ↦ `($t1⟨$t2⟩)) (← `(·))
+            else
+              pure none
           )
           let liftOps ← (lifts.map (·.raw)).mapM (fun | `(0) => `(id) | `(1) => `(.lift) | `($t) => `(.lift (k := $t)))
-          let ops ← (incOps.zip liftOps).mapM (fun ⟨incOp, liftOp⟩ ↦ match liftOp with | `(0) => `($incOp) | _ => `(($incOp) ∘ $liftOp))
+          let ops ← (incOps.zip liftOps).mapM (fun
+            | ⟨some incOp, liftOp⟩ => match liftOp with | `(id) => `(($incOp)) | _ => `(($incOp) ∘ $liftOp)
+            | ⟨none, liftOp⟩ => `($liftOp))
+
           pure $ ← `(𝐭[$ops.toArray,*])
       | _ => pure none
 

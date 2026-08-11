@@ -158,11 +158,11 @@ theorem smap_correct : Term.smap' = Term.smap := by
   case var n => simp
   case app t1 t2 ih1 ih2 => simp [ih1, ih2]
   case tapp t' A ih => simp [ih]
-  case lam A t' ih => simp [ih] ; congr
-  case tlam t' ih => simp [ih] ; congr
+  case lam A t' ih => simp [ih]
+  case tlam t' ih => simp [ih]
   case zero => simp
   case succ t ih => simp [ih]
-  case nrec motive z s n ih1 ih2 ih3 => simp [ih1, ih2, ih3] ; congr
+  case nrec motive z s n ih1 ih2 ih3 => simp [ih1, ih2, ih3]
 
 -- @[simp]
 -- def Term.smap (σ : Subst Term) (τ : Subst Ty) : Term -> Term
