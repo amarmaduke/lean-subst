@@ -61,6 +61,7 @@ inductive Term where
 #print Term.rmap_nrec
 
 #print Term.smap
+#print Term.smap._f
 
 
 ----------------------------------------------------------------------------------------------------
@@ -138,13 +139,15 @@ theorem Term.rmap_var' {x0} (r : RenVec [Term, Ty]) : (var x0)⟨r,⟩ = var (r.
 -- instance : SubstMap Ty [Ty] where
   -- smap := sorry
 
+theorem blah : Ren.succ Ty = ⟨fun x ↦ x + 1⟩ := rfl
+
 @[simp]
 def Term.smap' (σ : SubstVec [Term, Ty]) : Term -> Term
 | var x => (σ.get 0).act x
 | app t1 t2 => app (t1.smap' σ) (t2.smap' σ)
 | lam A t => lam A[σ.get 1] (t.smap' $ σ.map 𝐭[.lift, id])
 | tapp t A => tapp (t.smap' σ) A[σ.get 1]
-| tlam t => tlam (t.smap' $ σ.map 𝐭[(·⟨𝐫1(Ty)⟩), .lift])
+| tlam t => tlam (t.smap' $ σ.map 𝐭[(·⟨Ren.add Ty 1⟩), .lift])
 | zero => zero
 | succ t => succ (t.smap' σ)
 | nrec motive z s n => nrec motive[σ.get 1] (z.smap' σ) (s.smap' $ σ.map 𝐭[.lift (k := 2), id]) (n.smap' σ)
@@ -155,12 +158,11 @@ theorem smap_correct : Term.smap' = Term.smap := by
   case var n => simp
   case app t1 t2 ih1 ih2 => simp [ih1, ih2]
   case tapp t' A ih => simp [ih]
-  case lam A t' ih => simp [ih]
-  case tlam t' ih => -- TODO: Still need to increment the substitution since Ty is bound in Term
-    simp [ih]
-    sorry
+  case lam A t' ih => simp [ih] ; congr
+  case tlam t' ih => simp [ih] ; congr
   case zero => simp
-  case nrec motive z s n ih1 ih2 ih3 => simp [ih1, ih2, ih3]
+  case succ t ih => simp [ih]
+  case nrec motive z s n ih1 ih2 ih3 => simp [ih1, ih2, ih3] ; congr
 
 -- @[simp]
 -- def Term.smap (σ : Subst Term) (τ : Subst Ty) : Term -> Term

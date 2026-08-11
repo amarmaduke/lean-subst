@@ -12,6 +12,7 @@ namespace Automation
     | some (.inductInfo val) => return val.ctors
     | _ => throwError "Could not get constructors of: {typeName}"
 
+
   def isVar (ctor : Name) : MetaM Bool := do
     pure $ leanSubstVar.hasTag (← getEnv) ctor
 
@@ -81,6 +82,25 @@ namespace Automation
     else
       pure .none
 
+  def numArgsInCtor (ctor : Name) : CommandElabM Nat := do
+    let ctorType := (← getConstInfo ctor).type
+    let argTypes := getForallBinderTypes ctorType
+    pure $ argTypes.length
+
+  def isBoundInCtorAtPos (A Bctor : Name) (pos : Nat) : CommandElabM Bool := do
+    let data ← getCtorArgData Bctor pos
+    if let .binder binds := data then
+      binds.anyM (fun ⟨_, ty⟩ ↦ do liftCoreM $ runMetaMAsCoreM $ isDefEq (← liftTermElabM $ Term.elabTerm (mkIdent A) none) (← liftTermElabM $ Term.elabTerm ty none))
+    else
+      pure false
+
+  def isBoundInCtor (A Bctor : Name) : CommandElabM Bool := do
+    (List.range $ ← numArgsInCtor Bctor).anyM (fun pos ↦ isBoundInCtorAtPos A Bctor pos)
+
+  -- Check if A is bound in B
+  def isBoundIn (A B : Name) : CommandElabM Bool := do
+    (← liftCoreM $ runMetaMAsCoreM $ getConstructors B).anyM (isBoundInCtor A)
+
   def mkCtorLhs (ctor : Name) : CommandElabM $ Term := do
     let ctorType := (← getConstInfo ctor).type
     let argTypes := getForallBinderTypes ctorType
@@ -92,9 +112,7 @@ namespace Automation
     `($(mkIdent ctor) $(xs.toArray)*)
 
   def mkCtorArgs (ctor : Name) : CommandElabM $ List Ident := do
-    let ctorType := (← getConstInfo ctor).type
-    let argTypes := getForallBinderTypes ctorType
-    pure $ List.map xN' $ List.range $ List.length argTypes
+    pure $ List.map xN' $ List.range $ (← numArgsInCtor ctor)
 
   def mkCtorRhs (f : Expr → ArgData → Ident → List Ident → CommandElabM Term) (ctor : Name) : CommandElabM $ Term := do
     let ctorType := (← getConstInfo ctor).type
@@ -151,7 +169,7 @@ namespace Automation
     dbg_trace s!"Generating {ty} with list {tys}"
 
     let tyArr ← `([$tys.toArray,*])
-    let tyNameGlobalArr ← tys.mapM (Command.liftCoreM $ realizeGlobalConstNoOverload ·.raw)
+    let tysNamesGlobal ← tys.mapM (Command.liftCoreM $ realizeGlobalConstNoOverload ·.raw)
 
     let qualify str := mkIdent $ .str tyName str
 
@@ -194,7 +212,7 @@ namespace Automation
     )
 
     -- rmap
-    let getLiftOfTy (data : ArgData) (xs : List Ident) (ty : Ident)  : CommandElabM $ Term := do
+    let getLiftsOfTy (data : ArgData) (xs : List Ident) (ty : Ident)  : CommandElabM $ Term := do
       let closure := getClosureFromArgData ty data
       if let some closure := closure then
         let closureTypeExpr ← liftTermElabM $ inferType (← liftTermElabM $ Term.elabTerm closure none)
@@ -211,7 +229,7 @@ namespace Automation
     let mkLiftArr (data : ArgData) (xs : List Ident) : CommandElabM $ Option Term :=
       match data with
       | .binder _ => do
-        let lifts ← tys.mapM $ getLiftOfTy data xs
+        let lifts ← tys.mapM $ getLiftsOfTy data xs
         -- Check if all lifts are syntactically just 0
         if List.all lifts (fun stx ↦ BEq.beq stx $ Syntax.mkNatLit 0) then
           pure none
@@ -272,15 +290,33 @@ namespace Automation
       )
 
     -- smap
+    let getIncrementsOfTy (lifts : List Term) (ty : Name) : CommandElabM $ List (Ident × Term) := do
+      let tysLiftsZip := tysNamesGlobal.zip lifts
+      let increments : List (Ident × Term) ←
+        tysLiftsZip.mapM
+          (fun ⟨ty', lift⟩ ↦ do
+            let ty'_eq_ty ← liftCoreM $ runMetaMAsCoreM $ isDefEq (← liftTermElabM $ Term.elabTerm (mkIdent ty') none) (← liftTermElabM $ Term.elabTerm (mkIdent ty) none)
+            if (← isBoundIn ty' ty) ∧ ¬ ty'_eq_ty then
+              pure ⟨mkIdent ty', lift⟩
+            else
+              pure ⟨mkIdent ty', Syntax.mkNatLit 0⟩)
+      pure $ increments.filter (fun (_, stx) ↦ match stx with | `(0) => false | _ => true)
+
     let mkMapArr (data : ArgData) (xs : List Ident) : CommandElabM $ Option Term :=
       match data with
       | .binder _ => do
-        let lifts ← tys.mapM $ getLiftOfTy data xs
+        let lifts ← tys.mapM $ getLiftsOfTy data xs
         -- Check if all lifts are syntactically just 0
         if List.all lifts (fun stx ↦ BEq.beq stx $ Syntax.mkNatLit 0) then
           pure none
         else
-          let ops ← (lifts.map (·.raw)).mapM (fun | `(0) => `(id) | `(1) => `(.lift) | `($t) => `(.lift (k := $t)))
+          let incrementsList ← tysNamesGlobal.mapM $ getIncrementsOfTy lifts
+          let incOps : List Term ← incrementsList.mapM (fun incs ↦ do
+            let incOps ← incs.mapM (fun ⟨ty, inc⟩ ↦ `(Ren.add $ty:ident $inc))
+            incOps.foldlM (fun t1 t2 ↦ `($t1⟨$t2⟩)) (← `(·))
+          )
+          let liftOps ← (lifts.map (·.raw)).mapM (fun | `(0) => `(id) | `(1) => `(.lift) | `($t) => `(.lift (k := $t)))
+          let ops ← (incOps.zip liftOps).mapM (fun ⟨incOp, liftOp⟩ ↦ match liftOp with | `(0) => `($incOp) | _ => `(($incOp) ∘ $liftOp))
           pure $ ← `(𝐭[$ops.toArray,*])
       | _ => pure none
 
@@ -290,8 +326,8 @@ namespace Automation
     | _ => do
       let tyExpr ← liftTermElabM $ Term.elabTerm ty none
       if ← liftCoreM $ runMetaMAsCoreM $ isDefEq tyExpr ty' then
-        if let some liftArr ← mkMapArr data xs then
-          if useTCSyntax then `(($x)[$(σ).map $liftArr]) else `($smap ($(σ).map $liftArr) $x)
+        if let some opsArr ← mkMapArr data xs then
+          if useTCSyntax then `(($x)[$(σ).map $opsArr]) else `($smap ($(σ).map $opsArr) $x)
         else
           if useTCSyntax then `(($x)[$(σ),]) else `($smap $σ $x)
       else if let some theTy ← List.findM? (fun ty ↦ do pure (← liftCoreM $ runMetaMAsCoreM $ isDefEq (← liftTermElabM $ Term.elabTerm ty.raw none) ty')) tys then
