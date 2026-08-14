@@ -121,8 +121,11 @@ instance : SubstAction T Nat (Action T) where
 class SubstMap (S : Type u1) (V : List (Type u2)) where
   smap : SubstVec V -> S -> S
 
-class SubstMapAll (V : List (Type u2)) where
-  smap : ∀ (i : Fin V.length), SubstMap V[i] [V[i]]
+class inductive SubstMapAll : List (Type u2) -> Sort _ where
+| nil : SubstMapAll []
+| cons {V Vs} : SubstMap V [V] -> SubstMap V Vs -> SubstMapAll Vs -> SubstMapAll (V::Vs)
+
+--  smap : ∀ (i : Fin V.length), SubstMap V[i] [V[i]]
 
 export SubstMap (smap)
 

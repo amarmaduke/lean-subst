@@ -85,23 +85,32 @@ instance [i1 : RenMap T1 [T1]] [i2 : RenMap T2 [T2]] : RenMapAll [T1, T2] where
 
 set_option synthInstance.checkSynthOrder false in
 instance [i : SubstMapAll (T::V)] : SubstMap T [T] where
-  smap := (i.smap 0).smap
+  smap :=
+    match i with
+    | .cons i _ _ => i.smap
 
 set_option synthInstance.checkSynthOrder false in
-instance [i : SubstMapAll (T::V)] : SubstMapAll V where
-  smap := λ k => (i.smap k.succ)
+instance [i : SubstMapAll (T::V)] : SubstMap T V where
+  smap :=
+    match i with
+    | .cons _ i _ => i.smap
 
-instance [i : SubstMap T [T]] : SubstMapAll [T] where
-  smap := λ 0 => i
+set_option synthInstance.checkSynthOrder false in
+instance [i : SubstMapAll (T::V)] : SubstMapAll V :=
+  match i with
+  | .cons _ _ i => i
 
-instance [i1 : SubstMap T1 [T1]] [i2 : SubstMap T2 [T2]] : SubstMapAll [T1, T2] where
-  smap := by
-    intro i; cases i using Fin.cases with
-    | zero => exact i1
-    | succ i =>
-      cases i using Fin.cases with
-      | zero => exact i2
-      | succ i => apply Fin.elim0 i
+-- instance [i : SubstMap T [T]] : SubstMapAll [T] where
+--   smap := λ 0 => i
+
+-- instance [i1 : SubstMap T1 [T1]] [i2 : SubstMap T2 [T2]] : SubstMapAll [T1, T2] where
+--   smap := by
+--     intro i; cases i using Fin.cases with
+--     | zero => exact i1
+--     | succ i =>
+--       cases i using Fin.cases with
+--       | zero => exact i2
+--       | succ i => apply Fin.elim0 i
 ----------------------------------------------------------------------------------------------------
 ---- Var
 ----------------------------------------------------------------------------------------------------
@@ -500,7 +509,7 @@ def SubstVec.compose
   : {V : List (Type u2)} -> [SubstMapAll V] ->
     SubstVec V -> SubstVec V -> SubstVec V
 | [], _, _, _ => .unit
-| .cons _ _, _, (v1, v1s), (v2, v2s) => (⟨λ n => ((v1 >> v2).act n)[v2s,]⟩, compose v1s v2s)
+| .cons _ _, _, (v1, v1s), (v2, v2s) => (v1[v2s,] >> v2, compose v1s v2s)
 
 instance [SubstMapAll V] : AndThen (SubstVec V) where
   andThen σ f := SubstVec.compose σ (f ())
@@ -565,57 +574,40 @@ theorem Subst.compose_ren_right_action [RenMap T [T]] {σ : Subst T} {r : Ren T}
   : (σ >> r).act x = (σ.act x)⟨r⟩
 := by simp [HAndThen.hAndThen, compose_ren_right, act, SubstAction.act]
 
-set_option linter.unusedVariables false in
-@[instance_reducible]
-def RenMapAll.get (T : Type u2) :
-  ∀ (i : Nat) {V : List (Type u2)} (h : V[i]? = some T), RenMapAll V -> RenMap T [T]
-| i, V, h, ⟨inst⟩ =>
-  let i' : Fin V.length := ⟨i, by grind⟩
-  inst i' |> cast (by grind)
+-- set_option linter.unusedVariables false in
+-- @[instance_reducible]
+-- def RenMapAll.get (T : Type u2) :
+--   ∀ (i : Nat) {V : List (Type u2)} (h : V[i]? = some T), RenMapAll V -> RenMap T [T]
+-- | i, V, h, ⟨inst⟩ =>
+--   let i' : Fin V.length := ⟨i, by grind⟩
+--   inst i' |> cast (by grind)
 
-set_option linter.unusedVariables false in
-@[instance_reducible]
-def SubstMapAll.get (T : Type u2) :
-  ∀ (i : Nat) {V : List (Type u2)} (h : V[i]? = some T), SubstMapAll V -> SubstMap T [T]
-| i, V, h, ⟨inst⟩ =>
-  let i' : Fin V.length := ⟨i, by grind⟩
-  inst i' |> cast (by grind)
+-- set_option linter.unusedVariables false in
+-- @[instance_reducible]
+-- def SubstMapAll.get (T : Type u2) :
+--   ∀ (x : Nat) {V : List (Type u2)} (h : V[x]? = some T), SubstMapAll V -> SubstMap T [T]
+-- | 0, .cons V Vs, h, .cons i1 i2 i3 => i1 |> cast (by grind)
+-- | x + 1, .cons V Vs, h, .cons i1 i2 i3 =>
+--   sorry
 
-@[simp]
-theorem SubstVec.compose_ren_left_get {r : RenVec V} {σ : SubstVec V} {i h}
-  : (r >> σ).get T i h = r.get T i h >> σ.get T i h
-:= sorry
-
-@[simp]
-theorem SubstVec.compose_ren_right_get [inst : RenMapAll V] {σ : SubstVec V} {r : RenVec V} {i h}
-  : (σ >> r).get T i h
-    = let : RenMap T [T] := inst.get T i h; σ.get T i h >> r.get T i h
-:= sorry
-
-@[simp]
-theorem SubstVec.compose_get [inst : SubstMapAll V] {σ τ : SubstVec V} {i h}
-  : (σ >> τ).get T i h
-    = let : SubstMap T [T] := inst.get T i h; σ.get T i h >> τ.get T i h
-:= sorry
-
--- def Subst.hcompose [SubstMap S T] : Subst S -> Subst T -> Subst S
--- | σ, τ => .mk λ n => (σ.act n)[τ]
--- infixr:85 " ◾ " => Subst.hcompose
 
 -- @[simp]
--- theorem Subst.hcompose_action [SubstMap S T] {σ : Subst S} {τ : Subst T} {x : Nat}
---   : (σ ◾ τ).act x = (σ.act x)[τ]
--- := by simp [hcompose, act, SubstAction.act]
-
--- def Subst.hcompose_ren [RenMap S T] : Subst S -> Ren T -> Subst S
--- | σ, r => .mk λ n => (σ.act n)⟨r⟩
--- infixr:85 " ◾ " => Subst.hcompose_ren
+-- theorem SubstVec.compose_ren_left_get {r : RenVec V} {σ : SubstVec V} {i h}
+--   : (r >> σ).get T i h = r.get T i h >> σ.get T i h
+-- := sorry
 
 -- @[simp]
--- theorem Subst.hcompose_ren_action [RenMap S T] {σ : Subst S} {r : Ren T} {x : Nat}
---   : (σ ◾ r).act x = (σ.act x)⟨r⟩
--- := by simp [hcompose_ren, act, SubstAction.act]
---
+-- theorem SubstVec.compose_ren_right_get [inst : RenMapAll V] {σ : SubstVec V} {r : RenVec V} {i h}
+--   : (σ >> r).get T i h
+--     = let : RenMap T [T] := inst.get T i h; σ.get T i h >> r.get T i h
+-- := sorry
+
+-- @[simp]
+-- theorem SubstVec.compose_get [inst : SubstMapAll V] {σ τ : SubstVec V} {i h}
+--   : (σ >> τ).get T i h
+--     = let : SubstMap T [T] := inst.get T i h; σ.get T i h >> τ.get T i h
+-- := sorry
+
 ----------------------------------------------------------------------------------------------------
 ---- Lift
 ----------------------------------------------------------------------------------------------------

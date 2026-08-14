@@ -4,7 +4,7 @@ import LeanSubst.Ops
 namespace LeanSubst
 
 universe u1 u2 u3
-variable {S : Type u1} {T T1 T2 : Type u2} {U : Type u3}
+variable {S : Type u1} {T T1 T2 T3 : Type u2} {U : Type u3}
 variable {V : List (Type u2)}
 
 class RenMapId (S : Type u1) (V : List (Type u2)) [RenMap S V] where
@@ -129,17 +129,34 @@ theorem Subst.apply_compose
 
 @[simp, grind =]
 theorem Subst.apply_compose1
-  [SubstMap S [T]] [SubstMap T [T]] [SubstMapCompose S [T]]
+  [SubstMap S [T]] [SubstMap T [T]] [SubstMapAll [T]] [SubstMapCompose S [T]]
   {s : S} {σ1 σ2 : Subst T}
   : s[σ1][σ2] = s[σ1 >> σ2]
-:= Subst.apply_compose
+:= by
+  have lem := Subst.apply_compose (V := [T]) (s := s) (σ1 := (σ1, .unit)) (σ2 := (σ2, .unit))
+  rw [lem]; simp [HAndThen.hAndThen, AndThen.andThen, SubstVec.compose]
+  sorry
+  --Subst.apply_compose
 
 @[simp, grind =]
 theorem Subst.apply_compose2
-  [SubstMap S [T1, T2]] [SubstMap T1 [T1]] [SubstMap T2 [T2]] [SubstMapCompose S [T1, T2]]
+  [SubstMap S [T1, T2]] [SubstMapAll [T1, T2]] [SubstMapCompose S [T1, T2]]
   {s : S} {σ1 σ2 : Subst T1} {τ1 τ2 : Subst T2}
-  : s[σ1, τ1][σ2, τ2] = s[σ1 >> σ2, τ1 >> τ2]
-:= Subst.apply_compose
+  : s[σ1, τ1][σ2, τ2] = s[σ1[τ2] >> σ2, τ1 >> τ2]
+:= by
+  have lem := Subst.apply_compose (V := [T1, T2]) (s := s) (σ1 := (σ1, τ1, .unit)) (σ2 := (σ2, τ2, .unit))
+  rw [lem]; simp [HAndThen.hAndThen, AndThen.andThen, SubstVec.compose]
+  sorry
+
+@[simp, grind =]
+theorem Subst.apply_compose3
+  [SubstMap S [T1, T2, T3]] [SubstMapAll [T1, T2, T3]] [SubstMapCompose S [T1, T2, T3]]
+  {s : S} {σ1 σ2 : Subst T1} {τ1 τ2 : Subst T2} {μ1 μ2 : Subst T3}
+  : s[σ1, τ1, μ1][σ2, τ2, μ2] = s[σ1[τ2, μ2] >> σ2, τ1[μ2] >> τ2, μ1 >> μ2]
+:= by
+  have lem := Subst.apply_compose (V := [T1, T2, T3]) (s := s) (σ1 := (σ1, τ1, μ1, .unit)) (σ2 := (σ2, τ2, μ2, .unit))
+  rw [lem]; simp [HAndThen.hAndThen, AndThen.andThen, SubstVec.compose]
+  sorry
 
 -- @[simp↓, grind =]
 -- theorem Subst.apply_compose2 [SubstMap S [T1, T2]] [SubstMapCompose S [T1, T2]]
