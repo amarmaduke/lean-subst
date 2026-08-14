@@ -137,7 +137,10 @@ theorem Term.rmap_var' {x0} (r : RenVec [Term, Ty]) : (var x0)⟨r,⟩ = var (r.
   -- rmap r := Term.rmap ⟨Ren.id Term, r.1, .unit⟩
 
 -- instance : SubstMap Ty [Ty] where
-  -- smap := sorry
+  -- smap σ := Ty.smap ⟨σ, .unit⟩
+
+instance : SubstMap Term [Ty] where
+  smap σ := Term.smap (.id Term, σ.1, .unit)
 
 theorem blah : Ren.succ Ty = ⟨fun x ↦ x + 1⟩ := rfl
 
