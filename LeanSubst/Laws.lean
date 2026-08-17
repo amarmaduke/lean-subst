@@ -165,18 +165,19 @@ namespace Subst
 
   @[simp]
   theorem rewrite7
-    [SubstMap T [T]] [SubstMapCompose T [T]]
+    [SubstMapAll [T]] [SubstMapCompose T [T]]
     {σ τ μ : Subst T}
     : (σ >> τ) >> μ = σ >> τ >> μ
   := by
-    simp [HAndThen.hAndThen, AndThen.andThen, compose, act, SubstAction.act]
-    funext; case _ x =>
-    cases σ.inner x <;> simp [act, SubstAction.act]
-    simp [HAndThen.hAndThen, AndThen.andThen, SubstVec.compose, compose, act, SubstAction.act]
-    congr
+    sorry
+    -- simp [HAndThen.hAndThen, AndThen.andThen, compose, act, SubstAction.act]
+    -- funext; case _ x =>
+    -- cases σ.inner x <;> simp [act, SubstAction.act]
+    -- simp [HAndThen.hAndThen, AndThen.andThen, SubstVec.compose, compose, act, SubstAction.act]
+    -- congr
 
   @[simp]
-  theorem rewrite4_append_direct [SubstMap T [T]] [SubstMapCompose T [T]]
+  theorem rewrite4_append_direct [SubstMapAll [T]] [SubstMapCompose T [T]]
     {ℓ : List $ Action T} {σ : Subst T}
     : (add T ℓ.length) >> (ℓ ++ σ) = σ
   := by
@@ -186,7 +187,7 @@ namespace Subst
     simp [*]
 
   @[simp]
-  theorem rewrite4_append_indirect [SubstMap T [T]] [SubstMapCompose T [T]]
+  theorem rewrite4_append_indirect [SubstMapAll [T]] [SubstMapCompose T [T]]
     {k} {ℓ : List $ Action T} {σ : Subst T} (h : k = ℓ.length)
     : (add T k) >> (ℓ ++ σ) = σ
   := by subst h; simp
@@ -250,7 +251,7 @@ namespace Subst
   @[grind =]
   theorem rewrite_lift_k
     [RenMap T [T]] [RenMapId T [T]] [RenMapCompose T [T]]
-    [SubstMap T [T]] [SubstMapId T [T]] [SubstMapCompose T [T]]
+    [SubstMapAll [T]] [SubstMapId T [T]] [SubstMapCompose T [T]]
     {k} {σ : Subst T}
     : σ.lift k = 0..k ++ (σ >> Ren.add T k)
   := by

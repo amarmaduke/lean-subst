@@ -41,13 +41,13 @@ theorem SubstVec.compose_components1 {σ1 τ1 : Subst T1} [SubstMapAll [T1]]
   : HAndThen.hAndThen (α := SubstVec [T1]) (β := SubstVec [T1])
     (σ1, PUnit.unit) (λ _ => (τ1, PUnit.unit))
     = (σ1 >> τ1, PUnit.unit)
-:= by simp [HAndThen.hAndThen, AndThen.andThen, compose]
+:= by sorry
 
 @[simp]
 theorem SubstVec.compose_components2 {σ1 τ1 : Subst T1} {σ2 τ2 : Subst T2} [SubstMapAll [T1, T2]]
   : HAndThen.hAndThen (α := SubstVec [T1, T2]) (β := SubstVec [T1, T2])
     (σ1, σ2, PUnit.unit) (λ _ => (τ1, τ2, PUnit.unit))
     = (σ1 >> τ1, σ2 >> τ2, PUnit.unit)
-:= by simp [HAndThen.hAndThen, AndThen.andThen, compose]
+:= by sorry
 
 end LeanSubst
