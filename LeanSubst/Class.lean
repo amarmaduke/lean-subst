@@ -44,6 +44,11 @@ instance (priority := high) [RenMap T [T]] [RenMapId T [T]] : RenMapId (Action T
 instance (priority := low) [RenMap S V] [RenMapId S V] : RenMapId (Action S) V where
   apply_id := by intro s; cases s <;> simp
 
+instance [RenMap S V] [RenMapId S V] : RenMapId (Subst S) V where
+  apply_id := by
+    intro s; cases s
+    simp [RenMap.rmap, Subst.rmap]; grind
+
 instance (priority := high) [RenMap T [T]] [RenMapCompose T [T]] : RenMapCompose (Action T) [T] where
   apply_compose := by
     intro s r1 r2; cases s
@@ -53,6 +58,14 @@ instance (priority := high) [RenMap T [T]] [RenMapCompose T [T]] : RenMapCompose
 
 instance (priority := low) [RenMap S V] [RenMapCompose S V] : RenMapCompose (Action S) V where
   apply_compose := by intro s; cases s <;> simp
+
+instance [RenMap S V] [RenMapCompose S V] : RenMapCompose (Subst S) V where
+  apply_compose := by
+    intro s r1 r2; cases s; case _ inner =>
+    simp [RenMap.rmap, Subst.rmap]
+    funext; case _ i =>
+    generalize zdef : inner i = z at *
+    cases z <;> simp
 
 class SubstMapStable (S : Type u1) (V : List $ Type u2) [RenMap S V] [SubstMap S V] where
   apply_stable (r : RenVec V) (σ : SubstVec V) : r.to = σ -> rmap (S := S) r = smap σ

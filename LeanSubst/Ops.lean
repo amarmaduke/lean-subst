@@ -59,7 +59,7 @@ def SubstVec.get
 | .cons _ _, A, n + 1, _, (_, σs) => σs.get A n
 
 @[simp]
-def SubstVec.drop : {V : List (Type u2)} -> (n : Nat) -> SubstVec V -> SubstVec (V.drop n)
+def SubstVec.drop : {V : List (Type u2)} -> (n : Nat) -> SubstVec V -> SubstVec (V.drop' n)
 | [], n, x => x |> cast (by grind)
 | .cons _ _, 0, x => x |> cast (by grind)
 | .cons _ _, n + 1, (_, σs) => σs.drop n
@@ -73,41 +73,63 @@ theorem SubstVec.drop_0 {σ : SubstVec V} : σ.drop 0 = σ := sorry
 ---- RenMapAll & SubstMapAll
 ----------------------------------------------------------------------------------------------------
 set_option synthInstance.checkSynthOrder false in
+@[reducible, simp]
 instance [i : RenMapAll (T::V)] : RenMap T [T] where
-  rmap := (i.rmap 0).rmap
+  rmap :=
+    match i with
+    | @RenMapAll.cons _ _ i _ => i.rmap
 
 set_option synthInstance.checkSynthOrder false in
-instance [i : RenMapAll (T::V)] : RenMapAll V where
-  rmap := λ k => (i.rmap k.succ)
+@[reducible, simp]
+instance [i : RenMapAll (T::V)] : RenMapAll V :=
+  match i with
+  | @RenMapAll.cons _ _ _ i => i
 
-instance [i : RenMap T [T]] : RenMapAll [T] where
-  rmap := λ 0 => i
+-- instance [i1 : RenMap T1 [T1]] [i2 : RenMap T2 [T2]] : RenMapAll [T1, T2] where
+--   rmap := by
+--     intro i; cases i using Fin.cases with
+--     | zero => exact i1
+--     | succ i =>
+--       cases i using Fin.cases with
+--       | zero => exact i2
+--       | succ i => apply Fin.elim0 i
 
-instance [i1 : RenMap T1 [T1]] [i2 : RenMap T2 [T2]] : RenMapAll [T1, T2] where
-  rmap := by
-    intro i; cases i using Fin.cases with
-    | zero => exact i1
-    | succ i =>
-      cases i using Fin.cases with
-      | zero => exact i2
-      | succ i => apply Fin.elim0 i
 
 set_option synthInstance.checkSynthOrder false in
+@[reducible, simp]
 instance [i : SubstMapAll (T::V)] : SubstMap T [T] where
   smap :=
     match i with
-    | .cons i _ _ => i.smap
+    | @SubstMapAll.cons _ _ i _ _ => i.smap
 
 set_option synthInstance.checkSynthOrder false in
+@[reducible, simp]
 instance [i : SubstMapAll (T::V)] : SubstMap T V where
   smap :=
     match i with
-    | .cons _ i _ => i.smap
+    | @SubstMapAll.cons _ _ _ i _ => i.smap
 
 set_option synthInstance.checkSynthOrder false in
+@[reducible, simp]
 instance [i : SubstMapAll (T::V)] : SubstMapAll V :=
   match i with
-  | .cons _ _ i => i
+  | @SubstMapAll.cons _ _ _ _ i => i
+
+instance : RenMap T [] where
+  rmap _ := id
+
+@[simp]
+theorem rmap_empty_vec {t : T} {r : RenVec []} : t⟨r,⟩ = t := by simp [RenMap.rmap]
+
+instance : RenMapAll [] := .nil
+
+instance : SubstMap T [] where
+  smap _ := id
+
+@[simp]
+theorem smap_empty_vec {t : T} {σ : SubstVec []} : t[σ,] = t := by simp [SubstMap.smap]
+
+instance : SubstMapAll [] := .nil
 
 -- instance [i : SubstMap T [T]] : SubstMapAll [T] where
 --   smap := λ 0 => i
@@ -592,25 +614,24 @@ theorem Subst.compose_ren_right_action [RenMap T [T]] {σ : Subst T} {r : Ren T}
 set_option linter.unusedVariables false in
 @[instance_reducible]
 def RenMapAll.get (T : Type u2) :
-  ∀ (i : Nat) {V : List (Type u2)} (h : V[i]? = some T), RenMapAll V -> RenMap T [T]
-| i, V, h, ⟨inst⟩ =>
-  let i' : Fin V.length := ⟨i, by grind⟩
-  inst i' |> cast (by grind)
+  ∀ (x : Nat) {V : List (Type u2)} (h : V[x]? = some T), RenMapAll V -> RenMap T [T]
+| 0, .cons V Vs, h, .cons (i1 := i1) _ => i1 |> cast (by grind)
+| x + 1, .cons V Vs, h, .cons (i1 := i1) i3 => i3.get T x (by grind)
 
 set_option linter.unusedVariables false in
 @[instance_reducible]
 def SubstMapAll.get (T : Type u2) :
   ∀ (x : Nat) {V : List (Type u2)} (h : V[x]? = some T), SubstMapAll V -> SubstMap T [T]
-| 0, .cons V Vs, h, .cons i1 i2 i3 => i1 |> cast (by grind)
-| x + 1, .cons V Vs, h, .cons i1 i2 i3 => i3.get T x (by grind)
+| 0, .cons V Vs, h, .cons (i1 := i1) (i2 := i2) _ => i1 |> cast (by grind)
+| x + 1, .cons V Vs, h, .cons (i1 := i1) (i2 := i2) i3 => i3.get T x (by grind)
 
 set_option linter.unusedVariables false in
 @[instance_reducible]
 def SubstMapAll.get_drop (T : Type u2) :
-  ∀ {V : List (Type u2)} (n : Nat) (h : V[n]? = some T), SubstMapAll V -> SubstMap T (V.drop (n + 1))
+  ∀ {V : List (Type u2)} (n : Nat) (h : V[n]? = some T), SubstMapAll V -> SubstMap T (V.drop' (n + 1))
 | [], n, h, σs => by cases h
-| .cons V Vs, 0, h, .cons i1 i2 i3 => i2 |> cast (by grind)
-| .cons V Vs, n + 1, h, .cons i1 i2 i3 => i3.get_drop T n (by grind)
+| .cons V Vs, 0, h, .cons (i1 := i1) (i2 := i2) i3 => i2 |> cast (by grind)
+| .cons V Vs, n + 1, h, .cons (i1 := i1) (i2 := i2) i3 => i3.get_drop T n (by grind)
 
 @[simp]
 theorem SubstVec.compose_ren_left_get {r : RenVec V} {σ : SubstVec V} {i h}
@@ -628,13 +649,13 @@ theorem SubstVec.compose_get
   : ∀ {V : List (Type u2)} [inst : SubstMapAll V] {σ τ : SubstVec V} {i h},
     (σ >> τ).get T i h =
       let : SubstMap T [T] := inst.get T i h
-      let : SubstMap T (V.drop (i + 1)) := inst.get_drop T i h
+      let : SubstMap T (V.drop' (i + 1)) := inst.get_drop T i h
       (σ.get T i h)[τ.drop (i + 1),] >> τ.get T i h
 | [], .nil, σ, τ, 0, h => by cases h
-| .cons V Vs, .cons i1 i2 i3, (σ, σs), (τ, τs), 0, h =>
+| .cons V Vs, .cons (i1 := i1) (i2 := i2) i3, (σ, σs), (τ, τs), 0, h =>
   have h' : V = T := by grind
-  by subst h'; simp; rfl
-| .cons V Vs, .cons i1 i2 i3, (σ, σs), (τ, τs), i + 1, h =>
+  by subst h'; simp
+| .cons V Vs, .cons (i1 := i1) (i2 := i2) i3, (σ, σs), (τ, τs), i + 1, h =>
   have h' : Vs[i]? = some T := by grind
   compose_get (V := Vs) (h := h')
 

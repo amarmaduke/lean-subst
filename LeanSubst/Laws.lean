@@ -554,7 +554,7 @@ theorem Subst.lift_compose_ren_right_vec
 := sorry
 
 theorem Subst.rewrite_lift_compose_k1
-  [RenMap T [T]] [SubstMap T [T]] [SubstMapRenComposeLeft T [T]] [SubstMapRenComposeRight T [T]]
+  [RenMapAll [T]] [SubstMap T [T]] [SubstMapRenComposeLeft T [T]] [SubstMapRenComposeRight T [T]]
   {σ τ : Subst T}
   : (σ >> τ).lift = σ.lift >> τ.lift
 := by
@@ -567,7 +567,7 @@ theorem Subst.rewrite_lift_compose_k1
 
 @[simp]
 theorem Subst.rewrite_lift_compose
-  [RenMap T [T]] [RenMapId T [T]] [RenMapCompose T [T]] [SubstMap T [T]]
+  [RenMapAll [T]] [RenMapId T [T]] [RenMapCompose T [T]] [SubstMap T [T]]
   [SubstMapRenComposeLeft T [T]] [SubstMapRenComposeRight T [T]]
   {k} {σ τ : Subst T}
   : (σ >> τ).lift k = σ.lift k >> τ.lift k

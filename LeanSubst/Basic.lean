@@ -2,35 +2,12 @@
 import Lean.Elab.Term
 import Lean.Elab.SyntheticMVars
 
+import LeanSubst.Glue
+
 namespace LeanSubst
 
 universe u1 u2 u3
 variable {S : Type u1} {T : Type u2} {U : Type u3}
-
-namespace Subst.Syntax
-  open Lean.Elab.Term
-
-  open Lean in
-  def MetaM.promote {α} (x : Meta.MetaM α) : Elab.Term.TermElabM α := x
-
-  def form_list : List Lean.Expr -> TermElabM (Lean.TSyntax `term)
-  | [] => `(List.nil)
-  | .cons x xs => do
-    let xs' <- form_list xs
-    `(List.cons $(<- exprToSyntax x) $xs')
-
-  def form_prod : List Lean.Expr -> TermElabM (Lean.TSyntax `term)
-  | [] => `(PUnit.unit)
-  | .cons x xs => do
-    let xs' <- form_prod xs
-    `(Prod.mk $(<- exprToSyntax x) $xs')
-
-  def get_ty_arg (e : TermElabM Lean.Expr) : TermElabM Lean.Expr := do
-    let e <- e
-    match e with
-    | .app _ ty => pure ty
-    | _ => Lean.Elab.throwUnsupportedSyntax
-end Subst.Syntax
 
 @[reducible]
 def Subst.typeof {T : Type u2} (_ : T) : Type u2 := T
@@ -49,8 +26,9 @@ def RenVec : List (Type u2) -> Type u2
 class RenMap (S : Type u1) (V : List (Type u2)) where
   rmap : RenVec V -> S -> S
 
-class RenMapAll (V : List (Type u2)) where
-  rmap : ∀ (i : Fin V.length), RenMap V[i] [V[i]]
+class inductive RenMapAll : List (Type u2) -> Sort _ where
+| nil : RenMapAll []
+| cons {V Vs} [i1 : RenMap V [V]] : RenMapAll Vs -> RenMapAll (V::Vs)
 
 export RenMap (rmap)
 
@@ -123,7 +101,7 @@ class SubstMap (S : Type u1) (V : List (Type u2)) where
 
 class inductive SubstMapAll : List (Type u2) -> Sort _ where
 | nil : SubstMapAll []
-| cons {V Vs} : SubstMap V [V] -> SubstMap V Vs -> SubstMapAll Vs -> SubstMapAll (V::Vs)
+| cons {V Vs} [i1 : SubstMap V [V]] [i2 : SubstMap V Vs] : SubstMapAll Vs -> SubstMapAll (V::Vs)
 
 --  smap : ∀ (i : Fin V.length), SubstMap V[i] [V[i]]
 

@@ -257,7 +257,7 @@ theorem Subst.compose_ren_right_assoc
   congr
 
 theorem Subst.compose_ren_right_assoc2
-  [RenMap S [S]] [SubstMap S [S]] [SubstMapRenComposeRight S [S]]
+  [RenMapAll [S]] [SubstMap S [S]] [SubstMapRenComposeRight S [S]]
   {σ τ : Subst S} {r : Ren S}
   : (σ >> τ) >> r = σ >> τ >> r
 := by
