@@ -257,7 +257,7 @@ notation "𝐫0(" T ")" => Ren.id T
 @[simp]
 theorem Ren.id_action {x} : 𝐫0(T).act x = x := by simp [id]
 
-@[simp]
+@[reducible, simp]
 def RenVec.id : (V : List (Type u2)) -> RenVec V
 | [] => .unit
 | .cons x xs => (.id x, id xs)
@@ -269,7 +269,7 @@ notation "𝐬0(" T ")" => Subst.id T
 @[simp]
 theorem Subst.id_action {x} : 𝐬0(T).act x = re x := by simp [id, act, SubstAction.act]
 
-@[simp]
+@[reducible, simp]
 def SubstVec.id : (V : List (Type u2)) -> SubstVec V
 | [] => .unit
 | .cons x xs => (.id x, id xs)
@@ -494,6 +494,18 @@ instance : AndThen (RenVec V) where
   andThen r f := RenVec.compose r (f ())
 
 @[simp]
+theorem RenVec.compose_proj1 {σ τ : RenVec (T::V)} : (σ >> τ).1 = σ.1 >> τ.1 := by
+  rcases σ with ⟨σ, σ'⟩
+  rcases τ with ⟨τ, τ'⟩
+  simp [HAndThen.hAndThen, AndThen.andThen, compose]
+
+@[simp]
+theorem RenVec.compose_proj2 {σ τ : RenVec (T::V)} : (σ >> τ).2 = σ.2 >> τ.2 := by
+  rcases σ with ⟨σ, σ'⟩
+  rcases τ with ⟨τ, τ'⟩
+  simp [HAndThen.hAndThen, AndThen.andThen, compose]
+
+@[simp]
 theorem RenVec.compose_get [RenMapAll V] {σ τ : RenVec V} {i} {h}
   : (σ >> τ).get T i h = σ.get T i h >> τ.get T i h
 := sorry
@@ -643,6 +655,22 @@ theorem SubstVec.compose_ren_right_get [inst : RenMapAll V] {σ : SubstVec V} {r
   : (σ >> r).get T i h
     = let : RenMap T [T] := inst.get T i h; σ.get T i h >> r.get T i h
 := sorry
+
+@[simp]
+theorem SubstVec.compose_proj1 [SubstMapAll (T::V)] {σ τ : SubstVec (T::V)}
+  : (σ >> τ).1 = σ.1[τ.2,] >> τ.1
+:= by
+  rcases σ with ⟨σ, σs⟩
+  rcases τ with ⟨τ, τs⟩
+  simp
+
+@[simp]
+theorem SubstVec.compose_proj2 [SubstMapAll (T::V)] {σ τ : SubstVec (T::V)}
+  : (σ >> τ).2 = σ.2 >> τ.2
+:= by
+  rcases σ with ⟨σ, σs⟩
+  rcases τ with ⟨τ, τs⟩
+  simp
 
 @[simp]
 theorem SubstVec.compose_get
