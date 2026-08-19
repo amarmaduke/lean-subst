@@ -93,10 +93,13 @@ theorem Ty.from_action_rmap {t : Action Ty} {r : RenVec [Ty]}
 := by
   rcases r with ⟨r, u⟩
   cases u; case _ =>
-  cases t <;> simp [Ty.from_action, RenVec.get]
+  cases t <;> simp [Ty.from_action]
 
 @[simp, grind =]
 theorem Ty.apply_id : ∀ {s : Ty}, rmap (.id [Ty]) s = s := by subst_solve_id
+
+instance : RenMapEmpty Ty where
+  apply_empty := by intro s; simp
 
 instance : RenMapId Ty [Ty] where
   apply_id := by intro s; simp [RenMap.rmap]; grind
@@ -138,7 +141,10 @@ theorem Ty.from_action_smap {t : Action Ty} {σ : SubstVec [Ty]}
 := by
   rcases σ with ⟨σ, u⟩
   cases u; case _ =>
-  cases t <;> simp [Ty.from_action, SubstVec.get]
+  cases t <;> simp [Ty.from_action]
+
+instance : SubstMapEmpty Ty where
+  apply_empty := by intro s; simp
 
 instance : SubstMapId Ty [Ty] where
   apply_id := by subst_solve_id
@@ -164,12 +170,11 @@ instance : SubstMapCompose Ty [Ty] where
       try simp [Subst.rewrite_lift_compose_ren_left_vec (T := T), *]
       try simp [Subst.rewrite_lift_compose_vec (T := T), *]
     case var =>
-      congr
-      unfold instSubstMapSubst
-      unfold Subst.smap
-      unfold instSubstMapAction
-      unfold Action.smap0
-      sorry
+
+      rcases σ with ⟨σ, u1⟩
+      rcases τ with ⟨τ, u2⟩
+      cases u1; cases u2; case _ =>
+      simp
 ----------------------------------------------------------------------------------------------------
 -- Term Renaming & Substitution
 ----------------------------------------------------------------------------------------------------

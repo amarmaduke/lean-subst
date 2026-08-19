@@ -7,6 +7,14 @@ universe u1 u2 u3
 variable {S : Type u1} {T T1 T2 T3 : Type u2} {U : Type u3}
 variable {V : List (Type u2)}
 
+class RenMapEmpty (S : Type u1) [RenMap S []] where
+  apply_empty {s : S} {r : RenVec []} : rmap (V := []) r s = s
+
+@[simp]
+theorem Ren.apply_empty [RenMap S []] [RenMapEmpty S] {s : S} {r : RenVec []}
+  : rmap (V := []) r s = s
+:= RenMapEmpty.apply_empty
+
 class RenMapId (S : Type u1) (V : List (Type u2)) [RenMap S V] where
   apply_id {s : S} : s⟨.id V,⟩ = s
 
@@ -38,11 +46,21 @@ theorem Ren.apply_compose2 [RenMap S [T1, T2]] [RenMapCompose S [T1, T2]]
   : s⟨r1, k1⟩⟨r2, k2⟩ = s⟨r1 >> r2, k1 >> k2⟩
 := Ren.apply_compose
 
+instance [RenMap S []] [RenMapEmpty S] : RenMapEmpty (Action S) where
+  apply_empty := by intro s; simp
+
 instance (priority := high) [RenMap T [T]] [RenMapId T [T]] : RenMapId (Action T) [T] where
   apply_id := by intro s; cases s <;> simp [RenVec.id]
 
 instance (priority := low) [RenMap S V] [RenMapId S V] : RenMapId (Action S) V where
   apply_id := by intro s; cases s <;> simp
+
+instance [RenMap S []] [RenMapEmpty S] : RenMapEmpty (Subst S) where
+  apply_empty := by
+    intro s r; cases s <;> simp [RenMap.rmap, Subst.rmap]
+    funext; case _ f i =>
+    generalize zdef : f i = z at *
+    cases z <;> simp
 
 instance [RenMap S V] [RenMapId S V] : RenMapId (Subst S) V where
   apply_id := by
@@ -69,6 +87,14 @@ instance [RenMap S V] [RenMapCompose S V] : RenMapCompose (Subst S) V where
 
 class SubstMapStable (S : Type u1) (V : List $ Type u2) [RenMap S V] [SubstMap S V] where
   apply_stable (r : RenVec V) (σ : SubstVec V) : r.to = σ -> rmap (S := S) r = smap σ
+
+class SubstMapEmpty (S : Type u1) [SubstMap S []] where
+  apply_empty {s : S} {σ : SubstVec []} : smap (V := []) σ s = s
+
+@[simp]
+theorem Subst.apply_empty [SubstMap S []] [SubstMapEmpty S] {s : S} {σ : SubstVec []}
+  : SubstMap.smap (V := []) σ s = s
+:= SubstMapEmpty.apply_empty
 
 class SubstMapId (S : Type u1) (V : List $ Type u2) [SubstMap S V] where
   apply_id {s : S} : s[.id V,] = s
@@ -170,6 +196,46 @@ theorem Subst.apply_compose3
   have lem := Subst.apply_compose (V := [T1, T2, T3]) (s := s) (σ1 := (σ1, τ1, μ1, .unit)) (σ2 := (σ2, τ2, μ2, .unit))
   rw [lem]; simp [HAndThen.hAndThen, AndThen.andThen, SubstVec.compose]
   sorry
+
+instance [SubstMap S []] [SubstMapEmpty S] : SubstMapEmpty (Action S) where
+  apply_empty := by intro s; simp
+
+instance (priority := high) [SubstMap T [T]] [SubstMapId T [T]] : SubstMapId (Action T) [T] where
+  apply_id := by intro s; cases s <;> simp [SubstVec.id]
+
+instance (priority := low) [SubstMap S V] [SubstMapId S V] : SubstMapId (Action S) V where
+  apply_id := by intro s; cases s <;> simp
+
+instance [SubstMap S []] [SubstMapEmpty S] : SubstMapEmpty (Subst S) where
+  apply_empty := by
+    intro s σ; cases s <;> simp [SubstMap.smap, Subst.smap]
+    funext; case _ f i =>
+    generalize zdef : f i = z at *
+    cases z <;> simp
+
+instance [SubstMap S V] [SubstMapId S V] : SubstMapId (Subst S) V where
+  apply_id := by
+    intro s; cases s
+    simp [SubstMap.smap, Subst.smap]; grind
+
+instance (priority := high) [SubstMapAll [T]] [SubstMapCompose T [T]] : SubstMapCompose (Action T) [T] where
+  apply_compose := by
+    sorry
+    -- intro s r1 r2; cases s
+    -- all_goals
+    --   simp [SubstVec] at r1 r2
+    --   simp [smap, HAndThen.hAndThen, AndThen.andThen, SubstVec.compose, Subst.compose]
+
+instance (priority := low) [SubstMap S V] [SubstMapAll V] [SubstMapCompose S V] : SubstMapCompose (Action S) V where
+  apply_compose := by intro s; cases s <;> simp
+
+instance [SubstMap S V] [SubstMapAll V] [SubstMapCompose S V] : SubstMapCompose (Subst S) V where
+  apply_compose := by
+    intro s r1 r2; cases s; case _ inner =>
+    simp [SubstMap.smap, Subst.smap]
+    funext; case _ i =>
+    generalize zdef : inner i = z at *
+    cases z <;> simp
 
 -- @[simp↓, grind =]
 -- theorem Subst.apply_compose2 [SubstMap S [T1, T2]] [SubstMapCompose S [T1, T2]]
