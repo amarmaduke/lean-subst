@@ -10,6 +10,12 @@ variable {V : List (Type u2)}
 ----------------------------------------------------------------------------------------------------
 ---- RenVec & SubstVec; Map & GetElem
 ----------------------------------------------------------------------------------------------------
+@[ext]
+theorem RenVec.empty_ext {a b : RenVec []} : a = b := by sorry
+
+@[ext]
+theorem SubstVec.empty_ext {a b : SubstVec []} : a = b := by sorry
+
 inductive Subst.TupleMap (F : Type u2 -> Type u2) : List (Type u2) -> Type _ where
 | nil : Subst.TupleMap F []
 | cons {T Ts} : F T -> Subst.TupleMap F Ts -> Subst.TupleMap F (T::Ts)
@@ -60,8 +66,8 @@ def SubstVec.get
 
 @[simp]
 def SubstVec.drop : {V : List (Type u2)} -> (n : Nat) -> SubstVec V -> SubstVec (V.drop' n)
-| [], n, x => x |> cast (by grind)
-| .cons _ _, 0, x => x |> cast (by grind)
+| [], n, x => x |> cast (by simp)
+| .cons _ _, 0, x => x |> cast (by simp)
 | .cons _ _, n + 1, (_, σs) => σs.drop n
 
 @[simp]
@@ -259,7 +265,7 @@ theorem Ren.id_action {x} : 𝐫0(T).act x = x := by simp [id]
 
 @[reducible, simp]
 def RenVec.id : (V : List (Type u2)) -> RenVec V
-| [] => .unit
+| [] => .nil
 | .cons x xs => (.id x, id xs)
 
 def Subst.id T : Subst T := ⟨λ x => re x⟩
@@ -271,7 +277,7 @@ theorem Subst.id_action {x} : 𝐬0(T).act x = re x := by simp [id, act, SubstAc
 
 @[reducible, simp]
 def SubstVec.id : (V : List (Type u2)) -> SubstVec V
-| [] => .unit
+| [] => .nil
 | .cons x xs => (.id x, id xs)
 ----------------------------------------------------------------------------------------------------
 ---- Successor
@@ -487,7 +493,7 @@ instance : AndThen (Ren T) where
   andThen r f := Ren.compose r (f ())
 
 def RenVec.compose : {V : List (Type u2)} -> RenVec V -> RenVec V -> RenVec V
-| [], _, _ => .unit
+| [], _, _ => .nil
 | .cons _ _, (v1, v1s), (v2, v2s) => (v1 >> v2, compose v1s v2s)
 
 instance : AndThen (RenVec V) where
@@ -551,7 +557,7 @@ instance [SubstMap T [T]] : AndThen (Subst T) where
 def SubstVec.compose
   : {V : List (Type u2)} -> [SubstMapAll V] ->
     SubstVec V -> SubstVec V -> SubstVec V
-| [], _, _, _ => .unit
+| [], _, _, _ => .nil
 | .cons _ _, _, (v1, v1s), (v2, v2s) => (v1[v2s,] >> v2, compose v1s v2s)
 
 instance [SubstMapAll V] : AndThen (SubstVec V) where
@@ -592,7 +598,7 @@ instance : HAndThen (Ren T) (Subst T) (Subst T) where
 
 def SubstVec.compose_ren_left
   : {V : List (Type u2)} -> RenVec V -> SubstVec V -> SubstVec V
-| [],  _, _ => .unit
+| [],  _, _ => .nil
 | .cons _ _, (v1, v1s), (v2, v2s) => (v1 >> v2, compose_ren_left v1s v2s)
 
 instance : HAndThen (RenVec V) (SubstVec V) (SubstVec V) where
@@ -612,7 +618,7 @@ instance [RenMap T [T]] : HAndThen (Subst T) (Ren T) (Subst T) where
 def SubstVec.compose_ren_right
   : {V : List (Type u2)} -> [RenMapAll V] ->
     SubstVec V -> RenVec V -> SubstVec V
-| [], _, _, _ => .unit
+| [], _, _, _ => .nil
 | .cons _ _, _, (v1, v1s), (v2, v2s) => (v1 >> v2, compose_ren_right v1s v2s)
 
 instance [RenMapAll V] : HAndThen (SubstVec V) (RenVec V) (SubstVec V) where
@@ -657,6 +663,38 @@ theorem SubstVec.compose_ren_right_get [inst : RenMapAll V] {σ : SubstVec V} {r
 := sorry
 
 @[simp]
+theorem SubstVec.compose_ren_left_proj1 {r : RenVec (T::V)} {τ : SubstVec (T::V)}
+  : (r >> τ).1 = r.1 >> τ.1
+:= by
+  rcases r with ⟨r, rs⟩
+  rcases τ with ⟨τ, τs⟩
+  simp [HAndThen.hAndThen, compose_ren_left]
+
+@[simp]
+theorem SubstVec.compose_ren_left_proj2 {r : RenVec (T::V)} {τ : SubstVec (T::V)}
+  : (r >> τ).2 = r.2 >> τ.2
+:= by
+  rcases r with ⟨r, rs⟩
+  rcases τ with ⟨τ, τs⟩
+  simp [HAndThen.hAndThen, compose_ren_left]
+
+@[simp]
+theorem SubstVec.compose_ren_right_proj1 [RenMapAll (T::V)] {σ : SubstVec (T::V)} {r : RenVec (T::V)}
+  : (σ >> r).1 = σ.1 >> r.1
+:= by
+  rcases σ with ⟨σ, σs⟩
+  rcases r with ⟨r, rs⟩
+  simp [HAndThen.hAndThen, compose_ren_right]
+
+@[simp]
+theorem SubstVec.compose_ren_right_proj2 [RenMapAll (T::V)] {σ : SubstVec (T::V)} {r : RenVec (T::V)}
+  : (σ >> r).2 = σ.2 >> r.2
+:= by
+  rcases σ with ⟨σ, σs⟩
+  rcases r with ⟨r, rs⟩
+  simp [HAndThen.hAndThen, compose_ren_right]
+
+@[simp]
 theorem SubstVec.compose_proj1 [SubstMapAll (T::V)] {σ τ : SubstVec (T::V)}
   : (σ >> τ).1 = σ.1[τ.2,] >> τ.1
 := by
@@ -695,7 +733,7 @@ def Ren.lift (r : Ren T) (k : Nat := 1) : Ren T := .mk λ n =>
 
 @[simp]
 def RenVec.lift : {V : List (Type u2)} -> RenVec V -> List Nat -> RenVec V
-| [], _, _ => .unit
+| [], _, _ => .nil
 | .cons _ _, (t, ts), [] => (t, ts)
 | .cons _ _, (t, ts), (.cons k ks) => (t.lift k, ts.lift ks)
 
@@ -747,7 +785,7 @@ def Subst.lift [RenMap T [T]] (σ : Subst T) (k : Nat := 1) : Subst T := .mk λ 
 
 @[simp]
 def SubstVec.lift : {V : List (Type u2)} -> [RenMapAll V] -> SubstVec V -> List Nat -> SubstVec V
-| [], _, _, _ => .unit
+| [], _, _, _ => .nil
 | .cons _ _, _, (t, ts), [] => (t, ts)
 | .cons _ _, _, (t, ts), (.cons k ks) => (t.lift k, ts.lift ks)
 
@@ -819,7 +857,7 @@ theorem Ren.to_compose [RenMap T [T]] [SubstMap T [T]] {r1 r2 : Ren T}
   simp [to, HAndThen.hAndThen, AndThen.andThen, compose, Subst.compose, Subst.act, SubstAction.act]
 
 def RenVec.to : {V : List (Type u2)} -> (r : RenVec V) -> SubstVec V
-| [], _ => .unit
+| [], _ => .nil
 | .cons _ _, (r, rs) => (r.to, rs.to)
 ----------------------------------------------------------------------------------------------------
 ---- Range

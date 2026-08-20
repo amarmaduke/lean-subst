@@ -172,7 +172,7 @@ theorem Subst.apply_compose1
   {s : S} {σ1 σ2 : Subst T}
   : s[σ1][σ2] = s[σ1 >> σ2]
 := by
-  have lem := Subst.apply_compose (V := [T]) (s := s) (σ1 := (σ1, .unit)) (σ2 := (σ2, .unit))
+  have lem := Subst.apply_compose (V := [T]) (s := s) (σ1 := (σ1, .nil)) (σ2 := (σ2, .nil))
   rw [lem]; simp [HAndThen.hAndThen, AndThen.andThen, SubstVec.compose]
   sorry
   --Subst.apply_compose
@@ -183,7 +183,7 @@ theorem Subst.apply_compose2
   {s : S} {σ1 σ2 : Subst T1} {τ1 τ2 : Subst T2}
   : s[σ1, τ1][σ2, τ2] = s[σ1[τ2] >> σ2, τ1 >> τ2]
 := by
-  have lem := Subst.apply_compose (V := [T1, T2]) (s := s) (σ1 := (σ1, τ1, .unit)) (σ2 := (σ2, τ2, .unit))
+  have lem := Subst.apply_compose (V := [T1, T2]) (s := s) (σ1 := (σ1, τ1, .nil)) (σ2 := (σ2, τ2, .nil))
   rw [lem]; simp [HAndThen.hAndThen, AndThen.andThen, SubstVec.compose]
   sorry
 
@@ -193,7 +193,7 @@ theorem Subst.apply_compose3
   {s : S} {σ1 σ2 : Subst T1} {τ1 τ2 : Subst T2} {μ1 μ2 : Subst T3}
   : s[σ1, τ1, μ1][σ2, τ2, μ2] = s[σ1[τ2, μ2] >> σ2, τ1[μ2] >> τ2, μ1 >> μ2]
 := by
-  have lem := Subst.apply_compose (V := [T1, T2, T3]) (s := s) (σ1 := (σ1, τ1, μ1, .unit)) (σ2 := (σ2, τ2, μ2, .unit))
+  have lem := Subst.apply_compose (V := [T1, T2, T3]) (s := s) (σ1 := (σ1, τ1, μ1, .nil)) (σ2 := (σ2, τ2, μ2, .nil))
   rw [lem]; simp [HAndThen.hAndThen, AndThen.andThen, SubstVec.compose]
   sorry
 
@@ -242,7 +242,7 @@ instance [SubstMap S V] [SubstMapAll V] [SubstMapCompose S V] : SubstMapCompose 
 --   {s : S} {r1 r2 : Subst T1} {k1 k2 : Subst T2}
 --   : s⟨r1, k1⟩⟨r2, k2⟩ = s⟨r1 >> r2, k1 >> k2⟩
 -- := by
---   have lem := @SubstMapCompose.apply_compose S [T1, T2] _ _ s (r1, k1, .up .unit) (r2, k2, .up .unit)
+--   have lem := @SubstMapCompose.apply_compose S [T1, T2] _ _ s (r1, k1, .up .nil) (r2, k2, .up .nil)
 --   rw [lem]; simp [Subst.compose_tuple]
 
 -- class SubstMapRenCommute (S : Type u1) (T : Type u2) [RenMap S S] [RenMap S T] [SubstMap S T] where

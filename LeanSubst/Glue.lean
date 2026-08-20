@@ -16,10 +16,11 @@ namespace LeanSubst.Subst.Syntax
     let xs' <- form_list xs
     `(List.cons $(<- exprToSyntax x) $xs')
 
-  def form_prod : List Lean.Expr -> TermElabM (Lean.TSyntax `term)
-  | [] => `(PUnit.unit)
+  def form_prod (b : TermElabM $ Lean.TSyntax `term)
+    : List Lean.Expr -> TermElabM (Lean.TSyntax `term)
+  | [] => b
   | .cons x xs => do
-    let xs' <- form_prod xs
+    let xs' <- form_prod b xs
     `(Prod.mk $(<- exprToSyntax x) $xs')
 
   def get_ty_arg (e : TermElabM Lean.Expr) : TermElabM Lean.Expr := do

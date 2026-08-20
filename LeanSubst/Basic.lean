@@ -23,6 +23,8 @@ def RenVec : List (Type u2) -> Type u2
 | [] => PUnit
 | .cons x xs => Ren x × RenVec xs
 
+def RenVec.nil : RenVec [] := PUnit.unit
+
 class RenMap (S : Type u1) (V : List (Type u2)) where
   rmap : RenVec V -> S -> S
 
@@ -60,16 +62,16 @@ elab_rules <= expected
   let elems <- List.mapM id $ elems.getElems.foldl (λ acc t => elabTermAndSynthesize t none :: acc) []
   let elems_ty <- List.mapM id $ elems.map inferType |> List.map MetaM.promote |> List.map get_ty_arg
   let list_ann <- form_list elems_ty.reverse
-  let elems_stx <- form_prod elems.reverse
+  let elems_stx <- form_prod `(RenVec.nil) elems.reverse
   let stx : TermElabM Lean.Syntax := `(@rmap _ $list_ann _ $elems_stx $t)
   let stx <- stx
   elabTermAndSynthesize stx expected
 
 @[app_unexpander rmap]
 def unexpand_rmap : Lean.PrettyPrinter.Unexpander
-| `($_ ($r1, {down := ()}) $t) => `($t⟨$r1⟩)
-| `($_ ($r1, $r2, {down := ()}) $t) => `($t⟨$r1, $r2⟩)
-| `($_ ($r1, $r2, $r3, {down := ()}) $t) => `($t⟨$r1, $r2, $r3⟩)
+| `($_ ($r1, RenVec.nil) $t) => `($t⟨$r1⟩)
+| `($_ ($r1, $r2, RenVec.nil) $t) => `($t⟨$r1, $r2⟩)
+| `($_ ($r1, $r2, $r3, RenVec.nil) $t) => `($t⟨$r1, $r2, $r3⟩)
 | `($_ $r $t) => `($t⟨$r,⟩)
 | _ => throw ()
 
@@ -87,6 +89,8 @@ structure Subst (T : Type u2) where
 def SubstVec : List (Type u2) -> Type u2
 | [] => PUnit
 | .cons x xs => Subst x × SubstVec xs
+
+def SubstVec.nil : SubstVec [] := PUnit.unit
 
 class SubstAction (T : Type u1) (A : Type u2) (U : outParam (Type u3)) where
   act (σ : Subst T) : A -> U
@@ -118,16 +122,16 @@ elab_rules <= expected
   let elems <- List.mapM id $ elems.getElems.foldl (λ acc t => elabTermAndSynthesize t none :: acc) []
   let elems_ty <- List.mapM id $ elems.map inferType |> List.map MetaM.promote |> List.map get_ty_arg
   let list_ann <- form_list elems_ty.reverse
-  let elems_stx <- form_prod elems.reverse
+  let elems_stx <- form_prod `(SubstVec.nil) elems.reverse
   let stx : TermElabM Lean.Syntax := `(@smap _ $list_ann _ $elems_stx $t)
   let stx <- stx
   elabTermAndSynthesize stx expected
 
 @[app_unexpander smap]
 def unexpand_smap : Lean.PrettyPrinter.Unexpander
-| `($_ ($σ1, {down := ()}) $t) => `($t[$σ1])
-| `($_ ($σ1, $σ2, {down := ()}) $t) => `($t[$σ1, $σ2])
-| `($_ ($σ1, $σ2, $σ3, {down := ()}) $t) => `($t[$σ1, $σ2, $σ3])
+| `($_ ($σ1, SubstVec.nil) $t) => `($t[$σ1])
+| `($_ ($σ1, $σ2, SubstVec.nil) $t) => `($t[$σ1, $σ2])
+| `($_ ($σ1, $σ2, $σ3, SubstVec.nil) $t) => `($t[$σ1, $σ2, $σ3])
 | `($_ $σ $t) => `($t[$σ,])
 | _ => throw ()
 
