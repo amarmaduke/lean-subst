@@ -564,6 +564,7 @@ theorem Subst.rewrite_lift_compose_k1
   case _ x =>
   cases σ.inner x <;> simp [act, SubstAction.act]; case _ t =>
   simp [HAndThen.hAndThen, SubstVec.compose_ren_right, SubstVec.compose_ren_left]; congr
+  sorry
 
 @[simp]
 theorem Subst.rewrite_lift_compose
@@ -587,12 +588,24 @@ theorem Subst.rewrite_lift_compose_vec
   : (σ >> τ).lift k = σ.lift k >> τ.lift k
 := sorry
 
+@[simp]
 theorem Subst.compose_ren_left_vec_map_commute
-  [RenMap T V] [SubstMap T V] [RenMapAll V] [SubstMapAll V]
-  [RenMapId T V] [RenMapCompose T V]
-  [SubstMapRenComposeLeft T V] [SubstMapRenComposeRight T V]
-  {σ τ : SubstVec V} {f : TupleMap (λ T => Subst T -> Subst T) V}
-  : (σ >> τ).map f = σ.map f >> τ.map f
+  {r : RenVec V} {τ : SubstVec V} {ops : SubstVec.MapOps V}
+  : (r >> τ).map ops = r.lift ops.to >> τ.map ops
+:= sorry
+
+@[simp]
+theorem Subst.compose_ren_right_vec_map_commute
+  [RenMapAll V]
+  {σ : SubstVec V} {r : RenVec V} {ops : SubstVec.MapOps V}
+  : (σ >> r).map ops = σ.map ops >> r.lift ops.to
+:= sorry
+
+@[simp]
+theorem Subst.compose_vec_map_commute
+  [SubstMapAll V]
+  {σ τ : SubstVec V} {ops : SubstVec.MapOps V}
+  : (σ >> τ).map ops = σ.map ops >> τ.map ops
 := sorry
 
 end LeanSubst

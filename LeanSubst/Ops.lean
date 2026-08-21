@@ -39,11 +39,11 @@ def RenVec.map
 | [], .nil, r => r
 | .cons _ _, .cons f fs, (r, rs) => (f r, rs.map fs)
 
-@[simp]
-def SubstVec.map
-  : {V : List (Type u2)} -> Subst.TupleMap (λ T => Subst T -> Subst T) V -> SubstVec V -> SubstVec V
-| [], .nil, r => r
-| .cons _ _, .cons f fs, (σ, σs) => (f σ, σs.map fs)
+-- @[simp]
+-- def SubstVec.map
+--   : {V : List (Type u2)} -> Subst.TupleMap (λ T => Subst T -> Subst T) V -> SubstVec V -> SubstVec V
+-- | [], .nil, r => r
+-- | .cons _ _, .cons f fs, (σ, σs) => (f σ, σs.map fs)
 
 @[simp]
 def RenVec.get
@@ -83,13 +83,20 @@ set_option synthInstance.checkSynthOrder false in
 instance [i : RenMapAll (T::V)] : RenMap T [T] where
   rmap :=
     match i with
-    | @RenMapAll.cons _ _ i _ => i.rmap
+    | @RenMapAll.cons _ _ i _ _ => i.rmap
+
+set_option synthInstance.checkSynthOrder false in
+@[reducible, simp]
+instance [i : RenMapAll (T::V)] : RenMap T V where
+  rmap :=
+    match i with
+    | @RenMapAll.cons _ _ _ i _ => i.rmap
 
 set_option synthInstance.checkSynthOrder false in
 @[reducible, simp]
 instance [i : RenMapAll (T::V)] : RenMapAll V :=
   match i with
-  | @RenMapAll.cons _ _ _ i => i
+  | @RenMapAll.cons _ _ _ _ i => i
 
 -- instance [i1 : RenMap T1 [T1]] [i2 : RenMap T2 [T2]] : RenMapAll [T1, T2] where
 --   rmap := by
@@ -619,7 +626,7 @@ def SubstVec.compose_ren_right
   : {V : List (Type u2)} -> [RenMapAll V] ->
     SubstVec V -> RenVec V -> SubstVec V
 | [], _, _, _ => .nil
-| .cons _ _, _, (v1, v1s), (v2, v2s) => (v1 >> v2, compose_ren_right v1s v2s)
+| .cons _ _, _, (v1, v1s), (v2, v2s) => (v1⟨v2s,⟩ >> v2, compose_ren_right v1s v2s)
 
 instance [RenMapAll V] : HAndThen (SubstVec V) (RenVec V) (SubstVec V) where
   hAndThen σ f := SubstVec.compose_ren_right σ (f ())
@@ -633,8 +640,8 @@ set_option linter.unusedVariables false in
 @[instance_reducible]
 def RenMapAll.get (T : Type u2) :
   ∀ (x : Nat) {V : List (Type u2)} (h : V[x]? = some T), RenMapAll V -> RenMap T [T]
-| 0, .cons V Vs, h, .cons (i1 := i1) _ => i1 |> cast (by grind)
-| x + 1, .cons V Vs, h, .cons (i1 := i1) i3 => i3.get T x (by grind)
+| 0, .cons V Vs, h, .cons (i1 := i1) (i2 := i2) _ => i1 |> cast (by grind)
+| x + 1, .cons V Vs, h, .cons (i1 := i1) (i2 := i2) i3 => i3.get T x (by grind)
 
 set_option linter.unusedVariables false in
 @[instance_reducible]
@@ -680,7 +687,7 @@ theorem SubstVec.compose_ren_left_proj2 {r : RenVec (T::V)} {τ : SubstVec (T::V
 
 @[simp]
 theorem SubstVec.compose_ren_right_proj1 [RenMapAll (T::V)] {σ : SubstVec (T::V)} {r : RenVec (T::V)}
-  : (σ >> r).1 = σ.1 >> r.1
+  : (σ >> r).1 = σ.1⟨r.2,⟩ >> r.1
 := by
   rcases σ with ⟨σ, σs⟩
   rcases r with ⟨r, rs⟩
@@ -889,5 +896,25 @@ theorem Ren.range_lt_cons {s e} {h : s < e} : s..e = s::(s.succ..e) := by
       simp [range]
       rw [ite_cond_eq_true, ite_cond_eq_true, ih (h := h2)]
       all_goals grind
+
+----------------------------------------------------------------------------------------------------
+---- SubstVec Map
+----------------------------------------------------------------------------------------------------
+inductive SubstVec.MapOps : List (Type u2) -> Type _ where
+| nil : MapOps []
+| ren {S : Type u2} {V : List (Type u2)} (T : List (Type u2)) [i : RenMap S T] (r : RenVec T) : MapOps V -> MapOps (S::V)
+| lift {S : Type u2} {V : List (Type u2)} [i : RenMap S [S]] (n : Nat) : MapOps V -> MapOps (S::V)
+
+@[simp]
+def SubstVec.MapOps.to : {V : List (Type u2)} -> MapOps V -> List Nat
+| [], nil => []
+| .cons _ _, ren _ _ ops => 0::ops.to
+| .cons _ _, lift n ops => n::ops.to
+
+@[simp]
+def SubstVec.map : {V : List (Type u2)} -> MapOps V -> SubstVec V -> SubstVec V
+| [], .nil, σs => σs
+| .cons _ _, MapOps.ren _ r ops, (σ, σs) => (σ⟨r,⟩, σs.map ops)
+| .cons _ _, MapOps.lift n ops, (σ, σs) => (σ.lift n, σs.map ops)
 
 end LeanSubst

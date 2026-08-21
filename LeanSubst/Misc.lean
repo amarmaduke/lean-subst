@@ -265,6 +265,7 @@ theorem Subst.compose_ren_right_assoc2
   generalize zdef : σ.act i = z
   cases z <;> simp
   congr
+  sorry
 
 -- like rewrite_lift_succ but no [RenMapId S [S]]
 theorem Subst.lift_of_succ [RenMap S [S]] [RenMapCompose S [S]] {k} {σ : Subst S} : σ.lift (k + 1) = (σ.lift k).lift := by

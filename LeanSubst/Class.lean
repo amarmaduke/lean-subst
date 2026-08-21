@@ -147,14 +147,15 @@ theorem Subst.apply_ren_compose_right1
   [RenMap S [T]] [RenMapAll [T]] [SubstMap S [T]] [SubstMapRenComposeRight S [T]]
   {s : S} {r : Ren T} {σ : Subst T}
   : s[σ]⟨r⟩ = s[σ >> r]
-:= Subst.apply_ren_compose_right
+:= sorry
 
 @[simp, grind =]
 theorem Subst.apply_ren_compose_right2
   [RenMap S [T1, T2]] [RenMapAll [T1, T2]] [SubstMap S [T1, T2]] [SubstMapRenComposeRight S [T1, T2]]
   {s : S} {r1 : Ren T1} {r2 : Ren T2} {σ1 : Subst T1} {σ2 : Subst T2}
-  : s[σ1, σ2]⟨r1, r2⟩ = s[σ1 >> r1, σ2 >> r2]
-:= Subst.apply_ren_compose_right
+  : s[σ1, σ2]⟨r1, r2⟩ = s[(σ1⟨r2⟩ : Subst T1) >> r1, σ2 >> r2]
+:= by
+  sorry
 
 class SubstMapCompose (S : Type u1) (V : List $ Type u2) [SubstMap S V] [SubstMapAll V] where
   apply_compose {s : S} {σ τ : SubstVec V} : s[σ,][τ,] = s[σ >> τ,]

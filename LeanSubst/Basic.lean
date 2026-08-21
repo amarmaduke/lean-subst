@@ -30,7 +30,7 @@ class RenMap (S : Type u1) (V : List (Type u2)) where
 
 class inductive RenMapAll : List (Type u2) -> Sort _ where
 | nil : RenMapAll []
-| cons {V Vs} [i1 : RenMap V [V]] : RenMapAll Vs -> RenMapAll (V::Vs)
+| cons {V Vs} [i1 : RenMap V [V]] [i2 : RenMap V Vs] : RenMapAll Vs -> RenMapAll (V::Vs)
 
 export RenMap (rmap)
 
