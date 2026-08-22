@@ -114,7 +114,7 @@ namespace Subst
       cases x <;> simp [act, SubstAction.act]
   end
 
-  @[simp, grind =]
+  @[grind =]
   theorem rewrite_lift [RenMap T [T]] {σ : Subst T}
     : σ.lift = re 0 :: (σ >> 𝐫1(T))
   := by
@@ -247,7 +247,7 @@ namespace Subst
         case _ h4 => rw [subst_append_assoc_nat]; simp
         case _ h4 => omega
 
-  @[simp, grind =]
+  @[grind =]
   theorem rewrite_lift_k
     [RenMap T [T]] [RenMapId T [T]] [RenMapCompose T [T]]
     [SubstMap T [T]] [SubstMapId T [T]] [SubstMapCompose T [T]]
@@ -257,7 +257,7 @@ namespace Subst
     induction k generalizing σ <;> simp
     case _ k ih =>
       rw [rewrite_lift_succ, ih]
-      simp
+      simp [rewrite_lift]
       sorry
       -- rw [rewrite_lift_succ, ih]
       -- simp; congr
@@ -517,6 +517,12 @@ theorem Subst.rewrite_lift_compose_ren_left
     rw [<-rewrite_lift_succ]
     rw [<-Ren.lift_of_succ]
 
+theorem Subst.rewrite_lift_compose_ren_left_vec
+  [RenMap T V] [RenMapAll V] [RenMapId T V] [RenMapCompose T V]
+  {k : List Nat} {r : RenVec V} {τ : SubstVec V}
+  : (r >> τ).lift k = r.lift k >> τ.lift k
+:= sorry
+
 theorem Subst.lift_compose_ren_right_k1
   [RenMap T [T]] [RenMapId T [T]] [RenMapCompose T [T]]
   {σ : Subst T} {r : Ren T}
@@ -539,6 +545,12 @@ theorem Subst.lift_compose_ren_right
     rw [lift_compose_ren_right_k1]
     rw [<-rewrite_lift_succ]
     rw [<-Ren.lift_of_succ]
+
+theorem Subst.lift_compose_ren_right_vec
+  [RenMap T V] [RenMapAll V] [SubstMap T V] [RenMapId T V] [RenMapCompose T V]
+  {k} {σ : SubstVec V} {r : RenVec V}
+  : (σ >> r).lift k = σ.lift k >> r.lift k
+:= sorry
 
 theorem Subst.rewrite_lift_compose_k1
   [RenMap T [T]] [SubstMap T [T]] [SubstMapRenComposeLeft T [T]] [SubstMapRenComposeRight T [T]]
@@ -565,5 +577,21 @@ theorem Subst.rewrite_lift_compose
     rw [rewrite_lift_succ (σ := σ)]
     rw [rewrite_lift_succ (σ := τ)]
     rw [rewrite_lift_compose_k1]
+
+theorem Subst.rewrite_lift_compose_vec
+  [RenMap T V] [SubstMap T V] [RenMapAll V] [SubstMapAll V]
+  [RenMapId T V] [RenMapCompose T V]
+  [SubstMapRenComposeLeft T V] [SubstMapRenComposeRight T V]
+  {k} {σ τ : SubstVec V}
+  : (σ >> τ).lift k = σ.lift k >> τ.lift k
+:= sorry
+
+theorem Subst.compose_ren_left_vec_map_commute
+  [RenMap T V] [SubstMap T V] [RenMapAll V] [SubstMapAll V]
+  [RenMapId T V] [RenMapCompose T V]
+  [SubstMapRenComposeLeft T V] [SubstMapRenComposeRight T V]
+  {σ τ : SubstVec V} {f : TupleMap (λ T => Subst T -> Subst T) V}
+  : (σ >> τ).map f = σ.map f >> τ.map f
+:= sorry
 
 end LeanSubst

@@ -8,10 +8,10 @@ variable {S : Type u1} {T T1 T2 : Type u2} {U : Type u3}
 variable {V : List (Type u2)}
 
 class RenMapId (S : Type u1) (V : List (Type u2)) [RenMap S V] where
-  apply_id {s : S} : s⟨Ren.ids V,⟩ = s
+  apply_id {s : S} : s⟨.id V,⟩ = s
 
 @[simp]
-theorem Ren.apply_id [RenMap S V] [RenMapId S V] {s : S} : s⟨ids V,⟩ = s := RenMapId.apply_id
+theorem Ren.apply_id [RenMap S V] [RenMapId S V] {s : S} : s⟨.id V,⟩ = s := RenMapId.apply_id
 
 @[simp]
 theorem Ren.apply_id1 [RenMap S [T]] [RenMapId S [T]] {s : S} : s⟨id T⟩ = s := RenMapId.apply_id
@@ -39,7 +39,7 @@ theorem Ren.apply_compose2 [RenMap S [T1, T2]] [RenMapCompose S [T1, T2]]
 := Ren.apply_compose
 
 instance (priority := high) [RenMap T [T]] [RenMapId T [T]] : RenMapId (Action T) [T] where
-  apply_id := by intro s; cases s <;> simp [Ren.ids]
+  apply_id := by intro s; cases s <;> simp [RenVec.id]
 
 instance (priority := low) [RenMap S V] [RenMapId S V] : RenMapId (Action S) V where
   apply_id := by intro s; cases s <;> simp
@@ -58,10 +58,10 @@ class SubstMapStable (S : Type u1) (V : List $ Type u2) [RenMap S V] [SubstMap S
   apply_stable (r : RenVec V) (σ : SubstVec V) : r.to = σ -> rmap (S := S) r = smap σ
 
 class SubstMapId (S : Type u1) (V : List $ Type u2) [SubstMap S V] where
-  apply_id {s : S} : s[Subst.ids V,] = s
+  apply_id {s : S} : s[.id V,] = s
 
 @[simp]
-theorem Subst.apply_id [SubstMap S V] [SubstMapId S V] {s : S} : s[ids V,] = s := SubstMapId.apply_id
+theorem Subst.apply_id [SubstMap S V] [SubstMapId S V] {s : S} : s[.id V,] = s := SubstMapId.apply_id
 
 @[simp]
 theorem Subst.apply_id1 [SubstMap S [T]] [SubstMapId S [T]] {s : S} : s[id T] = s := SubstMapId.apply_id
