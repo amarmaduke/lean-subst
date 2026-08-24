@@ -13,9 +13,9 @@ theorem Subst.test {T n} : n :: Ren.add T (n + 1) = Ren.add T n := by
   funext; case _ i =>
   cases i <;> simp; omega
 
-@[simp]
-theorem Subst.test2 {T V} [RenMap T V] (r : RenVec V) : (Subst.id T)⟨r,⟩ = Subst.id T := by
-  simp [RenMap.rmap, Subst.rmap, Subst.id]
+-- @[simp]
+-- theorem Subst.test2 {T V} [RenMap T V] (r : RenVec V) : (Subst.id T)⟨r,⟩ = Subst.id T := by
+--   simp [RenMap.rmap, Subst.rmap, Subst.id]
 
 inductive Ty where
 | var : Nat -> Ty
@@ -316,17 +316,20 @@ theorem Term.rmap_term_nrec {m z s n} {r : RenVec [Term]}
   : (nrec m z s n)⟨r,⟩ = nrec m z⟨r,⟩ s⟨r.lift [2],⟩ n⟨r,⟩
 := by simp [RenMap.rmap]; sorry
 
+set_option diagnostics true in
+@[simp]
+theorem Term.from_action_rmap {t : Action Term} {r : RenVec [Term, Ty]}
+  : (from_action t)⟨r,⟩ = from_action (RenMap.rmap (self := instRenMapAction) r t)
+:= by
+  sorry
+
 @[reducible, simp]
 instance instRenMapAll_Term : RenMapAll [Term] := .cons .nil
 
 @[reducible, simp]
 instance instRenMapAll_Term_Ty : RenMapAll [Term, Ty] := .cons instRenMapAll_Ty
 
-@[simp]
-theorem Term.from_action_rmap {t : Action Term} {r : RenVec [Term, Ty]}
-  : (from_action t)⟨r,⟩ = from_action t⟨r,⟩
-:= by
-  sorry
+
   -- rcases r with ⟨r1, r2, u⟩
   -- cases u; case _ =>
   -- cases t <;> simp [Term.from_action, RenVec.get]
@@ -416,7 +419,6 @@ theorem Term.smap_term_app {t1 t2} {σ : SubstVec [Term]} : (app t1 t2)[σ,] = a
 theorem Term.smap_term_lam {A t} {σ : SubstVec [Term]}
   : (lam A t)[σ,] = lam A t[σ.lift [1],]
 := by simp [SubstMap.smap]; sorry
-
 
 @[simp]
 theorem Term.smap_term_tapp {t1 t2} {σ : SubstVec [Term]}
@@ -519,6 +521,7 @@ instance : SubstMapRenComposeRight Term [Term, Ty] where
       try simp [Subst.rewrite_lift_compose_ren_left_vec (T := T), *]
       try simp [Subst.rewrite_lift_compose_vec (T := T), *]
     case var =>
+
       sorry
 
 @[grind =]
@@ -540,6 +543,12 @@ instance : SubstMapCompose Term [Term, Ty] where
       try simp [Subst.rewrite_lift_compose_ren_left_vec (T := T), *]
       try simp [Subst.rewrite_lift_compose_vec (T := T), *]
     case var =>
+      rcases τ with ⟨τ1, τ2⟩
+      rcases τ2 with ⟨τ2, u⟩; simp
+      rw [SubstVec.empty_ext (a := u) (b := .nil)]
+      rw [Term.smap_composition_lemma]
+
+
       sorry
 
 instance : SubstMapId Term [Term] where

@@ -25,12 +25,15 @@ def RenVec : List (Type u2) -> Type u2
 
 def RenVec.nil : RenVec [] := PUnit.unit
 
+class RenSuffix (S : Type u1) (V : List (Type u2)) where
+
 class RenMap (S : Type u1) (V : List (Type u2)) where
   rmap : RenVec V -> S -> S
 
 class inductive RenMapAll : List (Type u2) -> Sort _ where
 | nil : RenMapAll []
-| cons {V Vs} [i1 : RenMap V [V]] [i2 : RenMap V Vs] : RenMapAll Vs -> RenMapAll (V::Vs)
+| cons {V Vs} [i1 : RenMap V [V]] [i2 : RenMap V Vs] [i3 : RenSuffix V Vs]
+  : RenMapAll Vs -> RenMapAll (V::Vs)
 
 export RenMap (rmap)
 
@@ -100,12 +103,15 @@ def Subst.act [SubstAction S T U] (σ : Subst S) : T -> U := SubstAction.act σ
 instance : SubstAction T Nat (Action T) where
   act := Subst.inner
 
+class SubstSuffix (S : Type u1) (V : List (Type u2)) where
+
 class SubstMap (S : Type u1) (V : List (Type u2)) where
   smap : SubstVec V -> S -> S
 
 class inductive SubstMapAll : List (Type u2) -> Sort _ where
 | nil : SubstMapAll []
-| cons {V Vs} [i1 : SubstMap V [V]] [i2 : SubstMap V Vs] : SubstMapAll Vs -> SubstMapAll (V::Vs)
+| cons {V Vs} [i1 : SubstMap V [V]] [i2 : SubstMap V Vs] [i3 : SubstSuffix V Vs]
+  : SubstMapAll Vs -> SubstMapAll (V::Vs)
 
 --  smap : ∀ (i : Fin V.length), SubstMap V[i] [V[i]]
 

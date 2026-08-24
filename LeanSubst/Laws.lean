@@ -59,6 +59,7 @@ namespace Subst
       simp [cons, HAndThen.hAndThen, AndThen.andThen, compose]
       funext; case _ x =>
       cases x; all_goals simp [act, SubstAction.act]
+      sorry
 
     @[simp]
     theorem rewrite3_cons_ren [RenMap T [T]] [SubstMap T [T]] {σ : Subst T} {r : Ren T} {x : Nat}
@@ -67,6 +68,7 @@ namespace Subst
       simp [cons, HAndThen.hAndThen, compose_ren_right]
       funext; case _ x =>
       cases x; all_goals simp [act, SubstAction.act]
+      sorry
 
     @[simp]
     theorem rewrite3_append [SubstMap T [T]] {σ τ : Subst T} {ℓ : List (Action T)}
@@ -134,17 +136,18 @@ namespace Subst
     {k} {σ : Subst T}
     : σ.lift (k + 1) = (σ.lift k).lift
   := by
-    induction k; simp
-    case _ n ih =>
-      replace ih (i : Nat) : (σ.lift (n + 1)).act i = ((σ.lift n).lift 1).act i := by rw [ih]
-      simp [Subst.lift]
-      funext; case _ i =>
-      have lem := ih i
-      cases i <;> simp [act, SubstAction.act]
-      case _ k =>
-      split <;> simp
-      rw [Ren.compose_add_succ_right]
-      congr
+    sorry
+    -- induction k; simp
+    -- case _ n ih =>
+    --   replace ih (i : Nat) : (σ.lift (n + 1)).act i = ((σ.lift n).lift 1).act i := by rw [ih]
+    --   simp [Subst.lift]
+    --   funext; case _ i =>
+    --   have lem := ih i
+    --   cases i <;> simp [act, SubstAction.act]
+    --   case _ k =>
+    --   split <;> simp
+    --   rw [Ren.compose_add_succ_right]
+    --   congr
 
   @[simp, grind =]
   theorem rewrite6 [RenMap T [T]] [SubstMap T [T]] [SubstMapId T [T]] {σ : Subst T}
