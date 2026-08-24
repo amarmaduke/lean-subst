@@ -10,6 +10,16 @@ variable {V : List (Type u2)}
 class RenMapEmpty (S : Type u1) [RenMap S []] where
   apply_empty {s : S} {r : RenVec []} : rmap (V := []) r s = s
 
+class RenMapVecDef (S : Type u1) (T : Type u2) (V : List (Type u2)) [RenMap S [T]] [RenMap S (T::V)] [RenMap S V] where
+  apply_vecdef {s : S} {r : RenVec (T::V)} : s⟨r,⟩ = s⟨r.2,⟩⟨r.1⟩
+
+@[grind =]
+theorem Ren.apply_vecdef
+  [RenMap S [T]] [RenMap S (T::V)] [RenMap S V] [RenMapVecDef S T V]
+  {s : S} {r : RenVec (T::V)}
+  : s⟨r,⟩ = s⟨r.2,⟩⟨r.1⟩
+:= sorry
+
 @[simp]
 theorem Ren.apply_empty [RenMap S []] [RenMapEmpty S] {s : S} {r : RenVec []}
   : rmap (V := []) r s = s
@@ -48,6 +58,12 @@ theorem Ren.apply_compose2 [RenMap S [T1, T2]] [RenMapCompose S [T1, T2]]
 
 instance [RenMap S []] [RenSuffix S []] [RenMapEmpty S] : RenMapEmpty (Action S) where
   apply_empty := by intro s r; cases s <;> simp
+
+instance [RenMap T [T]] [RenMap T (T::V)] [RenMap T V] [RenSuffix T V] [RenMapVecDef T T V] : RenMapVecDef (Action T) T V where
+  apply_vecdef := sorry
+
+instance [RenMap T [T]] [RenMap T (T::V)] [RenMap T V] [RenSuffix T V] [RenMapVecDef T T V] : RenMapVecDef (Subst T) T V where
+  apply_vecdef := sorry
 
 instance [RenMap T (T::V)] [RenMapId T (T::V)] : RenMapId (Action T) (T::V) where
   apply_id := by intro s; cases s <;> simp [RenVec.id]; sorry
@@ -91,6 +107,16 @@ class SubstMapStable (S : Type u1) (V : List $ Type u2) [RenMap S V] [SubstMap S
 
 class SubstMapEmpty (S : Type u1) [SubstMap S []] where
   apply_empty {s : S} {σ : SubstVec []} : smap (V := []) σ s = s
+
+class SubstMapVecDef (S : Type u1) (T : Type u2) (V : List (Type u2)) [SubstMap S [T]] [SubstMap S (T::V)] [SubstMap S V] where
+  apply_vecdef {s : S} {σ : SubstVec (T::V)} : s[σ,] = s[σ.2,][σ.1]
+
+@[grind =]
+theorem Subst.apply_vecdef
+  [SubstMap S [T]] [SubstMap S (T::V)] [SubstMap S V] [SubstMapVecDef S T V]
+  {s : S} {σ : SubstVec (T::V)}
+  : s[σ,] = s[σ.2,][σ.1]
+:= sorry
 
 @[simp]
 theorem Subst.apply_empty [SubstMap S []] [SubstMapEmpty S] {s : S} {σ : SubstVec []}
@@ -201,6 +227,12 @@ theorem Subst.apply_compose3
 
 instance [SubstMap S []] [SubstSuffix S []] [SubstMapEmpty S] : SubstMapEmpty (Action S) where
   apply_empty := by intro s r; cases s <;> simp
+
+instance [SubstMap T [T]] [SubstMap T (T::V)] [SubstMap T V] [SubstSuffix T V] [SubstMapVecDef T T V] : SubstMapVecDef (Action T) T V where
+  apply_vecdef := sorry
+
+instance [SubstMap T [T]] [SubstMap T (T::V)] [SubstMap T V] [SubstSuffix T V] [SubstMapVecDef T T V] : SubstMapVecDef (Subst T) T V where
+  apply_vecdef := sorry
 
 instance [SubstMap T (T::V)] [SubstMapId T (T::V)] : SubstMapId (Action T) (T::V) where
   apply_id := by intro s; cases s <;> simp [SubstVec.id]; sorry

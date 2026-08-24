@@ -23,17 +23,23 @@ theorem SubstVec.proj_eta (σ : SubstVec (T::V)) : (σ.1, σ.2) = σ := by cases
 theorem SubstVec.proj_eta1 {σ : SubstVec [T1]} : (σ.1, .nil) = σ := by
   rcases σ with ⟨σ, u⟩; congr
 
-@[grind =_]
-theorem RenVec.get_eta1 {r : RenVec [T1]} : r = (r.get T1 0, .nil) := sorry
+@[simp]
+theorem RenVec.lift_size1_0 {r : RenVec [T1]} : r.lift [0] = r := sorry
 
-@[grind =_]
-theorem RenVec.get_eta2 {r : RenVec [T1, T2]} : r = (r.get T1 0, r.get T2 1, .nil) := sorry
+@[simp]
+theorem SubstVec.lift_size1_0 [RenMapAll [T1]] {σ : SubstVec [T1]} : σ.lift [0] = σ := sorry
 
-@[grind =_]
-theorem SubstVec.get_eta1 {σ : SubstVec [T1]} : σ = (σ.get T1 0, .nil) := sorry
+-- @[grind =_]
+-- theorem RenVec.get_eta1 {r : RenVec [T1]} : r = (r.get T1 0, .nil) := sorry
 
-@[grind =_]
-theorem SubstVec.get_eta2 {σ : SubstVec [T1, T2]} : σ = (σ.get T1 0, σ.get T2 1, .nil) := sorry
+-- @[grind =_]
+-- theorem RenVec.get_eta2 {r : RenVec [T1, T2]} : r = (r.get T1 0, r.get T2 1, .nil) := sorry
+
+-- @[grind =_]
+-- theorem SubstVec.get_eta1 {σ : SubstVec [T1]} : σ = (σ.get T1 0, .nil) := sorry
+
+-- @[grind =_]
+-- theorem SubstVec.get_eta2 {σ : SubstVec [T1, T2]} : σ = (σ.get T1 0, σ.get T2 1, .nil) := sorry
 
 @[simp]
 theorem RenVec.compose_nil : RenVec.nil >> RenVec.nil = RenVec.nil := sorry

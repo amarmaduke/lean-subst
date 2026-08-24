@@ -13,9 +13,9 @@ theorem Subst.test {T n} : n :: Ren.add T (n + 1) = Ren.add T n := by
   funext; case _ i =>
   cases i <;> simp; omega
 
--- @[simp]
--- theorem Subst.test2 {T V} [RenMap T V] (r : RenVec V) : (Subst.id T)⟨r,⟩ = Subst.id T := by
---   simp [RenMap.rmap, Subst.rmap, Subst.id]
+@[simp]
+theorem Subst.test2 {T V} [RenMap T V] [RenSuffix T V] (r : RenVec V) : (Subst.id T)⟨r,⟩ = Subst.id T := by
+  simp [RenMap.rmap, Subst.rmap1, Subst.id]
 
 inductive Ty where
 | var : Nat -> Ty
@@ -68,42 +68,38 @@ def Ty.rmap (r : RenVec [Ty]) : Ty -> Ty
 instance : RenMap Ty [Ty] where
   rmap := Ty.rmap
 
+@[simp]
+theorem Ty.rmap_fix {r : RenVec [Ty]} {t : Ty} : rmap r t = t⟨r,⟩ := by simp [RenMap.rmap]
+
 @[reducible, simp]
 instance instRenMapAll_Ty : RenMapAll [Ty] := .cons .nil
 
 @[simp]
 theorem Ty.rmap_var {x} {r : RenVec [Ty]} : (var x)⟨r,⟩ = .var (r.1.act x) := by
-  simp [RenMap.rmap]
+  simp only [RenMap.rmap]; rw [rmap]
 
 @[simp]
 theorem Ty.rmap_nat {r : RenVec [Ty]} : (nat)⟨r,⟩ = nat := by
-  simp [RenMap.rmap]
+  simp only [RenMap.rmap]; rw [rmap]
 
 @[simp]
 theorem Ty.rmap_app {t1 t2 : Ty} {r : RenVec [Ty]} : (arrow t1 t2)⟨r,⟩ = arrow t1⟨r,⟩ t2⟨r,⟩ := by
-  simp [RenMap.rmap]
+  simp only [RenMap.rmap]; rw [rmap]
 
 @[simp]
 theorem Ty.rmap_all {t} {r : RenVec [Ty]} : (all t)⟨r,⟩ = all t⟨r.lift [1],⟩ := by
-  simp [RenMap.rmap]
+  simp only [RenMap.rmap]; rw [rmap]
 
 @[simp]
 theorem Ty.from_action_rmap {t : Action Ty} {r : RenVec [Ty]}
   : (from_action t)⟨r,⟩ = from_action t⟨r,⟩
-:= by
-  sorry
-  -- rcases r with ⟨r, u⟩
-  -- cases u; case _ =>
-  -- cases t <;> simp [Ty.from_action]
-
-@[simp, grind =]
-theorem Ty.apply_id : ∀ {s : Ty}, rmap (.id [Ty]) s = s := by subst_solve_id
+:= by cases t <;> simp
 
 instance : RenMapEmpty Ty where
   apply_empty := by intro s; simp
 
 instance : RenMapId Ty [Ty] where
-  apply_id := by intro s; simp [RenMap.rmap]; grind
+  apply_id := by subst_solve_id
 
 instance : RenMapCompose Ty [Ty] where
   apply_compose := by subst_solve_compose
@@ -118,32 +114,31 @@ def Ty.smap (σ : SubstVec [Ty]) : Ty -> Ty
 instance : SubstMap Ty [Ty] where
   smap := Ty.smap
 
+@[simp]
+theorem Ty.smap_fix {σ : SubstVec [Ty]} {t : Ty} : smap σ t = t[σ,] := by simp [SubstMap.smap]
+
 instance instSubstMapAll_Ty : SubstMapAll [Ty] := .cons .nil
 
 @[simp]
 theorem Ty.smap_var {x} {σ : SubstVec [Ty]} : (var x)[σ,] = σ.1.act x := by
-  simp [SubstMap.smap]
+  simp only [SubstMap.smap]; rw [smap]
 
 @[simp]
 theorem Ty.smap_nat {σ : SubstVec [Ty]} : (nat)[σ,] = nat := by
-  simp [SubstMap.smap]
+  simp only [SubstMap.smap]; rw [smap]
 
 @[simp]
 theorem Ty.smap_app {t1 t2 : Ty} {σ : SubstVec [Ty]} : (arrow t1 t2)[σ,] = arrow t1[σ,] t2[σ,] := by
-  simp [SubstMap.smap]
+  simp only [SubstMap.smap]; rw [smap]
 
 @[simp]
 theorem Ty.smap_all {t} {σ : SubstVec [Ty]} : (all t)[σ,] = all t[σ.lift [1],] := by
-  simp [SubstMap.smap]
+  simp only [SubstMap.smap]; rw [smap]
 
 @[simp]
 theorem Ty.from_action_smap {t : Action Ty} {σ : SubstVec [Ty]}
   : (from_action t)[σ,] = from_action t[σ,]
-:= by
-  -- rcases σ with ⟨σ, u⟩
-  -- cases u; case _ =>
-  -- cases t <;> simp [Ty.from_action]
-  sorry
+:= by cases t <;> simp
 
 instance : SubstMapEmpty Ty where
   apply_empty := by intro s; simp
@@ -204,124 +199,134 @@ instance : RenMap Term [Term, Ty] where
   rmap := Term.rmap
 
 @[simp]
+theorem Term.rmap_fix {r : RenVec [Term, Ty]} {t : Term} : rmap r t = t⟨r,⟩ := by simp [RenMap.rmap]
+
+@[simp]
 theorem Term.rmap_term_ty_var {x} {r : RenVec [Term, Ty]} : (var x)⟨r,⟩ = var (r.1.act x) := by
-  simp [RenMap.rmap]
+  simp only [RenMap.rmap]; rw [rmap]
 
 @[simp]
 theorem Term.rmap_term_ty_app {t1 t2} {r : RenVec [Term, Ty]} : (app t1 t2)⟨r,⟩ = app t1⟨r,⟩ t2⟨r,⟩ := by
-  simp [RenMap.rmap]
+  simp only [RenMap.rmap]; rw [rmap]
 
 @[simp]
 theorem Term.rmap_term_ty_lam {A t} {r : RenVec [Term, Ty]}
   : (lam A t)⟨r,⟩ = lam A⟨r.2.1⟩ t⟨r.lift [1, 0],⟩
-:= by simp [RenMap.rmap]
+:= by simp only [RenMap.rmap]; rw [rmap]; try simp
 
 @[simp]
 theorem Term.rmap_term_ty_tapp {t1 t2} {r : RenVec [Term, Ty]}
   : (tapp t1 t2)⟨r,⟩ = tapp t1⟨r,⟩ t2⟨r.2.1⟩
-:= by simp [RenMap.rmap]
+:= by simp only [RenMap.rmap]; rw [rmap]; try simp
 
 @[simp]
 theorem Term.rmap_term_ty_tlam {t} {r : RenVec [Term, Ty]} : (tlam t)⟨r,⟩ = tlam t⟨r.lift [0, 1],⟩ := by
-  simp [RenMap.rmap]
+  simp only [RenMap.rmap]; rw [rmap]; try simp
 
 @[simp]
 theorem Term.rmap_term_ty_zero {r : RenVec [Term, Ty]} : zero⟨r,⟩ = zero := by
-  simp [RenMap.rmap]
+  simp only [RenMap.rmap]; rw [rmap]; try simp
 
 @[simp]
 theorem Term.rmap_term_ty_succ {t} {r : RenVec [Term, Ty]} : (succ t)⟨r,⟩ = succ t⟨r,⟩ := by
-  simp [RenMap.rmap]
+  simp only [RenMap.rmap]; rw [rmap]; try simp
 
 @[simp]
 theorem Term.rmap_term_ty_nrec {m z s n} {r : RenVec [Term, Ty]}
   : (nrec m z s n)⟨r,⟩ = nrec m⟨r.2.1⟩ z⟨r,⟩ s⟨r.lift [2, 0],⟩ n⟨r,⟩
-:= by simp [RenMap.rmap]
+:= by simp only [RenMap.rmap]; rw [rmap]; try simp
 
+instance : RenSuffix Term [Ty] := ⟨⟩
 instance : RenMap Term [Ty] where
   rmap r := Term.rmap (Ren.id Term, r.1, .nil)
 
 @[simp]
 theorem Term.rmap_ty_var {x} {r : RenVec [Ty]} : (var x)⟨r,⟩ = var x := by
-  simp [RenMap.rmap]
+  simp only [RenMap.rmap]; rw [rmap]; try simp
 
 @[simp]
 theorem Term.rmap_ty_app {t1 t2} {r : RenVec [Ty]} : (app t1 t2)⟨r,⟩ = app t1⟨r,⟩ t2⟨r,⟩ := by
-  simp [RenMap.rmap]
+  simp only [RenMap.rmap]; rw [rmap]; try simp
 
 @[simp]
 theorem Term.rmap_ty_lam {A t} {r : RenVec [Ty]}
   : (lam A t)⟨r,⟩ = lam A⟨r.1⟩ t⟨r,⟩
-:= by simp [RenMap.rmap]
+:= by simp only [RenMap.rmap]; rw [rmap]; try simp
 
 @[simp]
 theorem Term.rmap_ty_tapp {t1 t2} {r : RenVec [Ty]}
   : (tapp t1 t2)⟨r,⟩ = tapp t1⟨r,⟩ t2⟨r.1⟩
-:= by simp [RenMap.rmap]
+:= by simp only [RenMap.rmap]; rw [rmap]; try simp
 
 @[simp]
 theorem Term.rmap_ty_tlam {t} {r : RenVec [Ty]} : (tlam t)⟨r,⟩ = tlam t⟨r.lift [1],⟩ := by
-  simp +instances [RenMap.rmap]
-  rcases r with ⟨r, u⟩; cases u -- TODO(FIX)
-  simp
+  simp only [RenMap.rmap]; rw [rmap]; try simp
 
 @[simp]
 theorem Term.rmap_ty_zero {r : RenVec [Ty]} : zero⟨r,⟩ = zero := by
-  simp [RenMap.rmap]
+  simp only [RenMap.rmap]; rw [rmap]; try simp
 
 @[simp]
 theorem Term.rmap_ty_succ {t} {r : RenVec [Ty]} : (succ t)⟨r,⟩ = succ t⟨r,⟩ := by
-  simp [RenMap.rmap]
+  simp only [RenMap.rmap]; rw [rmap]; try simp
 
 @[simp]
 theorem Term.rmap_ty_nrec {m z s n} {r : RenVec [Ty]}
   : (nrec m z s n)⟨r,⟩ = nrec m⟨r.1⟩ z⟨r,⟩ s⟨r,⟩ n⟨r,⟩
-:= by simp [RenMap.rmap]
+:= by simp only [RenMap.rmap]; rw [rmap]; try simp
 
 instance : RenMap Term [Term] where
   rmap r := Term.rmap (r.1, Ren.id Ty, .nil)
 
 @[simp]
 theorem Term.rmap_term_var {x} {r : RenVec [Term]} : (var x)⟨r,⟩ = var (r.1.act x) := by
-  simp [RenMap.rmap]
+  simp only [RenMap.rmap]; rw [rmap]; try simp
 
 @[simp]
 theorem Term.rmap_term_app {t1 t2} {r : RenVec [Term]} : (app t1 t2)⟨r,⟩ = app t1⟨r,⟩ t2⟨r,⟩ := by
-  simp [RenMap.rmap]
+  simp only [RenMap.rmap]; rw [rmap]; try simp
 
 @[simp]
 theorem Term.rmap_term_lam {A t} {r : RenVec [Term]}
   : (lam A t)⟨r,⟩ = lam A t⟨r.lift [1],⟩
-:= by simp [RenMap.rmap]; sorry
+:= by simp only [RenMap.rmap]; rw [rmap]; try simp
 
 @[simp]
 theorem Term.rmap_term_tapp {t1 t2} {r : RenVec [Term]}
   : (tapp t1 t2)⟨r,⟩ = tapp t1⟨r,⟩ t2
-:= by simp [RenMap.rmap]; grind
+:= by simp only [RenMap.rmap]; rw [rmap]; try simp
 
 @[simp]
 theorem Term.rmap_term_tlam {t} {r : RenVec [Term]} : (tlam t)⟨r,⟩ = tlam t⟨r,⟩ := by
-  simp [RenMap.rmap]
+  simp only [RenMap.rmap]; rw [rmap]; try simp
 
 @[simp]
 theorem Term.rmap_term_zero {r : RenVec [Term]} : zero⟨r,⟩ = zero := by
-  simp [RenMap.rmap]
+  simp only [RenMap.rmap]; rw [rmap]; try simp
 
 @[simp]
 theorem Term.rmap_term_succ {t} {r : RenVec [Term]} : (succ t)⟨r,⟩ = succ t⟨r,⟩ := by
-  simp [RenMap.rmap]
+  simp only [RenMap.rmap]; rw [rmap]; try simp
 
 @[simp]
 theorem Term.rmap_term_nrec {m z s n} {r : RenVec [Term]}
   : (nrec m z s n)⟨r,⟩ = nrec m z⟨r,⟩ s⟨r.lift [2],⟩ n⟨r,⟩
-:= by simp [RenMap.rmap]; sorry
+:= by simp only [RenMap.rmap]; rw [rmap]; try simp
 
-set_option diagnostics true in
 @[simp]
 theorem Term.from_action_rmap {t : Action Term} {r : RenVec [Term, Ty]}
-  : (from_action t)⟨r,⟩ = from_action (RenMap.rmap (self := instRenMapAction) r t)
-:= by
-  sorry
+  : (from_action t)⟨r,⟩ = from_action t⟨r,⟩
+:= by cases t <;> simp [from_action]
+
+@[simp]
+theorem Term.from_action_rmap1 {t : Action Term} {r : RenVec [Term]}
+  : (from_action t)⟨r,⟩ = from_action t⟨r,⟩
+:= by cases t <;> simp [from_action]
+
+@[simp]
+theorem Term.from_action_rmap2 {t : Action Term} {r : RenVec [Ty]}
+  : (from_action t)⟨r,⟩ = from_action t⟨r,⟩
+:= by cases t <;> simp [from_action]
 
 @[reducible, simp]
 instance instRenMapAll_Term : RenMapAll [Term] := .cons .nil
@@ -329,16 +334,17 @@ instance instRenMapAll_Term : RenMapAll [Term] := .cons .nil
 @[reducible, simp]
 instance instRenMapAll_Term_Ty : RenMapAll [Term, Ty] := .cons instRenMapAll_Ty
 
-
-  -- rcases r with ⟨r1, r2, u⟩
-  -- cases u; case _ =>
-  -- cases t <;> simp [Term.from_action, RenVec.get]
+instance : RenMapVecDef Term Term [Ty] where
+  apply_vecdef := sorry
 
 instance : RenMapId Term [Term, Ty] where
   apply_id := by subst_solve_id
 
 instance : RenMapCompose Term [Term, Ty] where
   apply_compose := by subst_solve_compose
+
+instance : RenMapVecDef Term Term [] where
+  apply_vecdef := sorry
 
 instance : RenMapId Term [Term] where
   apply_id := by subst_solve_id
@@ -368,120 +374,125 @@ instance : SubstMap Term [Term, Ty] where
   smap := Term.smap
 
 @[simp]
-theorem Term.smap_term_ty_var {x} {σ : SubstVec [Term, Ty]} : (var x)[σ,] = σ.1.act x := by
+theorem Term.smap_fix {σ : SubstVec [Term, Ty]} {t : Term} : smap σ t = t[σ,] := by
   simp [SubstMap.smap]
 
 @[simp]
+theorem Term.smap_term_ty_var {x} {σ : SubstVec [Term, Ty]} : (var x)[σ,] = σ.1.act x := by
+  simp only [SubstMap.smap]; rw [smap]; try simp
+
+@[simp]
 theorem Term.smap_term_ty_app {t1 t2} {σ : SubstVec [Term, Ty]} : (app t1 t2)[σ,] = app t1[σ,] t2[σ,] := by
-  simp [SubstMap.smap]
+  simp only [SubstMap.smap]; rw [smap]; try simp
 
 @[simp]
 theorem Term.smap_term_ty_lam {A t} {σ : SubstVec [Term, Ty]}
   : (lam A t)[σ,] = lam A[σ.2.1] t[σ.lift [1, 0],]
-:= by simp [SubstMap.smap]
+:= by simp only [SubstMap.smap]; rw [smap]; try simp
 
 @[simp]
 theorem Term.smap_term_ty_tapp {t1 t2} {σ : SubstVec [Term, Ty]}
   : (tapp t1 t2)[σ,] = tapp t1[σ,] t2[σ.2.1]
-:= by simp [SubstMap.smap]
+:= by simp only [SubstMap.smap]; rw [smap]; try simp
 
 @[simp]
 theorem Term.smap_term_ty_tlam {t} {σ : SubstVec [Term, Ty]}
   : (tlam t)[σ,] = tlam t[σ.map (.ren [Ty] (𝐫1, .nil) $ .lift 1 $ .nil),]
-:= by simp [SubstMap.smap]
+:= by simp only [SubstMap.smap]; rw [smap]; try simp
 
 @[simp]
 theorem Term.smap_term_ty_zero {σ : SubstVec [Term, Ty]} : zero[σ,] = zero := by
-  simp [SubstMap.smap]
+  simp only [SubstMap.smap]; rw [smap]; try simp
 
 @[simp]
 theorem Term.smap_term_ty_succ {t} {σ : SubstVec [Term, Ty]} : (succ t)[σ,] = succ t[σ,] := by
-  simp [SubstMap.smap]
+  simp only [SubstMap.smap]; rw [smap]; try simp
 
 @[simp]
 theorem Term.smap_term_ty_nrec {m z s n} {σ : SubstVec [Term, Ty]}
   : (nrec m z s n)[σ,] = nrec m[σ.2.1] z[σ,] s[σ.lift [2, 0],] n[σ,]
-:= by simp [SubstMap.smap]
+:= by simp only [SubstMap.smap]; rw [smap]; try simp
 
 @[simp]
 instance : SubstMap Term [Term] where
-  smap σ := Term.smap (σ.get Term 0, Subst.id Ty, .nil)
+  smap σ := Term.smap (σ.1, Subst.id Ty, .nil)
 
 @[simp]
-theorem Term.smap_term_var {x} {σ : SubstVec [Term]} : (var x)[σ,] = (σ.get Term 0).act x := by
-  simp [SubstMap.smap]
+theorem Term.smap_term_var {x} {σ : SubstVec [Term]} : (var x)[σ,] = σ.1.act x := by
+  simp only [SubstMap.smap]; rw [smap]; try simp
 
 @[simp]
 theorem Term.smap_term_app {t1 t2} {σ : SubstVec [Term]} : (app t1 t2)[σ,] = app t1[σ,] t2[σ,] := by
-  simp [SubstMap.smap]
+  simp only [SubstMap.smap]; rw [smap]; try simp
 
 @[simp]
 theorem Term.smap_term_lam {A t} {σ : SubstVec [Term]}
   : (lam A t)[σ,] = lam A t[σ.lift [1],]
-:= by simp [SubstMap.smap]; sorry
+:= by simp only [SubstMap.smap]; rw [smap]; try simp
 
 @[simp]
 theorem Term.smap_term_tapp {t1 t2} {σ : SubstVec [Term]}
   : (tapp t1 t2)[σ,] = tapp t1[σ,] t2
-:= by simp [SubstMap.smap]; sorry
+:= by simp only [SubstMap.smap]; rw [smap]; try simp
 
 @[simp]
 theorem Term.smap_term_tlam {t} {σ : SubstVec [Term]}
   : (tlam t)[σ,] = tlam t[σ.map (.ren [Ty] (𝐫1, .nil) $ .nil),]
-:= by simp [SubstMap.smap]; sorry
+:= by simp only [SubstMap.smap]; rw [smap]; try simp
 
 @[simp]
 theorem Term.smap_term_zero {σ : SubstVec [Term]} : zero[σ,] = zero := by
-  simp [SubstMap.smap]
+  simp only [SubstMap.smap]; rw [smap]; try simp
 
 @[simp]
 theorem Term.smap_term_succ {t} {σ : SubstVec [Term]} : (succ t)[σ,] = succ t[σ,] := by
-  simp [SubstMap.smap]
+  simp only [SubstMap.smap]; rw [smap]; try simp
 
 @[simp]
 theorem Term.smap_term_nrec {m z s n} {σ : SubstVec [Term]}
   : (nrec m z s n)[σ,] = nrec m z[σ,] s[σ.lift [2],] n[σ,]
-:= by simp [SubstMap.smap]; sorry
+:= by simp only [SubstMap.smap]; rw [smap]; try simp
 
+instance : SubstSuffix Term [Ty] := ⟨⟩
 @[simp]
 instance : SubstMap Term [Ty] where
-  smap σ := Term.smap (Subst.id Term, σ.get Ty 0, .nil)
+  smap σ := Term.smap (Subst.id Term, σ.1, .nil)
 
 @[simp]
 theorem Term.smap_ty_var {x} {σ : SubstVec [Ty]} : (var x)[σ,] = var x := by
-  simp [SubstMap.smap]
+  simp only [SubstMap.smap]; rw [smap]; try simp
 
 @[simp]
 theorem Term.smap_ty_app {t1 t2} {σ : SubstVec [Ty]} : (app t1 t2)[σ,] = app t1[σ,] t2[σ,] := by
-  simp [SubstMap.smap]
+  simp only [SubstMap.smap]; rw [smap]; try simp
 
 @[simp]
 theorem Term.smap_ty_lam {A t} {σ : SubstVec [Ty]}
-  : (lam A t)[σ,] = lam A[σ.get Ty 0] t[σ,]
-:= by simp [SubstMap.smap]
+  : (lam A t)[σ,] = lam A[σ.1] t[σ,]
+:= by simp only [SubstMap.smap]; rw [smap]; try simp
 
 @[simp]
 theorem Term.smap_ty_tapp {t1 t2} {σ : SubstVec [Ty]}
-  : (tapp t1 t2)[σ,] = tapp t1[σ,] t2[σ.get Ty 0]
-:= by simp [SubstMap.smap]
+  : (tapp t1 t2)[σ,] = tapp t1[σ,] t2[σ.1]
+:= by simp only [SubstMap.smap]; rw [smap]; try simp
 
 @[simp]
 theorem Term.smap_ty_tlam {t} {σ : SubstVec [Ty]}
   : (tlam t)[σ,] = tlam t[σ.map (.lift 1 $ .nil),]
-:= by simp [SubstMap.smap]; sorry
+:= by simp only [SubstMap.smap]; rw [smap]; try simp
 
 @[simp]
 theorem Term.smap_ty_zero {σ : SubstVec [Ty]} : zero[σ,] = zero := by
-  simp [SubstMap.smap]
+  simp only [SubstMap.smap]; rw [smap]; try simp
 
 @[simp]
 theorem Term.smap_ty_succ {t} {σ : SubstVec [Ty]} : (succ t)[σ,] = succ t[σ,] := by
-  simp [SubstMap.smap]
+  simp only [SubstMap.smap]; rw [smap]; try simp
 
 @[simp]
 theorem Term.smap_ty_nrec {m z s n} {σ : SubstVec [Ty]}
-  : (nrec m z s n)[σ,] = nrec m[σ.get Ty 0] z[σ,] s[σ,] n[σ,]
-:= by simp [SubstMap.smap]
+  : (nrec m z s n)[σ,] = nrec m[σ.1] z[σ,] s[σ,] n[σ,]
+:= by simp only [SubstMap.smap]; rw [smap]; try simp
 
 @[reducible, simp]
 instance instSubstMapAll_Term : SubstMapAll [Term] := .cons .nil
@@ -490,10 +501,22 @@ instance instSubstMapAll_Term : SubstMapAll [Term] := .cons .nil
 instance instSubstMapAll_Term_Ty : SubstMapAll [Term, Ty] := .cons instSubstMapAll_Ty
 
 @[simp]
-theorem Term.from_action_smap {t : Action Term} {σ : SubstVec [Term]}
+theorem Term.from_action_smap {t : Action Term} {σ : SubstVec [Term, Ty]}
   : (from_action t)[σ,] = from_action t[σ,]
-:= by
-  sorry
+:= by cases t <;> simp [from_action]
+
+@[simp]
+theorem Term.from_action_smap1 {t : Action Term} {σ : SubstVec [Term]}
+  : (from_action t)[σ,] = from_action t[σ,]
+:= by cases t <;> simp [from_action]
+
+@[simp]
+theorem Term.from_action_smap2 {t : Action Term} {σ : SubstVec [Ty]}
+  : (from_action t)[σ,] = from_action t[σ,]
+:= by cases t <;> simp [from_action]
+
+instance : SubstMapVecDef Term Term [Ty] where
+  apply_vecdef := sorry
 
 instance : SubstMapId Term [Term, Ty] where
   apply_id := by subst_solve_id
@@ -501,84 +524,46 @@ instance : SubstMapId Term [Term, Ty] where
 instance : SubstMapStable Term [Term, Ty] where
   apply_stable := by sorry
 
--- @[simp]
--- theorem Term.apply_ren_compose_left {s : Term} {r : RenVec [Term, Ty]} {τ : SubstVec [Term, Ty]}
---   : smap τ (rmap r s) = smap (r >> τ) s
--- := by sorry
-
 instance : SubstMapRenComposeLeft Term [Term, Ty] where
   apply_ren_compose_left := by subst_solve_compose
 
 instance : SubstMapRenComposeRight Term [Term, Ty] where
-  apply_ren_compose_right := by
-    intro s σ τ
-    let T := Subst.typeof s
-    induction s generalizing σ τ
-    all_goals
-      try solve | simp; grind
-      try solve | simp [*]
-      try simp [Subst.lift_compose_ren_right_vec (T := T), *]
-      try simp [Subst.rewrite_lift_compose_ren_left_vec (T := T), *]
-      try simp [Subst.rewrite_lift_compose_vec (T := T), *]
-    case var =>
-
-      sorry
-
-@[grind =]
-theorem Term.smap_composition_lemma {s : Term} {σ : Subst Term} {τ : Subst Ty} :
-  s[σ, τ] = s[τ][σ]
-:= by
-  induction s generalizing σ τ
-  all_goals try solve | simp [*]
+  apply_ren_compose_right := by subst_solve_compose
 
 instance : SubstMapCompose Term [Term, Ty] where
-  apply_compose := by
-    intro s σ τ
-    let T := Subst.typeof s
-    induction s generalizing σ τ
-    all_goals
-      try solve | simp; grind
-      try solve | simp [*]
-      try simp [Subst.lift_compose_ren_right_vec (T := T), *]
-      try simp [Subst.rewrite_lift_compose_ren_left_vec (T := T), *]
-      try simp [Subst.rewrite_lift_compose_vec (T := T), *]
-    case var =>
-      rcases τ with ⟨τ1, τ2⟩
-      rcases τ2 with ⟨τ2, u⟩; simp
-      rw [SubstVec.empty_ext (a := u) (b := .nil)]
-      rw [Term.smap_composition_lemma]
+  apply_compose := by subst_solve_compose
 
-
-      sorry
+instance : SubstMapVecDef Term Term [] where
+  apply_vecdef := sorry
 
 instance : SubstMapId Term [Term] where
-  apply_id := by sorry
+  apply_id := by subst_solve_id
 
 instance : SubstMapStable Term [Term] where
   apply_stable := by sorry
 
 instance : SubstMapRenComposeLeft Term [Term] where
-  apply_ren_compose_left := by sorry
+  apply_ren_compose_left := by subst_solve_compose
 
 instance : SubstMapRenComposeRight Term [Term] where
-  apply_ren_compose_right := by sorry
+  apply_ren_compose_right := by subst_solve_compose
 
 instance : SubstMapCompose Term [Term] where
-  apply_compose := by sorry
+  apply_compose := by subst_solve_compose
 
 instance : SubstMapId Term [Ty] where
-  apply_id := by sorry
+  apply_id := by subst_solve_id
 
 instance : SubstMapStable Term [Ty] where
   apply_stable := by sorry
 
 instance : SubstMapRenComposeLeft Term [Ty] where
-  apply_ren_compose_left := by sorry
+  apply_ren_compose_left := by subst_solve_compose
 
 instance : SubstMapRenComposeRight Term [Ty] where
-  apply_ren_compose_right := by sorry
+  apply_ren_compose_right := by subst_solve_compose
 
 instance : SubstMapCompose Term [Ty] where
-  apply_compose := by sorry
+  apply_compose := by subst_solve_compose
 
 end SystemFWithNat

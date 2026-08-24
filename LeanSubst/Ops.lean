@@ -739,21 +739,21 @@ theorem SubstVec.compose_ren_left_proj2 {r : RenVec (T::V)} {τ : SubstVec (T::V
   rcases τ with ⟨τ, τs⟩
   simp [HAndThen.hAndThen, compose_ren_left]
 
--- @[simp]
--- theorem SubstVec.compose_ren_right_proj1 [RenMapAll (T::V)] {σ : SubstVec (T::V)} {r : RenVec (T::V)}
---   : (σ >> r).1 = σ.1⟨r.2,⟩ >> r.1
--- := by
---   rcases σ with ⟨σ, σs⟩
---   rcases r with ⟨r, rs⟩
---   simp [HAndThen.hAndThen, compose_ren_right]
+@[simp]
+theorem SubstVec.compose_ren_right_proj1 [RenMapAll (T::V)] {σ : SubstVec (T::V)} {r : RenVec (T::V)}
+  : (σ >> r).1 = σ.1⟨r.2,⟩ >> r.1
+:= by
+  rcases σ with ⟨σ, σs⟩
+  rcases r with ⟨r, rs⟩
+  simp [HAndThen.hAndThen, compose_ren_right]
 
--- @[simp]
--- theorem SubstVec.compose_ren_right_proj2 [RenMapAll (T::V)] {σ : SubstVec (T::V)} {r : RenVec (T::V)}
---   : (σ >> r).2 = σ.2 >> r.2
--- := by
---   rcases σ with ⟨σ, σs⟩
---   rcases r with ⟨r, rs⟩
---   simp [HAndThen.hAndThen, compose_ren_right]
+@[simp]
+theorem SubstVec.compose_ren_right_proj2 [RenMapAll (T::V)] {σ : SubstVec (T::V)} {r : RenVec (T::V)}
+  : (σ >> r).2 = σ.2 >> r.2
+:= by
+  rcases σ with ⟨σ, σs⟩
+  rcases r with ⟨r, rs⟩
+  simp [HAndThen.hAndThen, compose_ren_right]
 
 @[simp]
 theorem SubstVec.compose_proj1 [SubstMapAll (T::V)] {σ τ : SubstVec (T::V)}
@@ -841,6 +841,14 @@ theorem Ren.lift_compose {k} {r1 r2 : Ren T} : (r1 >> r2).lift k = r1.lift k >> 
 theorem RenVec.lift_compose {k} {r1 r2 : RenVec V} : (r1 >> r2).lift k = r1.lift k >> r2.lift k := by
   sorry
 
+@[simp]
+theorem RenVec.lift_proj1 {r : RenVec (T::V)} {n k} : (r.lift (n::k)).1 = r.1.lift n := by
+  rcases r with ⟨r, r'⟩; simp
+
+@[simp]
+theorem RenVec.lift_proj2 {r : RenVec (T::V)} {n k} : (r.lift (n::k)).2 = r.2.lift k := by
+  rcases r with ⟨r, r'⟩; simp
+
 def Subst.lift [RenMap T [T]] (σ : Subst T) (k : Nat := 1) : Subst T := .mk λ n =>
   if n < k then re n else (σ.act (n - k))⟨Ren.add T k⟩
 
@@ -859,6 +867,14 @@ theorem Subst.lift_action_lt [RenMap T [T]] {σ : Subst T} {k i} (h : i < k)
 theorem Subst.lift_action_ge [RenMap T [T]] {σ : Subst T} {k i} (h : i ≥ k)
   : (lift σ k).act i = (σ.act (i - k))⟨Ren.add T k⟩
 := by simp [lift, act, SubstAction.act]; grind
+
+@[simp]
+theorem SubstVec.lift_proj1 [RenMapAll (T::V)] {σ : SubstVec (T::V)} {n k} : (σ.lift (n::k)).1 = σ.1.lift n := by
+  rcases σ with ⟨σ, σ'⟩; simp
+
+@[simp]
+theorem SubstVec.lift_proj2 [RenMapAll (T::V)] {σ : SubstVec (T::V)} {n k} : (σ.lift (n::k)).2 = σ.2.lift k := by
+  rcases σ with ⟨σ, σ'⟩; simp
 ----------------------------------------------------------------------------------------------------
 ---- Action on variable list
 ----------------------------------------------------------------------------------------------------
@@ -973,5 +989,29 @@ def SubstVec.map : {V : List (Type u2)} -> MapOps V -> SubstVec V -> SubstVec V
 | [], .nil, σs => σs
 | .cons _ _, MapOps.ren _ r ops, (σ, σs) => (σ⟨r,⟩, σs.map ops)
 | .cons _ _, MapOps.lift n ops, (σ, σs) => (σ.lift n, σs.map ops)
+
+@[simp]
+theorem SubstVec.map_ren_proj1
+  {X} [RenMap T X] [RenSuffix T X] {f : MapOps V} {r : RenVec X} {σ : SubstVec (T::V)}
+  : (σ.map (.ren X r f)).1 = σ.1⟨r,⟩
+:= by rcases σ with ⟨σ, σs⟩; simp
+
+@[simp]
+theorem SubstVec.map_ren_proj2
+  {X} [RenMap T X] [RenSuffix T X] {f : MapOps V} {r : RenVec X} {σ : SubstVec (T::V)}
+  : (σ.map (.ren X r f)).2 = σ.2.map f
+:= by rcases σ with ⟨σ, σs⟩; simp
+
+@[simp]
+theorem SubstVec.map_lift_proj1
+  [RenMap T [T]] {f : MapOps V} {n : Nat} {σ : SubstVec (T::V)}
+  : (σ.map (.lift n f)).1 = σ.1.lift n
+:= by rcases σ with ⟨σ, σs⟩; simp
+
+@[simp]
+theorem SubstVec.map_lift_proj2
+  [RenMap T [T]] {f : MapOps V} {n : Nat} {σ : SubstVec (T::V)}
+  : (σ.map (.lift n f)).2 = σ.2.map f
+:= by rcases σ with ⟨σ, σs⟩; simp
 
 end LeanSubst

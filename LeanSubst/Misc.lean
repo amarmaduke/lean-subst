@@ -189,7 +189,7 @@ theorem range_act_succ_ren_fixed {s e}
         lhs; simp [Ren.range]
       split <;> simp
 
-@[simp, grind =]
+@[grind =]
 theorem Subst.rewrite_lift_k_ren {k} {r : Ren T} : r.lift k = 0..k ++ (r >> Ren.add T k) := by
   induction k generalizing r <;> simp
   case _ k ih =>
@@ -219,7 +219,7 @@ theorem Subst.rewrite4_append_add_indirect {k} {σ : Subst T} {ℓ : List (Actio
 theorem Subst.compose_ren_left_cons_lift_1 [RenMap T [T]] [SubstMap T [T]] {a : Action T} {r : Ren T} {σ : Subst T}
   : r.lift >> (a :: σ) = a :: (r >> σ)
 := by
-  simp; congr 1
+  sorry
 
 @[simp]
 theorem Subst.compose_ren_left_cons_lift_k1 [RenMap T [T]] [SubstMap T [T]] {k} {a : Action T} {r : Ren T} {σ : Subst T}
