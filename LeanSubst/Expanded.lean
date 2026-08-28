@@ -24,10 +24,13 @@ theorem SubstVec.proj_eta1 {σ : SubstVec [T1]} : (σ.1, .nil) = σ := by
   rcases σ with ⟨σ, u⟩; congr
 
 @[simp]
-theorem RenVec.lift_size1_0 {r : RenVec [T1]} : r.lift [0] = r := sorry
+theorem RenVec.lift_size1_0 {r : RenVec [T1]} : r.lift [0] = r := by
+  rcases r with ⟨r, rs⟩; simp; congr
 
 @[simp]
-theorem SubstVec.lift_size1_0 [RenMapAll [T1]] {σ : SubstVec [T1]} : σ.lift [0] = σ := sorry
+theorem SubstVec.lift_size1_0 [RenMapAll [T1]] [RenMapId T1 [T1]] {σ : SubstVec [T1]} : σ.lift [0] = σ := by
+  rcases σ with ⟨σ, σs⟩; simp; congr
+  unfold Subst.lift; simp; cases σ; simp
 
 -- @[grind =_]
 -- theorem RenVec.get_eta1 {r : RenVec [T1]} : r = (r.get T1 0, .nil) := sorry

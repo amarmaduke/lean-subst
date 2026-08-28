@@ -18,7 +18,7 @@ theorem Ren.apply_vecdef
   [RenMap S [T]] [RenMap S (T::V)] [RenMap S V] [RenMapVecDef S T V]
   {s : S} {r : RenVec (T::V)}
   : s⟨r,⟩ = s⟨r.2,⟩⟨r.1⟩
-:= sorry
+:= RenMapVecDef.apply_vecdef
 
 @[simp]
 theorem Ren.apply_empty [RenMap S []] [RenMapEmpty S] {s : S} {r : RenVec []}
@@ -60,31 +60,48 @@ instance [RenMap S []] [RenSuffix S []] [RenMapEmpty S] : RenMapEmpty (Action S)
   apply_empty := by intro s r; cases s <;> simp
 
 instance [RenMap T [T]] [RenMap T (T::V)] [RenMap T V] [RenSuffix T V] [RenMapVecDef T T V] : RenMapVecDef (Action T) T V where
-  apply_vecdef := sorry
+  apply_vecdef := by
+    intro s r; cases s <;> simp
+    rw [Ren.apply_vecdef]
 
 instance [RenMap T [T]] [RenMap T (T::V)] [RenMap T V] [RenSuffix T V] [RenMapVecDef T T V] : RenMapVecDef (Subst T) T V where
-  apply_vecdef := sorry
+  apply_vecdef := by
+    intro s r; cases s; case _ f =>
+    simp [RenMap.rmap, Subst.rmap0, Subst.rmap1]; funext; case _ n =>
+    cases (f n) <;> simp
+    rw [Ren.apply_vecdef]
 
 instance [RenMap T (T::V)] [RenMapId T (T::V)] : RenMapId (Action T) (T::V) where
-  apply_id := by intro s; cases s <;> simp [RenVec.id]; sorry
+  apply_id := by
+    intro s; cases s <;> simp; case _ s =>
+    have lem := RenMapId.apply_id (V := T::V) (s := s)
+    simp at lem; exact lem
 
 instance [RenMap S V] [RenSuffix S V] [RenMapId S V] : RenMapId (Action S) V where
   apply_id := by intro s; cases s <;> simp
 
 instance [RenMap S []] [RenSuffix S []] [RenMapEmpty S] : RenMapEmpty (Subst S) where
-  apply_empty := by sorry
-    -- intro s r; cases s <;> simp [RenMap.rmap, Subst.rmap]
-    -- funext; case _ f i =>
-    -- generalize zdef : f i = z at *
-    -- cases z <;> simp
+  apply_empty := by
+    intro s r; cases r; cases s; case _ f =>
+    simp [RenMap.rmap, Subst.rmap1]
+    funext; case _ i =>
+    cases (f i) <;> simp
 
 instance [RenMap T (T::V)] [RenMapId T (T::V)] : RenMapId (Subst T) (T::V) where
-  apply_id := by sorry
-    -- intro s; cases s
-    -- simp [RenMap.rmap, Subst.rmap]; grind
+  apply_id := by
+    intro s; simp [RenMap.rmap, Subst.rmap0]
+    cases s; case _ f =>
+    congr; funext; case _ i =>
+    simp; cases (f i) <;> simp; case _ s =>
+    have lem := RenMapId.apply_id (V := T::V) (s := s)
+    simp at lem; exact lem
 
 instance [RenMap S V] [RenSuffix S V] [RenMapId S V] : RenMapId (Subst S) V where
-  apply_id := by sorry
+  apply_id := by
+    intro s; simp [RenMap.rmap, Subst.rmap1]
+    cases s; case _ f =>
+    congr; funext; case _ i =>
+    simp; cases (f i) <;> simp
 
 instance [RenMap T (T::V)] [RenMapCompose T (T::V)] : RenMapCompose (Action T) (T::V) where
   apply_compose := by
@@ -97,10 +114,19 @@ instance [RenMap S V] [RenSuffix S V] [RenMapCompose S V] : RenMapCompose (Actio
   apply_compose := by intro s; cases s <;> simp
 
 instance [RenMap T (T::V)] [RenMapCompose T (T::V)] : RenMapCompose (Subst T) (T::V) where
-  apply_compose := by sorry
+  apply_compose := by
+    intro s r1 r2
+    simp [RenMap.rmap, Subst.rmap0]
+    cases s; case _ f =>
+    funext; case _ i =>
+    simp; cases (f i) <;> simp
 
 instance [RenMap S V] [RenSuffix S V] [RenMapCompose S V] : RenMapCompose (Subst S) V where
-  apply_compose := by sorry
+  apply_compose := by
+    intro s r1 r2
+    simp [RenMap.rmap, Subst.rmap1]; funext; case _ i =>
+    cases s; case _ f =>
+    simp; cases (f i) <;> simp
 
 class SubstMapStable (S : Type u1) (V : List $ Type u2) [RenMap S V] [SubstMap S V] where
   apply_stable (r : RenVec V) (σ : SubstVec V) : r.to = σ -> rmap (S := S) r = smap σ
@@ -112,8 +138,13 @@ theorem Subst.apply_stable
   : rmap (S := S) r = smap σ
 := SubstMapStable.apply_stable _ _ h
 
-class SubstMapEmpty (S : Type u1) [SubstMap S []] where
+class SubstMapEmpty (S : Type u1) [SubstMap S ([] : List (Type u1))] where
   apply_empty {s : S} {σ : SubstVec []} : smap (V := []) σ s = s
+
+@[simp]
+theorem Subst.apply_empty [SubstMap S []] [SubstMapEmpty S] {s : S} {σ : SubstVec []}
+  : smap (V := []) σ s = s
+:= SubstMapEmpty.apply_empty
 
 class SubstMapVecDef (S : Type u1) (T : Type u2) (V : List (Type u2)) [SubstMap S [T]] [SubstMap S (T::V)] [SubstMap S V] where
   apply_vecdef {s : S} {σ : SubstVec (T::V)} : s[σ,] = s[σ.2,][σ.1]
@@ -123,12 +154,7 @@ theorem Subst.apply_vecdef
   [SubstMap S [T]] [SubstMap S (T::V)] [SubstMap S V] [SubstMapVecDef S T V]
   {s : S} {σ : SubstVec (T::V)}
   : s[σ,] = s[σ.2,][σ.1]
-:= sorry
-
-@[simp]
-theorem Subst.apply_empty [SubstMap S []] [SubstMapEmpty S] {s : S} {σ : SubstVec []}
-  : SubstMap.smap (V := []) σ s = s
-:= SubstMapEmpty.apply_empty
+:= SubstMapVecDef.apply_vecdef
 
 class SubstMapId (S : Type u1) (V : List $ Type u2) [SubstMap S V] where
   apply_id {s : S} : s[.id V,] = s
@@ -176,20 +202,20 @@ theorem Subst.apply_ren_compose_right
   : s[σ,]⟨r,⟩ = s[σ >> r,]
 := SubstMapRenComposeRight.apply_ren_compose_right
 
-@[simp, grind =]
-theorem Subst.apply_ren_compose_right1
-  [RenMap S [T]] [RenMapAll [T]] [SubstMap S [T]] [SubstMapRenComposeRight S [T]]
-  {s : S} {r : Ren T} {σ : Subst T}
-  : s[σ]⟨r⟩ = s[σ >> r]
-:= sorry
+-- @[simp, grind =]
+-- theorem Subst.apply_ren_compose_right1
+--   [RenMap S [T]] [RenMapAll [T]] [SubstMap S [T]] [SubstMapRenComposeRight S [T]]
+--   {s : S} {r : Ren T} {σ : Subst T}
+--   : s[σ]⟨r⟩ = s[σ >> r]
+-- := sorry
 
-@[simp, grind =]
-theorem Subst.apply_ren_compose_right2
-  [RenMap S [T1, T2]] [RenMapAll [T1, T2]] [SubstMap S [T1, T2]] [SubstMapRenComposeRight S [T1, T2]]
-  {s : S} {r1 : Ren T1} {r2 : Ren T2} {σ1 : Subst T1} {σ2 : Subst T2}
-  : s[σ1, σ2]⟨r1, r2⟩ = s[(σ1⟨r2⟩ : Subst T1) >> r1, σ2 >> r2]
-:= by
-  sorry
+-- @[simp, grind =]
+-- theorem Subst.apply_ren_compose_right2
+--   [RenMap S [T1, T2]] [RenMapAll [T1, T2]] [SubstMap S [T1, T2]] [SubstMapRenComposeRight S [T1, T2]]
+--   {s : S} {r1 : Ren T1} {r2 : Ren T2} {σ1 : Subst T1} {σ2 : Subst T2}
+--   : s[σ1, σ2]⟨r1, r2⟩ = s[(σ1⟨r2⟩ : Subst T1) >> r1, σ2 >> r2]
+-- := by
+--   sorry
 
 class SubstMapCompose (S : Type u1) (V : List $ Type u2) [SubstMap S V] [SubstMapAll V] where
   apply_compose {s : S} {σ τ : SubstVec V} : s[σ,][τ,] = s[σ >> τ,]
@@ -201,86 +227,129 @@ theorem Subst.apply_compose
   : s[σ1,][σ2,] = s[σ1 >> σ2,]
 := SubstMapCompose.apply_compose
 
-@[simp, grind =]
-theorem Subst.apply_compose1
-  [SubstMap S [T]] [SubstMap T [T]] [SubstMapAll [T]] [SubstMapCompose S [T]]
-  {s : S} {σ1 σ2 : Subst T}
-  : s[σ1][σ2] = s[σ1 >> σ2]
-:= by
-  have lem := Subst.apply_compose (V := [T]) (s := s) (σ1 := (σ1, .nil)) (σ2 := (σ2, .nil))
-  rw [lem]; simp [HAndThen.hAndThen, AndThen.andThen, SubstVec.compose]
-  sorry
-  --Subst.apply_compose
+-- @[simp, grind =]
+-- theorem Subst.apply_compose1
+--   [SubstMap S [T]] [SubstMap T [T]] [SubstMapAll [T]] [SubstMapCompose S [T]]
+--   {s : S} {σ1 σ2 : Subst T}
+--   : s[σ1][σ2] = s[σ1 >> σ2]
+-- := by
+--   have lem := Subst.apply_compose (V := [T]) (s := s) (σ1 := (σ1, .nil)) (σ2 := (σ2, .nil))
+--   rw [lem]; simp [HAndThen.hAndThen, AndThen.andThen, SubstVec.compose]
+--   sorry
+--   --Subst.apply_compose
 
-@[simp, grind =]
-theorem Subst.apply_compose2
-  [SubstMap S [T1, T2]] [SubstMapAll [T1, T2]] [SubstMapCompose S [T1, T2]]
-  {s : S} {σ1 σ2 : Subst T1} {τ1 τ2 : Subst T2}
-  : s[σ1, τ1][σ2, τ2] = s[σ1[τ2] >> σ2, τ1 >> τ2]
-:= by
-  have lem := Subst.apply_compose (V := [T1, T2]) (s := s) (σ1 := (σ1, τ1, .nil)) (σ2 := (σ2, τ2, .nil))
-  rw [lem]; simp [HAndThen.hAndThen, AndThen.andThen, SubstVec.compose]
-  sorry
+-- @[simp, grind =]
+-- theorem Subst.apply_compose2
+--   [SubstMap S [T1, T2]] [SubstMapAll [T1, T2]] [SubstMapCompose S [T1, T2]]
+--   {s : S} {σ1 σ2 : Subst T1} {τ1 τ2 : Subst T2}
+--   : s[σ1, τ1][σ2, τ2] = s[σ1[τ2] >> σ2, τ1 >> τ2]
+-- := by
+--   have lem := Subst.apply_compose (V := [T1, T2]) (s := s) (σ1 := (σ1, τ1, .nil)) (σ2 := (σ2, τ2, .nil))
+--   rw [lem]; simp [HAndThen.hAndThen, AndThen.andThen, SubstVec.compose]
+--   sorry
 
-@[simp, grind =]
-theorem Subst.apply_compose3
-  [SubstMap S [T1, T2, T3]] [SubstMapAll [T1, T2, T3]] [SubstMapCompose S [T1, T2, T3]]
-  {s : S} {σ1 σ2 : Subst T1} {τ1 τ2 : Subst T2} {μ1 μ2 : Subst T3}
-  : s[σ1, τ1, μ1][σ2, τ2, μ2] = s[σ1[τ2, μ2] >> σ2, τ1[μ2] >> τ2, μ1 >> μ2]
-:= by
-  have lem := Subst.apply_compose (V := [T1, T2, T3]) (s := s) (σ1 := (σ1, τ1, μ1, .nil)) (σ2 := (σ2, τ2, μ2, .nil))
-  rw [lem]; simp [HAndThen.hAndThen, AndThen.andThen, SubstVec.compose]
-  sorry
+-- @[simp, grind =]
+-- theorem Subst.apply_compose3
+--   [SubstMap S [T1, T2, T3]] [SubstMapAll [T1, T2, T3]] [SubstMapCompose S [T1, T2, T3]]
+--   {s : S} {σ1 σ2 : Subst T1} {τ1 τ2 : Subst T2} {μ1 μ2 : Subst T3}
+--   : s[σ1, τ1, μ1][σ2, τ2, μ2] = s[σ1[τ2, μ2] >> σ2, τ1[μ2] >> τ2, μ1 >> μ2]
+-- := by
+--   have lem := Subst.apply_compose (V := [T1, T2, T3]) (s := s) (σ1 := (σ1, τ1, μ1, .nil)) (σ2 := (σ2, τ2, μ2, .nil))
+--   rw [lem]; simp [HAndThen.hAndThen, AndThen.andThen, SubstVec.compose]
+--   sorry
 
 instance [SubstMap S []] [SubstSuffix S []] [SubstMapEmpty S] : SubstMapEmpty (Action S) where
   apply_empty := by intro s r; cases s <;> simp
 
 instance [SubstMap T [T]] [SubstMap T (T::V)] [SubstMap T V] [SubstSuffix T V] [SubstMapVecDef T T V] : SubstMapVecDef (Action T) T V where
-  apply_vecdef := sorry
+  apply_vecdef := by
+    intro s σ
+    cases s <;> simp
+    rw [SubstMapVecDef.apply_vecdef]
 
 instance [SubstMap T [T]] [SubstMap T (T::V)] [SubstMap T V] [SubstSuffix T V] [SubstMapVecDef T T V] : SubstMapVecDef (Subst T) T V where
-  apply_vecdef := sorry
+  apply_vecdef := by
+    intro s σ
+    simp [SubstMap.smap, Subst.smap0, Subst.smap1]; funext; case _ i =>
+    cases s; simp; case _ f =>
+    cases (f i) <;> simp
+    rw [SubstMapVecDef.apply_vecdef]
 
 instance [SubstMap T (T::V)] [SubstMapId T (T::V)] : SubstMapId (Action T) (T::V) where
-  apply_id := by intro s; cases s <;> simp [SubstVec.id]; sorry
+  apply_id := by
+    intro s; cases s <;> simp [SubstVec.id]; case _ t =>
+    have lem := SubstMapId.apply_id (s := t) (V := T::V); simp at lem
+    exact lem
 
 instance [SubstMap S V] [SubstSuffix S V] [SubstMapId S V] : SubstMapId (Action S) V where
   apply_id := by intro s; cases s <;> simp
 
 instance [SubstMap S []] [SubstSuffix S []] [SubstMapEmpty S] : SubstMapEmpty (Subst S) where
-  apply_empty := by sorry
-    -- intro s r; cases s <;> simp [SubstMap.rmap, Subst.rmap]
-    -- funext; case _ f i =>
-    -- generalize zdef : f i = z at *
-    -- cases z <;> simp
+  apply_empty := by
+    intro s σ
+    simp [SubstMap.smap, Subst.smap1]
+    cases s <;> simp; case _ f =>
+    funext; case _ i =>
+    cases (f i) <;> simp
 
 instance [SubstMap T (T::V)] [SubstMapId T (T::V)] : SubstMapId (Subst T) (T::V) where
-  apply_id := by sorry
-    -- intro s; cases s
-    -- simp [SubstMap.rmap, Subst.rmap]; grind
+  apply_id := by
+    intro s; simp; cases s; case _ f =>
+    simp [SubstMap.smap, Subst.smap0]; funext; case _ i =>
+    cases (f i) <;> simp; case _ t =>
+    have lem := SubstMapId.apply_id (s := t) (V := T::V); simp at lem
+    exact lem
 
 instance [SubstMap S V] [SubstSuffix S V] [SubstMapId S V] : SubstMapId (Subst S) V where
-  apply_id := by sorry
+  apply_id := by
+    intro s; cases s; case _ f =>
+    simp [SubstMap.smap, Subst.smap1]; funext; case _ i =>
+    cases (f i) <;> simp
 
-instance [SubstMap T (T::V)] [SubstMapAll (T::V)] [SubstMapCompose T (T::V)]
+instance [SubstMap T (T::V)] [SubstMapAll (T::V)] [SubstMapCompose T (T::V)] [SubstMapVecDef T T V]
   : SubstMapCompose (Action T) (T::V)
 where
-  apply_compose := by sorry
+  apply_compose := by
+    intro s σ τ; cases s <;> simp
+    rcases σ with ⟨σ, σs⟩
+    rcases τ with ⟨τ, τs⟩
+    simp; rw [SubstMapVecDef.apply_vecdef]
 
 instance [SubstMap S V] [SubstSuffix S V] [SubstMapAll V] [SubstMapCompose S V]
   : SubstMapCompose (Action S) V
 where
   apply_compose := by intro s; cases s <;> simp
 
-instance [SubstMap T (T::V)] [SubstMapAll (T::V)] [SubstMapCompose T (T::V)]
+theorem Subst.apply_compose_lemma [SubstMap T (T::V)] :
+  ∀ [SubstMapAll (T::V)] [SubstMapCompose T (T::V)] [SubstMapVecDef T T V]
+    {s : Subst T} {σ τ : SubstVec (T :: V)},
+    s[σ,][τ,] = s[σ >> τ,]
+| .cons (i1 := i1) (i2 := i2) (i3 := i3) i4, i5, i6, ⟨f⟩, (σ, σs), (τ, τs) => by
+  simp [SubstMap.smap, smap0, smap1]
+  funext; case _ i =>
+  cases (f i)
+  case re x =>
+    simp; cases (σ.act x) <;> simp
+    rw [SubstMapVecDef.apply_vecdef]
+  case su t =>
+    simp only -- possible Lean bug here around instance resolution
+    have lem2 := @Subst.apply_compose T (T::V) _ i4.cons i5 t (σ, σs) (τ, τs)
+    rw [lem2]; simp; congr
+
+instance [SubstMap T (T::V)] [SubstMapAll (T::V)] [SubstMapCompose T (T::V)] [SubstMapVecDef T T V]
   : SubstMapCompose (Subst T) (T::V)
 where
-  apply_compose := by sorry
+  apply_compose := Subst.apply_compose_lemma
 
 instance [SubstMap S V] [SubstSuffix S V] [SubstMapAll V] [SubstMapCompose S V]
   : SubstMapCompose (Subst S) V
 where
-  apply_compose := by sorry
+  apply_compose := by
+    intro s σ τ
+    cases s; case _ f =>
+    simp [SubstMap.smap, Subst.smap1]
+    funext; case _ i =>
+    cases (f i) <;> simp
 
 -- @[simp↓, grind =]
 -- theorem Subst.apply_compose2 [SubstMap S [T1, T2]] [SubstMapCompose S [T1, T2]]
