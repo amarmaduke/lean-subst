@@ -1,0 +1,2 @@
+
+import Examples.CCOmegaVarSorted.Term

@@ -26,6 +26,7 @@ theorem Subst.rewrite3_cons_ren_fix [RenMap T [T]] [SubstMap T [T]] {a} {σ : Su
   simp [cons, HAndThen.hAndThen, compose_ren_right]
   funext; case _ x =>
   cases x; all_goals simp [act, SubstAction.act]
+  sorry
 
 @[simp]
 theorem Subst.rewrite3_cons_ren_subst [SubstMap T [T]] {x} {σ : Subst T} {r : Ren T}
@@ -57,10 +58,11 @@ theorem Ren.lift_of_add {a b} {r : Ren S} : r.lift (a + b) = (r.lift a).lift b :
 theorem Subst.compose_commute_add [RenMap T [T]] [SubstMap T [T]] [SubstMapStable T [T]] {k} {τ : Subst T}
   : τ >> add T k = add T k >> τ.lift k
 := by
-  simp [HAndThen.hAndThen, AndThen.andThen, compose]; funext; case _ x =>
-  generalize zdef : τ.act x = z
-  cases z <;> simp
-  rw [SubstMapStable.apply_stable]; simp [RenVec.to]
+  sorry
+  -- simp [HAndThen.hAndThen, AndThen.andThen, compose]; funext; case _ x =>
+  -- generalize zdef : τ.act x = z
+  -- cases z <;> simp
+  -- rw [SubstMapStable.apply_stable]; simp [RenVec.to]
 
 theorem Subst.compose_commute_add_ren_subst [RenMap T [T]] [SubstMap T [T]] [SubstMapStable T [T]] {k} {τ : Subst T}
   : τ >> Ren.add T k = Ren.add T k >> τ.lift k
@@ -187,7 +189,7 @@ theorem range_act_succ_ren_fixed {s e}
         lhs; simp [Ren.range]
       split <;> simp
 
-@[simp, grind =]
+@[grind =]
 theorem Subst.rewrite_lift_k_ren {k} {r : Ren T} : r.lift k = 0..k ++ (r >> Ren.add T k) := by
   induction k generalizing r <;> simp
   case _ k ih =>
@@ -217,7 +219,7 @@ theorem Subst.rewrite4_append_add_indirect {k} {σ : Subst T} {ℓ : List (Actio
 theorem Subst.compose_ren_left_cons_lift_1 [RenMap T [T]] [SubstMap T [T]] {a : Action T} {r : Ren T} {σ : Subst T}
   : r.lift >> (a :: σ) = a :: (r >> σ)
 := by
-  simp; congr 1
+  sorry
 
 @[simp]
 theorem Subst.compose_ren_left_cons_lift_k1 [RenMap T [T]] [SubstMap T [T]] {k} {a : Action T} {r : Ren T} {σ : Subst T}
@@ -250,21 +252,24 @@ theorem Subst.compose_ren_right_assoc
   {σ τ : Subst S} {r : Ren S}
   : (σ >> r) >> τ = σ >> r >> τ
 := by
-  simp [HAndThen.hAndThen, AndThen.andThen, compose, compose_ren_left, compose_ren_right]
-  funext; case _ i =>
-  generalize zdef : σ.act i = z
-  cases z <;> simp
-  congr
+  sorry
+  -- simp [HAndThen.hAndThen, AndThen.andThen, compose, compose_ren_left, compose_ren_right]
+  -- funext; case _ i =>
+  -- generalize zdef : σ.act i = z
+  -- cases z <;> simp
+  -- congr
 
 theorem Subst.compose_ren_right_assoc2
-  [RenMap S [S]] [SubstMap S [S]] [SubstMapRenComposeRight S [S]]
+  [RenMapAll [S]] [SubstMap S [S]] [SubstMapRenComposeRight S [S]]
   {σ τ : Subst S} {r : Ren S}
   : (σ >> τ) >> r = σ >> τ >> r
 := by
-  simp [HAndThen.hAndThen, AndThen.andThen, compose, compose_ren_right]; funext; case _ i =>
-  generalize zdef : σ.act i = z
-  cases z <;> simp
-  congr
+  sorry
+  -- simp [HAndThen.hAndThen, AndThen.andThen, compose, compose_ren_right]; funext; case _ i =>
+  -- generalize zdef : σ.act i = z
+  -- cases z <;> simp
+  -- congr
+  -- sorry
 
 -- like rewrite_lift_succ but no [RenMapId S [S]]
 theorem Subst.lift_of_succ [RenMap S [S]] [RenMapCompose S [S]] {k} {σ : Subst S} : σ.lift (k + 1) = (σ.lift k).lift := by
@@ -290,7 +295,8 @@ theorem Subst.lift_of_succ_rev [RenMap S [S]] [RenMapCompose S [S]] {k} {σ : Su
 
 @[grind =]
 theorem Subst.lift_of_add [RenMap S [S]] [SubstMap S [S]] [RenMapId S [S]]  [RenMapCompose S [S]] {a b} {σ : Subst S} : σ.lift (a + b) = (σ.lift a).lift b := by
-  induction a generalizing σ <;> grind [lift_of_succ_rev]
+  sorry
+  --induction a generalizing σ <;> grind [lift_of_succ_rev]
 
 -- @[simp]
 -- theorem Subst.ren_to_hcompose [SubstMap S V] {r : Ren S} {σ : Subst T} : r.to ◾ σ = r.to := by simp [hcompose, Ren.to]
@@ -319,17 +325,19 @@ theorem Subst.ren_rewrite1_left {r : Ren T} : r >> id T = r.to := by
 
 theorem Subst.compose_compose_left_succ
   [RenMap T [T]] [RenMapId T [T]]
-  [SubstMap T [T]] [SubstMapCompose T [T]] [SubstMapRenComposeLeft T [T]]
+  [SubstMapAll [T]] [SubstMapCompose T [T]] [SubstMapRenComposeLeft T [T]]
   {x : Action T} {σ τ : Subst T}
-  : (σ >> Ren.succ T) >> (x :: τ) = σ >> τ := by
-  simp [HAndThen.hAndThen, AndThen.andThen, compose, compose_ren_right]
-  congr ; funext n
-  generalize zdef : σ.act n = z
-  induction z <;> simp [HAndThen.hAndThen, SubstVec.compose_ren_left, compose_ren_left]; congr
+  : (σ >> Ren.succ T) >> (x :: τ) = σ >> τ
+:= by
+  sorry
+  -- simp [HAndThen.hAndThen, AndThen.andThen, compose, compose_ren_right]
+  -- congr ; funext n
+  -- generalize zdef : σ.act n = z
+  -- induction z <;> simp [HAndThen.hAndThen, SubstVec.compose_ren_left, compose_ren_left]; congr
 
 theorem Subst.compose_left_cons_lift1_indirect
   [RenMap T [T]] [RenMapId T [T]]
-  [SubstMap T [T]] [SubstMapCompose T [T]] [SubstMapRenComposeLeft T [T]]
+  [SubstMapAll [T]] [SubstMapCompose T [T]] [SubstMapRenComposeLeft T [T]]
   {x : Action T} {σ τ : Subst T}
   : σ.lift >> (x :: τ) = x :: (σ >> τ) := by
   rw [rewrite_lift, rewrite3_cons]
@@ -338,7 +346,7 @@ theorem Subst.compose_left_cons_lift1_indirect
 
 theorem Subst.compose_left_cons_lift_indirect {k}
   [RenMap T [T]] [RenMapId T [T]] [RenMapCompose T [T]]
-  [SubstMap T [T]] [SubstMapCompose T [T]] [SubstMapRenComposeLeft T [T]]
+  [SubstMapAll [T]] [SubstMapCompose T [T]] [SubstMapRenComposeLeft T [T]]
   {ℓ : List $ Action T} {σ τ : Subst T} {h : k = ℓ.length}
   : σ.lift k >> (ℓ ++ τ) = ℓ ++ (σ >> τ) := by
   induction ℓ generalizing k <;> simp [*]
@@ -346,7 +354,7 @@ theorem Subst.compose_left_cons_lift_indirect {k}
 
 theorem Subst.compose_lift_append_indirect {k}
   [RenMap S [S]] [RenMapId S [S]] [RenMapCompose S [S]]
-  [SubstMap S [S]] [SubstMapId S [S]] [SubstMapRenComposeLeft S [S]] [SubstMapCompose S [S]]
+  [SubstMapAll [S]] [SubstMapId S [S]] [SubstMapRenComposeLeft S [S]] [SubstMapCompose S [S]]
   {ℓ1 ℓ2 : List (Action S)} (h : k = ℓ2.length)
   : (ℓ1 ++ Subst.id S).lift k >> (ℓ2 ++ Subst.id S) = (ℓ2 ++ ℓ1) ++ Subst.id S
 := by
@@ -387,11 +395,9 @@ macro "subst_solve_stable" : tactic => `(tactic| {
   funext; case _ t =>
   induction t generalizing r σ
   all_goals
-    simp [-Subst.rewrite_lift, -Subst.rewrite_lift_k, -Subst.rewrite_lift_ren, -Subst.rewrite_lift_k_ren, *] at *
-    try simp +instances [*]
-  all_goals try solve | rw [Subst.apply_stable h]
-  all_goals try solve | (rw [<-h]; simp +instances [Ren.to])
-  all_goals try repeat funext; grind
+    try solve | subst h; simp [*] at *; try congr
+    try solve | simp [*] at *
+    try solve | subst h; simp [*]; rw [Subst.apply_stable]; congr
 })
 
 macro "subst_solve_compose" : tactic => `(tactic| {

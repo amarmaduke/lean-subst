@@ -1,3 +1,4 @@
+
 import LeanSubst
 open LeanSubst
 
@@ -35,69 +36,93 @@ instance : Coe (Action Term) Term where
   coe := Term.from_action
 
 @[simp]
-def Term.rmap (r : Ren Term) : Term -> Term
-| var x => var (r.act x)
+def Term.rmap (r : RenVec [Term]) : Term -> Term
+| var x => var (r.1.act x)
 | app n t ts => app n (t.rmap r) (λ i => (ts i).rmap r)
-| lam n As t => lam n As (t.rmap $ r.lift n)
+| lam n As t => lam n As (t.rmap $ r.lift [n])
 
 instance : RenMap Term [Term] where
-  rmap r := Term.rmap r.1
+  rmap r := Term.rmap r
 
-@[simp, grind =]
-theorem Term.rmap_var {x} {r : Ren Term} : (var x)⟨r⟩ = .var (r.act x) := by
-  simp [RenMap.rmap]
+@[reducible, simp]
+instance instRenMapAll_Term : RenMapAll [Term] := .cons .nil
 
-@[simp, grind =]
-theorem Term.rmap_app {n} {t : Term} {ts  : Fin n -> Term} {r : Ren Term}
-  : (app n t ts)⟨r⟩ = app n t⟨r⟩ (λ i => (ts i)⟨r⟩)
-:= by simp [RenMap.rmap]
+@[simp]
+theorem Term.rmap_fix {r : RenVec [Term]} {t : Term} : rmap r t = t⟨r,⟩ := by simp [RenMap.rmap]
 
-@[simp, grind =]
-theorem Term.rmap_lam {n As t} {r : Ren Term} : (lam n As t)⟨r⟩ = lam n As t⟨r.lift n⟩ := by
-  simp [RenMap.rmap]
+@[simp]
+theorem Term.rmap_var {x} {r : RenVec [Term]} : (var x)⟨r,⟩ = .var (r.1.act x) := by
+  simp only [RenMap.rmap]; rw [rmap]
+
+@[simp]
+theorem Term.rmap_app {n} {t : Term} {ts  : Fin n -> Term} {r : RenVec [Term]}
+  : (app n t ts)⟨r,⟩ = app n t⟨r,⟩ (λ i => (ts i)⟨r,⟩)
+:= by simp only [RenMap.rmap]; rw [rmap]
+
+@[simp]
+theorem Term.rmap_lam {n As t} {r : RenVec [Term]} : (lam n As t)⟨r,⟩ = lam n As t⟨r.lift [n],⟩ := by
+  simp only [RenMap.rmap]; rw [rmap]
+
+@[simp]
+theorem Term.from_action_rmap {t : Action Term} {r : RenVec [Term]}
+  : (from_action t)⟨r,⟩ = from_action t⟨r,⟩
+:= by cases t <;> simp
+
+instance : RenMapEmpty Term where
+  apply_empty := by intro s; simp
 
 instance : RenMapId Term [Term] where
   apply_id := by subst_solve_id
 
 instance : RenMapCompose Term [Term] where
-  apply_compose := by sorry
+  apply_compose := by subst_solve_compose
 
 @[simp]
-def Term.smap (σ : Subst Term) : Term -> Term
-| var x => σ.act x
+def Term.smap (σ : SubstVec [Term]) : Term -> Term
+| var x => σ.1.act x
 | app n t ts => app n (t.smap σ) (λ i => (ts i).smap σ)
-| lam n As t => lam n As (t.smap $ σ.lift n)
+| lam n As t => lam n As (t.smap $ σ.lift [n])
 
 instance : SubstMap Term [Term] where
-  smap σ := Term.smap σ.1
+  smap σ := Term.smap σ
 
--- `σ.1.act` might change to `σ[0].act` to prevent things like `σ.2.2.1.act`
-@[simp, grind =]
+@[reducible, simp]
+instance instSubstMapAll_Ty : SubstMapAll [Term] := .cons .nil
+
+@[simp]
 theorem Term.smap_var {x} {σ : SubstVec [Term]} : (var x)[σ,] = from_action (σ.1.act x) := by
-  simp [SubstMap.smap]
+  simp only [SubstMap.smap]; rw [smap]
 
-@[simp, grind =]
-theorem Term.smap_app {n} {t : Term} {ts  : Fin n -> Term} {σ : Subst Term}
-  : (app n t ts)[σ] = app n t[σ] (λ i => (ts i)[σ])
-:= by simp [SubstMap.smap]
+@[simp]
+theorem Term.smap_app {n} {t : Term} {ts  : Fin n -> Term} {σ : SubstVec [Term]}
+  : (app n t ts)[σ,] = app n t[σ,] (λ i => (ts i)[σ,])
+:= by simp only [SubstMap.smap]; rw [smap]
 
-@[simp, grind =]
-theorem Term.smap_lam {n As t} {σ : Subst Term} : (lam n As t)[σ] = lam n As t[σ.lift n] := by
-  simp [SubstMap.smap]
+@[simp]
+theorem Term.smap_lam {n As t} {σ : SubstVec [Term]} : (lam n As t)[σ,] = lam n As t[σ.lift [n],] := by
+  simp only [SubstMap.smap]; rw [smap]
+
+@[simp]
+theorem Term.from_action_smap {t : Action Term} {σ : SubstVec [Term]}
+  : (from_action t)[σ,] = from_action t[σ,]
+:= by cases t <;> simp
+
+instance : SubstMapEmpty Term where
+  apply_empty := by intro s; simp
 
 instance : SubstMapId Term [Term] where
-  apply_id := by sorry
+  apply_id := by subst_solve_id
 
 instance : SubstMapStable Term [Term] where
-  apply_stable := by sorry
+  apply_stable := by subst_solve_stable
 
 instance : SubstMapRenComposeLeft Term [Term] where
-  apply_ren_compose_left := by sorry
+  apply_ren_compose_left := by subst_solve_compose
 
 instance : SubstMapRenComposeRight Term [Term] where
-  apply_ren_compose_right := by sorry
+  apply_ren_compose_right := by subst_solve_compose
 
 instance : SubstMapCompose Term [Term] where
-  apply_compose := by sorry
+  apply_compose := by subst_solve_compose
 
 end VariadicSTLC

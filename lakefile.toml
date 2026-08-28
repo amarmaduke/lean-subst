@@ -1,5 +1,5 @@
 name = "lean-subst"
-version = "0.1.0"
+version = "0.3.0"
 defaultTargets = ["lean-subst"]
 
 leanOptions = { autoImplicit = false }
@@ -15,6 +15,7 @@ name = "LeanSubst"
 
 [[lean_lib]]
 name = "Examples"
+root = "Examples"
 
 [[lean_exe]]
 name = "lean-subst"
