@@ -30,7 +30,7 @@ inductive Term where
 #leansubst bind Ty at pos 0 in Term.tlam
 #leansubst bind 2 of Term at pos 2 in Term.nrec
 
-#leansubst generate Ty
+#leansubst generate Ty, Term
 
 -- Checking Ty --
 #print Ty.from_action

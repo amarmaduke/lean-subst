@@ -270,7 +270,7 @@ namespace Automation
           if useTCSyntax then `(($x)⟨$(r),⟩) else `($rmap $r $x)
       else if let some theTy ← List.findM? (fun ty ↦ do pure (← liftCoreM $ runMetaMAsCoreM $ isDefEq (← liftTermElabM $ Term.elabTerm ty.raw none) ty')) tys then
         let r' ← getTy r tys.toArray theTy
-        `(($x)⟨$r',⟩)
+        `(($x)⟨$r'⟩)
       else
         `($x)
 
@@ -316,7 +316,7 @@ namespace Automation
       )
     ))
 
-    for ty' in tys do
+    for ty' in tys.tail do
       let tyList ← (tys.map (·.raw)).mapM (fun `($ty'') ↦ do
         let ty'Expr ← liftTermElabM $ Term.elabTerm ty' none
         let ty''Expr ← liftTermElabM $ Term.elabTerm ty'' none
@@ -324,7 +324,7 @@ namespace Automation
           `($(r).1)
         else
           `(Ren.id $ty''))
-      let tyArr := (tyList.append [← `(.unit)]).toArray
+      let tyArr := (tyList.append [← `(.nil)]).toArray
       elabCommand $ ← `(
         instance : RenMap $ty [$ty'] where
           rmap $r:ident :=  $rmap ⟨ $tyArr:term,* ⟩
