@@ -265,7 +265,7 @@ namespace Automation
         pure none
 
     let rmap := qualify "rmap"
-    let rmap_f useTCSyntax ty' data x xs := match data with
+    let rmap_f useTCSyntax ty' data x xs (tys := tys) := match data with
     | .var => `($(r).1.act $x) -- NOTE: assumes that the type being generated is the first type in [tys]
     | _ => do
       let tyExpr ← liftTermElabM $ Term.elabTerm ty none
@@ -338,9 +338,8 @@ namespace Automation
       let tyQual := if tys.length = 1 then "" else "_" ++ ("_".intercalate $ pfx.map (fun ty ↦ ty.raw.getId.toString.toLower))
       let thmName := qualify s!"rmap{tyQual}_{ctor.components.getLast!}"
       dbg_trace s!"NAME: {thmName}"
-      let fRhs := rmap_f true
+      let fRhs := rmap_f true (tys := pfx)
       let fLhs lhs := `(($lhs)⟨$(r),⟩)
-      -- TODO: Ah fuck we actually have to be careful here. The ".2.1" depends on which variant we're making.
       let eq ← mkCtorEq fLhs fRhs ctor
       let args ← mkCtorArgs ctor
       elabCommand $ ← `(
