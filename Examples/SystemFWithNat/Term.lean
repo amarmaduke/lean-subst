@@ -30,7 +30,19 @@ inductive Term where
 #leansubst bind Ty at pos 0 in Term.tlam
 #leansubst bind 2 of Term at pos 2 in Term.nrec
 
-#leansubst generate Ty
+-- set_option diagnostics true
+
+#leansubst generate Ty, Term
+
+def r : Ren Ty := sorry
+
+def rvec : RenVec [Term, Ty] := sorry
+
+def x : Ty := sorry
+def x' : Option Bool := sorry
+
+#check x⟨r⟩
+#check x⟨rvec.2.1⟩
 
 -- Checking Ty --
 #print Ty.from_action
@@ -52,6 +64,22 @@ inductive Term where
 
 #print Ty.smap
 #print Ty.smap._f
+
+-- Checking Term --
+
+#print Term.rmap
+#print Term.rmap._f
+
+#print Term.rmap_term_var
+#print Term.rmap_term_app
+#print Term.rmap_term_lam
+#print Term.rmap_term_tapp
+#print Term.rmap_term_tlam
+#print Term.rmap_term_zero
+#print Term.rmap_term_succ
+#print Term.rmap_term_nrec
+
+
 
 ----------------------------------------------------------------------------------------------------
 -- Ty Renaming & Substitution
@@ -321,7 +349,7 @@ theorem Term.rmap_term_app {t1 t2} {r : RenVec [Term]} : (app t1 t2)⟨r,⟩ = a
   simp only [RenMap.rmap]; rw [rmap]; try simp
 
 @[simp]
-theorem Term.rmap_term_lam {A t} {r : RenVec [Term]}
+theorem Term.rmap_term_lam' {A t} {r : RenVec [Term]}
   : (lam A t)⟨r,⟩ = lam A t⟨r.lift [1],⟩
 := by simp only [RenMap.rmap]; rw [rmap]; try simp
 

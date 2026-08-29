@@ -57,6 +57,7 @@ namespace Automation
   def y := mkIdent `y
   def z := mkIdent `z
   def r := mkIdent `r
+  def s := mkIdent `s
   def n := mkIdent `n
   def t := mkIdent `t
   def σ := mkIdent `σ
@@ -158,7 +159,7 @@ namespace Automation
   def getTy (rσ : Ident) (tys : Array Ident) (ty : Ident) : CommandElabM Term := do
     let pos := tys.idxOf ty
     let mut stx ← `($rσ)
-    for _ in List.range $ pos - 1 do
+    for _ in List.range $ pos do
       stx ← `($stx.2)
     `($stx.1)
 
@@ -275,8 +276,8 @@ namespace Automation
           if useTCSyntax then `(($x)⟨$(r),⟩) else `($rmap $r $x)
       else if let some theTy ← List.findM? (fun ty ↦ do pure (← liftCoreM $ runMetaMAsCoreM $ isDefEq (← liftTermElabM $ Term.elabTerm ty.raw none) ty')) tys then
         let r' ← getTy r tys.toArray theTy
-        dbg_trace s!"VAR {x} with type {ty'} and rmap {r'}\n\n"
-        `((($x)⟨$r'⟩))
+        dbg_trace s!"\nVAR {x} with type {ty'} and rmap {r'}\n"
+        `(($x⟨$r'⟩))
       else
         `($x)
 
@@ -305,7 +306,7 @@ namespace Automation
           else
             `(Ren.id $ty''))
         let tyArr := (tyList.append [← `(.nil)]).toArray
-        dbg_trace s!"INSTANCE {ty} [{ty'}]\n\n"
+        dbg_trace s!"INSTANCE {ty} ⟨{ty'}⟩\n\n"
         elabCommand $ ← `(
           instance : RenMap $ty [$ty'] where
             rmap $r:ident :=  $rmap ⟨ $tyArr:term,* ⟩
@@ -334,11 +335,12 @@ namespace Automation
     )
 
     forHeadAndEachSuffix tys (fun pfx ↦ forEachCtor tyNameGlobal (fun ctor ↦ do
-      let tyQual := if tys.length = 1 then "" else "_".intercalate $ pfx.map (fun ty ↦ ty.raw.getId.toString.toLower)
+      let tyQual := if tys.length = 1 then "" else "_" ++ ("_".intercalate $ pfx.map (fun ty ↦ ty.raw.getId.toString.toLower))
       let thmName := qualify s!"rmap{tyQual}_{ctor.components.getLast!}"
       dbg_trace s!"NAME: {thmName}"
       let fRhs := rmap_f true
       let fLhs lhs := `(($lhs)⟨$(r),⟩)
+      -- TODO: Ah fuck we actually have to be careful here. The ".2.1" depends on which variant we're making.
       let eq ← mkCtorEq fLhs fRhs ctor
       let args ← mkCtorArgs ctor
       elabCommand $ ← `(
@@ -352,6 +354,17 @@ namespace Automation
       @[simp]
       theorem $from_action_rmap {$t : Action $ty} {$r : RenVec [$tys.toArray,*]} : ($from_action $t)⟨$r,⟩ = $from_action ($t⟨$r,⟩) := by
         cases $t:ident <;> simp [$from_action:ident]
+    )
+
+    elabCommand $ ← `(
+      instance : RenMapEmpty $ty where
+        apply_empty := by intro $s:ident; simp [RenMap.rmap]
+
+      instance : RenMapId $ty [$ty] where
+        apply_id := by subst_solve_id
+
+      instance : RenMapCompose $ty [$ty] where
+        apply_compose := by subst_solve_compose
     )
 
     let instRenMapAll_ty := mkIdent $ .mkStr1 s!"instRenMapAll_{ty.raw.getId.toString}" -- not qualified
@@ -387,7 +400,7 @@ namespace Automation
       | .binder blah => do
         let lifts ← tys.mapM $ getLiftsOfTy data xs
         let optionLifts := lifts.map (fun stx : Term ↦ if BEq.beq stx $ Syntax.mkNatLit 0 then none else some stx)
-        dbg_trace s!"\n\nLIFTS: {optionLifts} for data {blah}"
+        dbg_trace s!"\nLIFTS: {optionLifts} for data {blah}\n"
 
         -- Check if all lifts are syntactically just 0
         if optionLifts.all (fun | none => true | some _ => false) then
