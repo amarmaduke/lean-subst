@@ -303,6 +303,25 @@ namespace Automation
               pure ⟨mkIdent ty', Syntax.mkNatLit 0⟩)
       pure $ increments.filter (fun (_, stx) ↦ match stx with | `(0) => false | _ => true)
 
+    let mkLiftArr (data : ArgData) (xs : List Ident) : CommandElabM $ Option Term :=
+      match data with
+      | .binder _ => do
+        let lifts ← tys.mapM $ getLiftsOfTy data xs
+        -- Check if all lifts are syntactically just 0
+        if List.all lifts (fun stx ↦ BEq.beq stx $ Syntax.mkNatLit 0) then
+          pure none
+        else
+          let incrementsList ← tysNamesGlobal.mapM $ getIncrementsOfTy lifts
+          let incOps : List $ Option Term ← incrementsList.mapM (fun incs ↦ do
+            let incOps ← incs.mapM (fun ⟨ty, inc⟩ ↦ `(Ren.add $ty:ident $inc))
+            if 0 < incOps.length then
+              pure $ some $ ← incOps.foldlM (fun t1 t2 ↦ `($t1⟨$t2⟩)) (← `(·))
+            else
+              pure none
+          )
+          pure $ ← `([$lifts.toArray,*])
+      | _ => pure none
+
     let mkMapArr (data : ArgData) (xs : List Ident) : CommandElabM $ Option Term :=
       match data with
       | .binder _ => do
@@ -319,11 +338,11 @@ namespace Automation
             else
               pure none
           )
-          let liftOps ← (lifts.map (·.raw)).mapM (fun | `(0) => `(id) | `(1) => `(.lift) | `($t) => `(.lift (k := $t)))
+          let liftOps ← lifts.mapM (fun k ↦ `(.lift $k))
           let ops ← (incOps.zip liftOps).mapM (fun
             | ⟨some incOp, liftOp⟩ => match liftOp with | `(id) => `(($incOp)) | _ => `(($incOp) ∘ $liftOp)
             | ⟨none, liftOp⟩ => `($liftOp))
-          pure $ ← `(𝐭[$ops.toArray,*])
+          pure $ ← `([$ops.toArray,*])
       | _ => pure none
 
     let smap := qualify "smap"
@@ -344,14 +363,14 @@ namespace Automation
     let smap_fVar xs := `(($(σ).get 0).act $(xs[0]!):ident) -- TODO: At the moment, this doesn't generalize to vars with data
     let smapCases ← mkAllCases (smap_f false) tyNameGlobal (fVar := some smap_fVar)
 
-    elabCommand $ ← `(
-      @[simp]
-      def $smap ($σ : SubstVec [$tys.toArray,*]) : $ty → $ty
-      $smapCases:matchAlt*
+    -- elabCommand $ ← `(
+    --   @[simp]
+    --   def $smap ($σ : SubstVec [$tys.toArray,*]) : $ty → $ty
+    --   $smapCases:matchAlt*
 
-      instance : SubstMap $ty [$tys.toArray,*] where
-        smap := $smap
-    )
+    --   instance : SubstMap $ty [$tys.toArray,*] where
+    --     smap := $smap
+    -- )
 
   def genAllTys : List Ident → CommandElabM Unit
   | [] => pure ()
