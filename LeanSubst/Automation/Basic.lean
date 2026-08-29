@@ -163,6 +163,23 @@ namespace Automation
       stx ← `($stx.2)
     `($stx.1)
 
+  def forEachPrefix : (tys : List Ident) → (f : List Ident → CommandElabM Unit) → CommandElabM Unit
+  | [], _ => pure ()
+  | tys@(.cons _ tys'), f => do
+    f tys
+    forEachPrefix tys' f
+
+
+  def forHeadAndEachPrefix : (tys : List Ident) → (f : List Ident → CommandElabM Unit) → CommandElabM Unit
+  | [], _ => pure ()
+  | .cons ty [], f => do f [ty]
+  | tys@(.cons ty _), f => do
+    f [ty]
+    forEachPrefix tys f
+
+  def forEachCtor (ty : Name) (f : Name → CommandElabM Unit) : CommandElabM Unit := do
+    for ctor in ← liftCoreM $ runMetaMAsCoreM $ getConstructors ty do f ctor
+
   def genTy (tys : List Ident) : CommandElabM Unit := do
     let ty := tys[0]!
     let tyName := ty.raw.getId
@@ -248,12 +265,12 @@ namespace Automation
       let tyExpr ← liftTermElabM $ Term.elabTerm ty none
       if ← liftCoreM $ runMetaMAsCoreM $ isDefEq tyExpr ty' then
         if let some liftArr ← mkLiftArr data xs then
-          if useTCSyntax then `(($x)⟨$(r).lift $liftArr⟩) else `($rmap ($(r).lift $liftArr) $x)
+          if useTCSyntax then `(($x)⟨$(r).lift $liftArr,⟩) else `($rmap ($(r).lift $liftArr) $x)
         else
           if useTCSyntax then `(($x)⟨$(r),⟩) else `($rmap $r $x)
       else if let some theTy ← List.findM? (fun ty ↦ do pure (← liftCoreM $ runMetaMAsCoreM $ isDefEq (← liftTermElabM $ Term.elabTerm ty.raw none) ty')) tys then
         let r' ← getTy r tys.toArray theTy
-        `(($x)⟨$r'⟩)
+        `(($x)⟨$r',⟩)
       else
         `($x)
 
@@ -273,16 +290,31 @@ namespace Automation
       theorem $rmap_fix {$r : RenVec [$tys.toArray,*]} {$t : $ty} : $rmap $r $t = $t⟨$r,⟩ := by simp [RenMap.rmap]
     )
 
-    for ctor in ← liftCoreM $ runMetaMAsCoreM $ getConstructors tyNameGlobal do
-      let thmName := qualify s!"rmap_{ctor.components.getLast!}"
-      let fRhs := rmap_f false
+    -- forEachCtor tyNameGlobal (fun ctor ↦ do
+    --   let thmName := qualify s!"rmap_{ctor.components.getLast!}"
+    --   let fRhs := rmap_f false
+    --   let fLhs lhs := `(($lhs)⟨$(r),⟩)
+    --   let eq ← mkCtorEq fLhs fRhs ctor
+    --   let args ← mkCtorArgs ctor
+    --   elabCommand $ ← `(
+    --     @[simp, grind =]
+    --     theorem $thmName {$args.toArray*} {$r : RenVec [$tys.toArray,*]} : $eq := rfl
+    --   )
+    -- )
+
+    forHeadAndEachPrefix tys (fun pfx ↦ forEachCtor tyNameGlobal (fun ctor ↦ do
+      let tyQual := if tys.length = 1 then "" else "_".intercalate $ pfx.map (fun ty ↦ ty.raw.getId.toString.toLower)
+      let thmName := qualify s!"rmap{tyQual}_{ctor.components.getLast!}"
+      dbg_trace s!"NAME: {thmName}"
+      let fRhs := rmap_f true -- TODO: should be true, but something is wrong
       let fLhs lhs := `(($lhs)⟨$(r),⟩)
       let eq ← mkCtorEq fLhs fRhs ctor
       let args ← mkCtorArgs ctor
       elabCommand $ ← `(
-        @[simp, grind =]
-        theorem $thmName {$args.toArray*} {$r : RenVec [$tys.toArray,*]} : $eq := rfl
+        @[simp]
+        theorem $thmName {$args.toArray*} {$r : RenVec [$pfx.toArray,*]} : $eq := rfl
       )
+    ))
 
     for ty' in tys do
       let tyList ← (tys.map (·.raw)).mapM (fun `($ty'') ↦ do
@@ -312,6 +344,7 @@ namespace Automation
               pure ⟨mkIdent ty', Syntax.mkNatLit 0⟩)
       pure $ increments.filter (fun (_, stx) ↦ match stx with | `(0) => false | _ => true)
 
+    -- TODO: Use .lift instead of .map if we don't need to apply any renamings
     let mkMapArr (data : ArgData) (xs : List Ident) : CommandElabM $ Option Term :=
       match data with
       | .binder _ => do
@@ -357,7 +390,6 @@ namespace Automation
     let smap_fVar xs := `($(σ).1.act $(xs[0]!):ident) -- TODO: At the moment, this doesn't generalize to vars with data
     let smapCases ← mkAllCases (smap_f false) tyNameGlobal (fVar := some smap_fVar)
 
-    -- ERROR IS HERE
     elabCommand $ ← `(
       @[simp]
       def $smap ($σ : SubstVec [$tys.toArray,*]) : $ty → $ty

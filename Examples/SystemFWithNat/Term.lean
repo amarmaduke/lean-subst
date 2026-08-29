@@ -30,7 +30,7 @@ inductive Term where
 #leansubst bind Ty at pos 0 in Term.tlam
 #leansubst bind 2 of Term at pos 2 in Term.nrec
 
-#leansubst generate Ty, Term
+#leansubst generate Ty
 
 -- Checking Ty --
 #print Ty.from_action
@@ -41,6 +41,11 @@ inductive Term where
 
 #print Ty.rmap
 #print Ty.rmap_fix
+
+#print Ty.rmap_var
+#print Ty.rmap_arrow
+#print Ty.rmap_all
+#print Ty.rmap_nat
 
 ----------------------------------------------------------------------------------------------------
 -- Ty Renaming & Substitution
@@ -391,17 +396,17 @@ instance : RenMapId Term [Ty] where
 instance : RenMapCompose Term [Ty] where
   apply_compose := by subst_solve_compose
 
-@[simp]
-def Term.smap (σ : SubstVec [Term, Ty]) : Term -> Term
-| var x => σ.1.act x
-| app t1 t2 => app (t1.smap σ) (t2.smap σ)
-| lam A t => lam A[σ.2.1] (t.smap $ σ.lift [1, 0])
-| tapp t A => tapp (t.smap σ) A[σ.2.1]
-| tlam t => tlam (t.smap $ σ.map ((SubstVec.MapOps.ren [Ty] ⟨Ren.add Ty 1, .nil⟩) $ .lift 1 $ .nil))
-| zero => zero
-| succ t => succ (t.smap σ)
-| nrec motive z s n =>
-  nrec motive[σ.2.1] (z.smap σ) (s.smap $ σ.lift [2, 0]) (n.smap σ)
+-- @[simp]
+-- def Term.smap (σ : SubstVec [Term, Ty]) : Term -> Term
+-- | var x => σ.1.act x
+-- | app t1 t2 => app (t1.smap σ) (t2.smap σ)
+-- | lam A t => lam A[σ.2.1] (t.smap $ σ.lift [1, 0])
+-- | tapp t A => tapp (t.smap σ) A[σ.2.1]
+-- | tlam t => tlam (t.smap $ σ.map ((SubstVec.MapOps.ren [Ty] ⟨Ren.add Ty 1, .nil⟩) $ .lift 1 $ .nil))
+-- | zero => zero
+-- | succ t => succ (t.smap σ)
+-- | nrec motive z s n =>
+--   nrec motive[σ.2.1] (z.smap σ) (s.smap $ σ.lift [2, 0]) (n.smap σ)
 
 instance : SubstMap Term [Term, Ty] where
   smap := Term.smap
@@ -521,7 +526,7 @@ theorem Term.smap_term_tapp {t1 t2} {σ : SubstVec [Term]}
 
 @[simp]
 theorem Term.smap_term_tlam {t} {σ : SubstVec [Term]}
-  : (tlam t)[σ,] = tlam t[σ.map (.ren [Ty] (𝐫1, .nil) $ .nil),]
+  : (tlam t)[σ,] = tlam t[σ.map (.ren [Ty] (Ren.add Ty 1, .nil) $ .nil),]
 := by simp only [SubstMap.smap]; rw [smap]; try simp
 
 @[simp]
