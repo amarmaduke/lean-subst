@@ -72,6 +72,14 @@ def Term.rmap (r : RenVec [Term]) : Term -> Term
 instance : RenMap Term [Term] where
   rmap r := Term.rmap r
 
+instance : RenSuffix Term [] := ⟨⟩
+instance : RenMap Term [] where
+  rmap _ := id
+
+@[simp]
+theorem Term.rmap_empty {t : Term} {r : RenVec []} : t⟨r,⟩ = t := by
+  simp only [RenMap.rmap, id]
+
 @[reducible, simp]
 instance instRenMapAll_Term : RenMapAll [Term] := .cons .nil
 
@@ -122,6 +130,14 @@ def Term.smap (σ : SubstVec [Term]) : Term -> Term
 
 instance : SubstMap Term [Term] where
   smap σ := Term.smap σ
+
+instance : SubstSuffix Term [] := ⟨⟩
+instance : SubstMap Term [] where
+  smap _ := id
+
+@[simp]
+theorem Term.smap_empty {t : Term} {σ : SubstVec []} : t[σ,] = t := by
+  simp only [SubstMap.smap, id]
 
 @[reducible, simp]
 instance instSubstMapAll_Ty : SubstMapAll [Term] := .cons .nil

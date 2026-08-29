@@ -1036,23 +1036,44 @@ theorem Ren.range_lt_cons {s e} {h : s < e} : s..e = s::(s.succ..e) := by
 ----------------------------------------------------------------------------------------------------
 inductive SubstVec.MapOps : List (Type u2) -> Type _ where
 | nil : MapOps []
+| skip (S : Type u2) {V : List (Type u2)} : MapOps V -> MapOps (S::V)
 | ren
   {S : Type u2} {V : List (Type u2)} (T : List (Type u2))
   [RenMap S T] [RenSuffix S T] (r : RenVec T)
   : MapOps V -> MapOps (S::V)
 | lift {S : Type u2} {V : List (Type u2)} [RenMap S [S]] (n : Nat) : MapOps V -> MapOps (S::V)
+| both
+  {S : Type u2} {V : List (Type u2)} (T : List (Type u2))
+  [RenMap S [S]] [RenMap S T] [RenSuffix S T] (r : RenVec T) (n : Nat)
+  : MapOps V -> MapOps (S::V)
 
 @[simp]
 def SubstVec.MapOps.to : {V : List (Type u2)} -> MapOps V -> List Nat
 | [], nil => []
+| .cons _ _, skip _ ops => 0::ops.to
 | .cons _ _, ren _ _ ops => 0::ops.to
 | .cons _ _, lift n ops => n::ops.to
+| .cons _ _, both _ _ n ops => n::ops.to
 
 @[simp]
 def SubstVec.map : {V : List (Type u2)} -> MapOps V -> SubstVec V -> SubstVec V
 | [], .nil, σs => σs
+| .cons _ _, MapOps.skip _ ops, (σ, σs) => (σ, σs.map ops)
 | .cons _ _, MapOps.ren _ r ops, (σ, σs) => (σ⟨r,⟩, σs.map ops)
 | .cons _ _, MapOps.lift n ops, (σ, σs) => (σ.lift n, σs.map ops)
+| .cons _ _, MapOps.both _ r n ops, (σ, σs) => (σ⟨r,⟩.lift n, σs.map ops)
+
+@[simp]
+theorem SubstVec.map_skip_proj1
+  [RenMap T [T]] {f : MapOps V} {σ : SubstVec (T::V)}
+  : (σ.map (.skip T f)).1 = σ.1
+:= by rcases σ with ⟨σ, σs⟩; simp
+
+@[simp]
+theorem SubstVec.map_skip_proj2
+  [RenMap T [T]] {f : MapOps V} {σ : SubstVec (T::V)}
+  : (σ.map (.skip T f)).2 = σ.2.map f
+:= by rcases σ with ⟨σ, σs⟩; simp
 
 @[simp]
 theorem SubstVec.map_ren_proj1
@@ -1076,6 +1097,20 @@ theorem SubstVec.map_lift_proj1
 theorem SubstVec.map_lift_proj2
   [RenMap T [T]] {f : MapOps V} {n : Nat} {σ : SubstVec (T::V)}
   : (σ.map (.lift n f)).2 = σ.2.map f
+:= by rcases σ with ⟨σ, σs⟩; simp
+
+@[simp]
+theorem SubstVec.map_both_proj1
+  {X} [RenMap T [T]] [RenMap T X] [RenSuffix T X]
+  {n : Nat} {f : MapOps V} {r : RenVec X} {σ : SubstVec (T::V)}
+  : (σ.map (.both X r n f)).1 = σ.1⟨r,⟩.lift n
+:= by rcases σ with ⟨σ, σs⟩; simp
+
+@[simp]
+theorem SubstVec.map_both_proj2
+  {X} [RenMap T [T]] [RenMap T X] [RenSuffix T X]
+  {n : Nat} {f : MapOps V} {r : RenVec X} {σ : SubstVec (T::V)}
+  : (σ.map (.both X r n f)).2 = σ.2.map f
 := by rcases σ with ⟨σ, σs⟩; simp
 
 end LeanSubst

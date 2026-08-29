@@ -40,6 +40,31 @@ theorem Ren.apply_id2 [RenMap S [T1, T2]] [RenMapId S [T1, T2]] {s : S} : s⟨id
 class RenMapCompose (S : Type u1) (V : List (Type u2)) [RenMap S V] where
   apply_compose {s : S} {r1 r2 : RenVec V} : s⟨r1,⟩⟨r2,⟩ = s⟨r1 >> r2,⟩
 
+class inductive RenMapLaws : (V : List (Type u2)) -> Sort _ where
+| nil : RenMapLaws []
+| cons {V Vs}
+  [i1 : RenMap V [V]] [i2 : RenMap V Vs] [i3 : RenSuffix V Vs]
+  [i4 : RenMapId V [V]] [i5 : RenMapCompose V [V]]
+  : RenMapLaws Vs -> RenMapLaws (V::Vs)
+
+@[instance_reducible]
+def RenMapLaws.all : {V : List (Type u2)} -> RenMapLaws V -> RenMapAll V
+| [], .nil => .nil
+| .cons _ _ , cons xs => .cons (all xs)
+
+@[reducible, simp]
+instance [i : RenMapLaws V] : RenMapAll V := i.all
+
+theorem RenMapLaws.id_law : [RenMapLaws (T::V)] -> RenMapId T [T]
+| @RenMapLaws.cons _ _ _i1 _ _ i4 _ _ => i4
+
+instance [i : RenMapLaws (T::V)] : RenMapId T [T] := i.id_law
+
+theorem RenMapLaws.comp_law : [RenMapLaws (T::V)] -> RenMapCompose T [T]
+| @RenMapLaws.cons _ _ _i1 _ _ _ i5 _ => i5
+
+instance [i : RenMapLaws (T::V)] : RenMapCompose T [T] := i.comp_law
+
 @[simp, grind =]
 theorem Ren.apply_compose [RenMap S V] [RenMapCompose S V] {s : S} {r1 r2 : RenVec V}
   : s⟨r1,⟩⟨r2,⟩ = s⟨r1 >> r2,⟩

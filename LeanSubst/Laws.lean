@@ -528,14 +528,20 @@ theorem Subst.rewrite_lift_compose_ren_left
     rw [<-Ren.lift_of_succ]
 
 theorem Subst.rewrite_lift_compose_ren_left_vec :
-  ∀ (V : List (Type u2)) [RenMapAll V]
+  ∀ {V : List (Type u2)} [RenMapAll V]
   {k : List Nat} {r : RenVec V} {τ : SubstVec V},
   (r >> τ).lift k = r.lift k >> τ.lift k
-| [], _, k, r, τ => sorry
-| .cons _ _, _, [], (r, rs), (τ, τs) => by simp
-| .cons _ _, _, .cons k ks, (r, rs), (τ, τs) => by
-  simp
-  sorry
+:= sorry
+
+-- theorem Subst.rewrite_lift_compose_ren_left_vec :
+--   ∀ {V : List (Type u2)} [RenMapLaws V]
+--   {k : List Nat} {r : RenVec V} {τ : SubstVec V},
+--   (r >> τ).lift k = r.lift k >> τ.lift k
+-- | [], _, k, r, τ => by simp
+-- | .cons _ _, _, [], (r, rs), (τ, τs) => by simp
+-- | .cons _ _, @RenMapLaws.cons _ _ _ _ _ _ _ _, .cons k ks, (r, rs), (τ, τs) => by
+--   have ih := rewrite_lift_compose_ren_left_vec (k := ks) (r := rs) (τ := τs)
+--   simp [ih]
 
 theorem Subst.lift_compose_ren_right_k1
   [RenMap T [T]] [RenMapId T [T]] [RenMapCompose T [T]]
@@ -560,11 +566,34 @@ theorem Subst.lift_compose_ren_right
     rw [<-rewrite_lift_succ]
     rw [<-Ren.lift_of_succ]
 
-theorem Subst.lift_compose_ren_right_vec
-  [RenMap T V] [RenMapAll V] [SubstMap T V] [RenMapId T V] [RenMapCompose T V]
-  {k} {σ : SubstVec V} {r : RenVec V}
-  : (σ >> r).lift k = σ.lift k >> r.lift k
+theorem Subst.sigh [RenMap T [T]] :
+  ∃ (σ : Subst T) (r : Ren T) (n : Nat),
+  (σ⟨r⟩ : Subst T).lift.act n ≠ ((σ.lift)⟨r⟩ : Subst T).act n
+:= by
+  exists 𝐬1
+  exists (4::3::2::1::𝐫1)
+  exists 1
+  intro h
+  unfold Subst.lift at h
+  simp [RenMap.rmap, rmap0] at h
+
+theorem Subst.lift_compose_ren_right_vec :
+  ∀ {V : List (Type u2)} [SubstMapAll V] [RenMapAll V]
+  {k} {σ : SubstVec V} {r : RenVec V},
+  (σ >> r).lift k = σ.lift k >> r.lift k
 := sorry
+
+-- theorem Subst.lift_compose_ren_right_vec :
+--   ∀ {V : List (Type u2)} [SubstMapAll V] [RenMapLaws V]
+--   {k} {σ : SubstVec V} {r : RenVec V},
+--   (σ >> r).lift k = σ.lift k >> r.lift k
+-- | [], _, _, k, σ, r => by simp
+-- | .cons _ _, _, _, [], (σ, σs), (r, rs) => by simp
+-- | .cons _ _, _, @RenMapLaws.cons _ _ _ _ _ _ _ _, .cons k ks, (σ, σs), (r, rs) =>
+--   have ih := lift_compose_ren_right_vec (k := ks) (σ := σs) (r := rs)
+--   by
+--     simp [ih]; congr
+--     sorry
 
 theorem Subst.rewrite_lift_compose_k1
   [RenMapAll [T]] [SubstMap T [T]] [SubstMapRenComposeLeft T [T]] [SubstMapRenComposeRight T [T]]

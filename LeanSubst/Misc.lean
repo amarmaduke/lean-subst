@@ -407,8 +407,8 @@ macro "subst_solve_compose" : tactic => `(tactic| {
   all_goals
     try solve | simp; grind
     try solve | simp [*]
-    try simp [Subst.lift_compose_ren_right_vec (T := T), *]
-    try simp [Subst.rewrite_lift_compose_ren_left_vec (T := T), *]
+    try simp [Subst.lift_compose_ren_right_vec, *]
+    try simp [Subst.rewrite_lift_compose_ren_left_vec, *]
     try simp [Subst.rewrite_lift_compose_vec (T := T), *]
   -- intro s σ τ
   -- induction s generalizing σ τ
