@@ -159,7 +159,7 @@ namespace Automation
   def getTy (rσ : Ident) (tys : Array Ident) (ty : Ident) : CommandElabM Term := do
     let pos := tys.idxOf ty
     let mut stx ← `($rσ)
-    for _ in List.range pos do
+    for _ in List.range $ pos - 1 do
       stx ← `($stx.2)
     `($stx.1)
 
@@ -270,7 +270,8 @@ namespace Automation
           if useTCSyntax then `(($x)⟨$(r),⟩) else `($rmap $r $x)
       else if let some theTy ← List.findM? (fun ty ↦ do pure (← liftCoreM $ runMetaMAsCoreM $ isDefEq (← liftTermElabM $ Term.elabTerm ty.raw none) ty')) tys then
         let r' ← getTy r tys.toArray theTy
-        `(($x)⟨$r'⟩)
+        dbg_trace s!"VAR {x} with type {ty'} and rmap {r'}\n\n"
+        `((($x)⟨$r'⟩))
       else
         `($x)
 
@@ -283,6 +284,23 @@ namespace Automation
       instance : RenMap $ty [$tys.toArray,*] where
         rmap := $rmap
     )
+
+    -- If the length of `tys` is 1, then we've already done the only necessary RenMap
+    if tys.length > 1 then
+      for ty' in tys do
+        let tyList ← (tys.map (·.raw)).mapM (fun `($ty'') ↦ do
+          let ty'Expr ← liftTermElabM $ Term.elabTerm ty' none
+          let ty''Expr ← liftTermElabM $ Term.elabTerm ty'' none
+          if ← liftCoreM $ runMetaMAsCoreM $ isDefEq ty'Expr ty''Expr then
+            `($(r).1)
+          else
+            `(Ren.id $ty''))
+        let tyArr := (tyList.append [← `(.nil)]).toArray
+        dbg_trace s!"INSTANCE {ty} [{ty'}]\n\n"
+        elabCommand $ ← `(
+          instance : RenMap $ty [$ty'] where
+            rmap $r:ident :=  $rmap ⟨ $tyArr:term,* ⟩
+        )
 
     let rmap_fix := qualify "rmap_fix"
     elabCommand $ ← `(
@@ -315,20 +333,6 @@ namespace Automation
         theorem $thmName {$args.toArray*} {$r : RenVec [$pfx.toArray,*]} : $eq := rfl
       )
     ))
-
-    for ty' in tys.tail do
-      let tyList ← (tys.map (·.raw)).mapM (fun `($ty'') ↦ do
-        let ty'Expr ← liftTermElabM $ Term.elabTerm ty' none
-        let ty''Expr ← liftTermElabM $ Term.elabTerm ty'' none
-        if ← liftCoreM $ runMetaMAsCoreM $ isDefEq ty'Expr ty''Expr then
-          `($(r).1)
-        else
-          `(Ren.id $ty''))
-      let tyArr := (tyList.append [← `(.nil)]).toArray
-      elabCommand $ ← `(
-        instance : RenMap $ty [$ty'] where
-          rmap $r:ident :=  $rmap ⟨ $tyArr:term,* ⟩
-      )
 
     -- smap
     let getIncrementsOfTy (lifts : List Term) (ty : Name) : CommandElabM $ List (Ident × Term) := do
