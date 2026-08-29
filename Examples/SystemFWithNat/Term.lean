@@ -1,5 +1,7 @@
 
 import LeanSubst
+import LeanSubst.Automation.Basic
+
 open LeanSubst
 
 namespace SystemFWithNat
@@ -20,6 +22,25 @@ inductive Term where
 | succ : Term -> Term
 | nrec (motive : Ty) (z : Term) (s : Term) (n : Term) : Term -- binds 2 Term's in s
 
+#leansubst var Ty.var
+#leansubst bind Ty at pos 0 in Ty.all
+
+#leansubst var Term.var
+#leansubst bind Term at pos 1 in Term.lam
+#leansubst bind Ty at pos 0 in Term.tlam
+#leansubst bind 2 of Term at pos 2 in Term.nrec
+
+#leansubst generate Ty, Term
+
+-- Checking Ty --
+#print Ty.from_action
+#print Ty.from_action_id
+#print Ty.from_action_succ
+#print Ty.from_action_re
+#print Ty.from_action_su
+
+#print Ty.rmap
+#print Ty.rmap_fix
 
 ----------------------------------------------------------------------------------------------------
 -- Ty Renaming & Substitution
@@ -376,7 +397,7 @@ def Term.smap (σ : SubstVec [Term, Ty]) : Term -> Term
 | app t1 t2 => app (t1.smap σ) (t2.smap σ)
 | lam A t => lam A[σ.2.1] (t.smap $ σ.lift [1, 0])
 | tapp t A => tapp (t.smap σ) A[σ.2.1]
-| tlam t => tlam (t.smap $ σ.map (.ren [Ty] (𝐫1, .nil) $ .lift 1 $ .nil))
+| tlam t => tlam (t.smap $ σ.map ((SubstVec.MapOps.ren [Ty] ⟨Ren.add Ty 1, .nil⟩) $ .lift 1 $ .nil))
 | zero => zero
 | succ t => succ (t.smap σ)
 | nrec motive z s n =>

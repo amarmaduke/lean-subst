@@ -158,7 +158,10 @@ namespace Automation
 
   def getTy (rσ : Ident) (tys : Array Ident) (ty : Ident) : CommandElabM Term := do
     let pos := tys.idxOf ty
-    `($(rσ).get $(Syntax.mkNatLit pos))
+    let mut stx ← `($rσ)
+    for _ in List.range pos do
+      stx ← `($stx.2)
+    `($stx.1)
 
   def genTy (tys : List Ident) : CommandElabM Unit := do
     let ty := tys[0]!
@@ -240,7 +243,7 @@ namespace Automation
 
     let rmap := qualify "rmap"
     let rmap_f useTCSyntax ty' data x xs := match data with
-    | .var => `(($(r).get 0).act $x) -- NOTE: assumes that the type being generated is the first type in [tys]
+    | .var => `($(r).1.act $x) -- NOTE: assumes that the type being generated is the first type in [tys]
     | _ => do
       let tyExpr ← liftTermElabM $ Term.elabTerm ty none
       if ← liftCoreM $ runMetaMAsCoreM $ isDefEq tyExpr ty' then
@@ -262,6 +265,12 @@ namespace Automation
 
       instance : RenMap $ty [$tys.toArray,*] where
         rmap := $rmap
+    )
+
+    let rmap_fix := qualify "rmap_fix"
+    elabCommand $ ← `(
+      @[simp]
+      theorem $rmap_fix {$r : RenVec [$tys.toArray,*]} {$t : $ty} : $rmap $r $t = $t⟨$r,⟩ := by simp [RenMap.rmap]
     )
 
     for ctor in ← liftCoreM $ runMetaMAsCoreM $ getConstructors tyNameGlobal do
@@ -297,52 +306,36 @@ namespace Automation
           (fun ⟨ty', lift⟩ ↦ do
             -- Is there a better way to check if two names are equal?
             let ty'_eq_ty ← liftCoreM $ runMetaMAsCoreM $ isDefEq (← liftTermElabM $ Term.elabTerm (mkIdent ty') none) (← liftTermElabM $ Term.elabTerm (mkIdent ty) none)
-            if (← isBoundIn ty' ty) ∧ ¬ ty'_eq_ty then
+            if ¬ ty'_eq_ty ∧ (← isBoundIn ty' ty) then
               pure ⟨mkIdent ty', lift⟩
             else
               pure ⟨mkIdent ty', Syntax.mkNatLit 0⟩)
       pure $ increments.filter (fun (_, stx) ↦ match stx with | `(0) => false | _ => true)
 
-    let mkLiftArr (data : ArgData) (xs : List Ident) : CommandElabM $ Option Term :=
-      match data with
-      | .binder _ => do
-        let lifts ← tys.mapM $ getLiftsOfTy data xs
-        -- Check if all lifts are syntactically just 0
-        if List.all lifts (fun stx ↦ BEq.beq stx $ Syntax.mkNatLit 0) then
-          pure none
-        else
-          let incrementsList ← tysNamesGlobal.mapM $ getIncrementsOfTy lifts
-          let incOps : List $ Option Term ← incrementsList.mapM (fun incs ↦ do
-            let incOps ← incs.mapM (fun ⟨ty, inc⟩ ↦ `(Ren.add $ty:ident $inc))
-            if 0 < incOps.length then
-              pure $ some $ ← incOps.foldlM (fun t1 t2 ↦ `($t1⟨$t2⟩)) (← `(·))
-            else
-              pure none
-          )
-          pure $ ← `([$lifts.toArray,*])
-      | _ => pure none
-
     let mkMapArr (data : ArgData) (xs : List Ident) : CommandElabM $ Option Term :=
       match data with
       | .binder _ => do
         let lifts ← tys.mapM $ getLiftsOfTy data xs
+        let optionLifts := lifts.map (fun stx : Term ↦ if BEq.beq stx $ Syntax.mkNatLit 0 then none else some stx)
         -- Check if all lifts are syntactically just 0
-        if List.all lifts (fun stx ↦ BEq.beq stx $ Syntax.mkNatLit 0) then
+        if optionLifts.all (fun | none => false | some _ => true) then
           pure none
         else
           let incrementsList ← tysNamesGlobal.mapM $ getIncrementsOfTy lifts
-          let incOps : List $ Option Term ← incrementsList.mapM (fun incs ↦ do
-            let incOps ← incs.mapM (fun ⟨ty, inc⟩ ↦ `(Ren.add $ty:ident $inc))
-            if 0 < incOps.length then
-              pure $ some $ ← incOps.foldlM (fun t1 t2 ↦ `($t1⟨$t2⟩)) (← `(·))
-            else
-              pure none
+          let zipped := incrementsList.zip optionLifts
+          let ops : List $ Term ← zipped.mapM (fun ⟨incs, lift⟩ ↦ do
+            let incOps ← incs.mapM (fun ⟨ty, inc⟩ ↦
+              if BEq.beq inc $ Syntax.mkNatLit 0 then `(Ren.id $ty:ident) else `(Ren.add $ty:ident $inc))
+            let anyIncs := incs.tail.any (fun ⟨_, inc⟩ ↦ ¬ (BEq.beq inc $ Syntax.mkNatLit 0))
+
+            let tyTail := tysNamesGlobal.tail.toArray.map mkIdent
+            match (anyIncs, lift) with
+            | (false, none) => `(.skip)
+            | (true, none) => `(.ren [$tyTail,*] ⟨$incOps.tail.toArray,*, .nil⟩)
+            | (false, some ℓ) => `(.lift $ℓ)
+            | (true, some ℓ) => `(.both [$tyTail,*] ⟨$incOps.tail.toArray,*, .nil⟩ $ℓ)
           )
-          let liftOps ← lifts.mapM (fun k ↦ `(.lift $k))
-          let ops ← (incOps.zip liftOps).mapM (fun
-            | ⟨some incOp, liftOp⟩ => match liftOp with | `(id) => `(($incOp)) | _ => `(($incOp) ∘ $liftOp)
-            | ⟨none, liftOp⟩ => `($liftOp))
-          pure $ ← `([$ops.toArray,*])
+          pure $ some $ ← ops.foldrM (fun t1 t2 ↦ `($t1 $ $t2)) $ ← `(LeanSubst.SubstVec.MapOps.nil)
       | _ => pure none
 
     let smap := qualify "smap"
@@ -353,6 +346,7 @@ namespace Automation
       if ← liftCoreM $ runMetaMAsCoreM $ isDefEq tyExpr ty' then
         if let some opsArr ← mkMapArr data xs then
           if useTCSyntax then `(($x)[$(σ).map $opsArr]) else `($smap ($(σ).map $opsArr) $x)
+          -- if useTCSyntax then `(($x)[$(σ)]) else `($smap ($(σ)) $x)
         else
           if useTCSyntax then `(($x)[$(σ),]) else `($smap $σ $x)
       else if let some theTy ← List.findM? (fun ty ↦ do pure (← liftCoreM $ runMetaMAsCoreM $ isDefEq (← liftTermElabM $ Term.elabTerm ty.raw none) ty')) tys then
@@ -360,17 +354,18 @@ namespace Automation
         `(($x)[$σ'])
       else
         `($x)
-    let smap_fVar xs := `(($(σ).get 0).act $(xs[0]!):ident) -- TODO: At the moment, this doesn't generalize to vars with data
+    let smap_fVar xs := `($(σ).1.act $(xs[0]!):ident) -- TODO: At the moment, this doesn't generalize to vars with data
     let smapCases ← mkAllCases (smap_f false) tyNameGlobal (fVar := some smap_fVar)
 
-    -- elabCommand $ ← `(
-    --   @[simp]
-    --   def $smap ($σ : SubstVec [$tys.toArray,*]) : $ty → $ty
-    --   $smapCases:matchAlt*
+    -- ERROR IS HERE
+    elabCommand $ ← `(
+      @[simp]
+      def $smap ($σ : SubstVec [$tys.toArray,*]) : $ty → $ty
+      $smapCases:matchAlt*
 
-    --   instance : SubstMap $ty [$tys.toArray,*] where
-    --     smap := $smap
-    -- )
+      instance : SubstMap $ty [$tys.toArray,*] where
+        smap := $smap
+    )
 
   def genAllTys : List Ident → CommandElabM Unit
   | [] => pure ()

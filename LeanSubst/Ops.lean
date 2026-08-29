@@ -1036,7 +1036,7 @@ theorem Ren.range_lt_cons {s e} {h : s < e} : s..e = s::(s.succ..e) := by
 ----------------------------------------------------------------------------------------------------
 inductive SubstVec.MapOps : List (Type u2) -> Type _ where
 | nil : MapOps []
-| skip (S : Type u2) {V : List (Type u2)} : MapOps V -> MapOps (S::V)
+| skip {S : Type u2} {V : List (Type u2)} : MapOps V -> MapOps (S::V)
 | ren
   {S : Type u2} {V : List (Type u2)} (T : List (Type u2))
   [RenMap S T] [RenSuffix S T] (r : RenVec T)
@@ -1050,7 +1050,7 @@ inductive SubstVec.MapOps : List (Type u2) -> Type _ where
 @[simp]
 def SubstVec.MapOps.to : {V : List (Type u2)} -> MapOps V -> List Nat
 | [], nil => []
-| .cons _ _, skip _ ops => 0::ops.to
+| .cons _ _, skip ops => 0::ops.to
 | .cons _ _, ren _ _ ops => 0::ops.to
 | .cons _ _, lift n ops => n::ops.to
 | .cons _ _, both _ _ n ops => n::ops.to
@@ -1058,7 +1058,7 @@ def SubstVec.MapOps.to : {V : List (Type u2)} -> MapOps V -> List Nat
 @[simp]
 def SubstVec.map : {V : List (Type u2)} -> MapOps V -> SubstVec V -> SubstVec V
 | [], .nil, σs => σs
-| .cons _ _, MapOps.skip _ ops, (σ, σs) => (σ, σs.map ops)
+| .cons _ _, MapOps.skip ops, (σ, σs) => (σ, σs.map ops)
 | .cons _ _, MapOps.ren _ r ops, (σ, σs) => (σ⟨r,⟩, σs.map ops)
 | .cons _ _, MapOps.lift n ops, (σ, σs) => (σ.lift n, σs.map ops)
 | .cons _ _, MapOps.both _ r n ops, (σ, σs) => (σ⟨r,⟩.lift n, σs.map ops)
@@ -1066,13 +1066,13 @@ def SubstVec.map : {V : List (Type u2)} -> MapOps V -> SubstVec V -> SubstVec V
 @[simp]
 theorem SubstVec.map_skip_proj1
   [RenMap T [T]] {f : MapOps V} {σ : SubstVec (T::V)}
-  : (σ.map (.skip T f)).1 = σ.1
+  : (σ.map (.skip f)).1 = σ.1
 := by rcases σ with ⟨σ, σs⟩; simp
 
 @[simp]
 theorem SubstVec.map_skip_proj2
   [RenMap T [T]] {f : MapOps V} {σ : SubstVec (T::V)}
-  : (σ.map (.skip T f)).2 = σ.2.map f
+  : (σ.map (.skip f)).2 = σ.2.map f
 := by rcases σ with ⟨σ, σs⟩; simp
 
 @[simp]
