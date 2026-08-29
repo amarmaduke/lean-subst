@@ -12,7 +12,6 @@ namespace Automation
     | some (.inductInfo val) => return val.ctors
     | _ => throwError "Could not get constructors of: {typeName}"
 
-
   def isVar (ctor : Name) : MetaM Bool := do
     pure $ leanSubstVar.hasTag (← getEnv) ctor
 
@@ -163,22 +162,32 @@ namespace Automation
       stx ← `($stx.2)
     `($stx.1)
 
-  def forEachPrefix : (tys : List Ident) → (f : List Ident → CommandElabM Unit) → CommandElabM Unit
+  def forEachSuffix : (tys : List Ident) → (f : List Ident → CommandElabM Unit) → CommandElabM Unit
   | [], _ => pure ()
   | tys@(.cons _ tys'), f => do
     f tys
-    forEachPrefix tys' f
+    forEachSuffix tys' f
 
+  def forEachPrefix : (tys : List Ident) → (f : List Ident → CommandElabM Unit) → CommandElabM Unit
+  | [], _ => pure ()
+  | tys@(.cons _ _), f => do
+    f tys
+    forEachSuffix tys.reverse.tail.reverse f
 
-  def forHeadAndEachPrefix : (tys : List Ident) → (f : List Ident → CommandElabM Unit) → CommandElabM Unit
+  def forHeadAndEachSuffix : (tys : List Ident) → (f : List Ident → CommandElabM Unit) → CommandElabM Unit
   | [], _ => pure ()
   | .cons ty [], f => do f [ty]
   | tys@(.cons ty _), f => do
     f [ty]
-    forEachPrefix tys f
+    forEachSuffix tys f
 
   def forEachCtor (ty : Name) (f : Name → CommandElabM Unit) : CommandElabM Unit := do
     for ctor in ← liftCoreM $ runMetaMAsCoreM $ getConstructors ty do f ctor
+
+  inductive MapOrLift
+  | map : Term → MapOrLift
+  | lift : Term → MapOrLift
+  | none : MapOrLift
 
   def genTy (tys : List Ident) : CommandElabM Unit := do
     let ty := tys[0]!
@@ -212,20 +221,16 @@ namespace Automation
       | su $t => $t
 
       @[simp, grind =]
-      theorem $from_action_id {$n} : $from_action (𝐬0.act $n) = $var $n := by
-        simp [$from_action:ident]
+      theorem $from_action_id {$n} : $from_action (𝐬0.act $n) = $var $n := rfl
 
       @[simp, grind =]
-      theorem $from_action_succ {$n} : $from_action (𝐬1.act $n) = $var ($n + 1) := by
-        simp [$from_action:ident]
+      theorem $from_action_succ {$n} : $from_action (𝐬1.act $n) = $var ($n + 1) := rfl
 
       @[simp, grind =]
-      theorem $from_action_re {$n} : $from_action (re $n) = $var $n := by
-        simp [$from_action:ident]
+      theorem $from_action_re {$n} : $from_action (re $n) = $var $n := rfl
 
       @[simp, grind =]
-      theorem $from_action_su {$n} : $from_action (su $n) = $n := by
-        simp [$from_action:ident]
+      theorem $from_action_su {$n} : $from_action (su $n) = $n := rfl
 
       instance : Coe (Action $ty) $ty where
         coe := $from_action
@@ -283,9 +288,13 @@ namespace Automation
 
       instance : RenMap $ty [$tys.toArray,*] where
         rmap := $rmap
+
+      instance : RenMap $ty [] where
+        rmap _ := id
     )
 
     -- If the length of `tys` is 1, then we've already done the only necessary RenMap
+    -- TODO: check, do we also need all prefixes here?
     if tys.length > 1 then
       for ty' in tys do
         let tyList ← (tys.map (·.raw)).mapM (fun `($ty'') ↦ do
@@ -302,29 +311,33 @@ namespace Automation
             rmap $r:ident :=  $rmap ⟨ $tyArr:term,* ⟩
         )
 
+    -- TODO: do we also need suffixes?
+    forEachPrefix tys (fun tys ↦ do
+      let head := tys.head!
+      let tail := tys.tail
+      dbg_trace s!"SUFFIX --- head: {head}, tail: {tail}"
+      elabCommand $ ← `(
+        instance : RenSuffix $head:ident [$tail.toArray,*] := ⟨⟩
+      )
+    )
+
     let rmap_fix := qualify "rmap_fix"
     elabCommand $ ← `(
       @[simp]
       theorem $rmap_fix {$r : RenVec [$tys.toArray,*]} {$t : $ty} : $rmap $r $t = $t⟨$r,⟩ := by simp [RenMap.rmap]
     )
 
-    -- forEachCtor tyNameGlobal (fun ctor ↦ do
-    --   let thmName := qualify s!"rmap_{ctor.components.getLast!}"
-    --   let fRhs := rmap_f false
-    --   let fLhs lhs := `(($lhs)⟨$(r),⟩)
-    --   let eq ← mkCtorEq fLhs fRhs ctor
-    --   let args ← mkCtorArgs ctor
-    --   elabCommand $ ← `(
-    --     @[simp, grind =]
-    --     theorem $thmName {$args.toArray*} {$r : RenVec [$tys.toArray,*]} : $eq := rfl
-    --   )
-    -- )
+    let rmap_empty := qualify "rmap_empty"
+    elabCommand $ ← `(
+      @[simp]
+      theorem $rmap_empty {$t : $ty} {$r : RenVec []} : $t⟨$r,⟩ = $t := rfl
+    )
 
-    forHeadAndEachPrefix tys (fun pfx ↦ forEachCtor tyNameGlobal (fun ctor ↦ do
+    forHeadAndEachSuffix tys (fun pfx ↦ forEachCtor tyNameGlobal (fun ctor ↦ do
       let tyQual := if tys.length = 1 then "" else "_".intercalate $ pfx.map (fun ty ↦ ty.raw.getId.toString.toLower)
       let thmName := qualify s!"rmap{tyQual}_{ctor.components.getLast!}"
       dbg_trace s!"NAME: {thmName}"
-      let fRhs := rmap_f true -- TODO: should be true, but something is wrong
+      let fRhs := rmap_f true
       let fLhs lhs := `(($lhs)⟨$(r),⟩)
       let eq ← mkCtorEq fLhs fRhs ctor
       let args ← mkCtorArgs ctor
@@ -333,6 +346,27 @@ namespace Automation
         theorem $thmName {$args.toArray*} {$r : RenVec [$pfx.toArray,*]} : $eq := rfl
       )
     ))
+
+    let from_action_rmap := qualify "from_action_rmap"
+    elabCommand $ ← `(
+      @[simp]
+      theorem $from_action_rmap {$t : Action $ty} {$r : RenVec [$tys.toArray,*]} : ($from_action $t)⟨$r,⟩ = $from_action ($t⟨$r,⟩) := by
+        cases $t:ident <;> simp [$from_action:ident]
+    )
+
+    let instRenMapAll_ty := mkIdent $ .mkStr1 s!"instRenMapAll_{ty.raw.getId.toString}" -- not qualified
+    elabCommand $ ← `(
+      @[reducible, simp]
+      instance $instRenMapAll_ty:ident : RenMapAll [$ty] := .cons .nil
+    )
+    if tys.length > 1 then
+      let tysPostfix := "_".intercalate (tys.map (·.raw.getId.toString))
+      let tysPostfix' := "_".intercalate (tys.tail.map (·.raw.getId.toString))
+      let instRenMapAll_tys := mkIdent $ .mkStr1 s!"instRenMapAll_{tysPostfix}" -- not qualified
+      let instRenMapAll_tys' := mkIdent $ .mkStr1 s!"instRenMapAll_{tysPostfix'}" -- not qualified
+      elabCommand $ ← `(
+        instance $instRenMapAll_tys:ident : RenMapAll [$tys.toArray:ident,*] := .cons $instRenMapAll_tys'
+      )
 
     -- smap
     let getIncrementsOfTy (lifts : List Term) (ty : Name) : CommandElabM $ List (Ident × Term) := do
@@ -348,31 +382,37 @@ namespace Automation
               pure ⟨mkIdent ty', Syntax.mkNatLit 0⟩)
       pure $ increments.filter (fun (_, stx) ↦ match stx with | `(0) => false | _ => true)
 
-    -- TODO: Use .lift instead of .map if we don't need to apply any renamings
-    let mkMapArr (data : ArgData) (xs : List Ident) : CommandElabM $ Option Term :=
+    let mkMapArr (data : ArgData) (xs : List Ident) : CommandElabM $ Option MapOrLift :=
       match data with
-      | .binder _ => do
+      | .binder blah => do
         let lifts ← tys.mapM $ getLiftsOfTy data xs
         let optionLifts := lifts.map (fun stx : Term ↦ if BEq.beq stx $ Syntax.mkNatLit 0 then none else some stx)
+        dbg_trace s!"\n\nLIFTS: {optionLifts} for data {blah}"
+
         -- Check if all lifts are syntactically just 0
-        if optionLifts.all (fun | none => false | some _ => true) then
+        if optionLifts.all (fun | none => true | some _ => false) then
           pure none
         else
           let incrementsList ← tysNamesGlobal.mapM $ getIncrementsOfTy lifts
           let zipped := incrementsList.zip optionLifts
-          let ops : List $ Term ← zipped.mapM (fun ⟨incs, lift⟩ ↦ do
+          let ops : List $ Term × Bool ← zipped.mapM (fun ⟨incs, lift⟩ ↦ do
             let incOps ← incs.mapM (fun ⟨ty, inc⟩ ↦
               if BEq.beq inc $ Syntax.mkNatLit 0 then `(Ren.id $ty:ident) else `(Ren.add $ty:ident $inc))
             let anyIncs := incs.tail.any (fun ⟨_, inc⟩ ↦ ¬ (BEq.beq inc $ Syntax.mkNatLit 0))
 
             let tyTail := tysNamesGlobal.tail.toArray.map mkIdent
-            match (anyIncs, lift) with
+            dbg_trace s!"MATCHING on {(anyIncs, lift)}"
+            let op ← match (anyIncs, lift) with
             | (false, none) => `(.skip)
             | (true, none) => `(.ren [$tyTail,*] ⟨$incOps.tail.toArray,*, .nil⟩)
             | (false, some ℓ) => `(.lift $ℓ)
             | (true, some ℓ) => `(.both [$tyTail,*] ⟨$incOps.tail.toArray,*, .nil⟩ $ℓ)
+            pure ⟨op, anyIncs⟩
           )
-          pure $ some $ ← ops.foldrM (fun t1 t2 ↦ `($t1 $ $t2)) $ ← `(LeanSubst.SubstVec.MapOps.nil)
+          if ops.all (¬ ·.2) then -- If we don't have to apply any renamings
+            pure $ MapOrLift.lift $ ← `([$lifts.toArray,*])
+          else
+            pure $ MapOrLift.map $ ← (ops.map Prod.fst).foldrM (fun t1 t2 ↦ `($t1 $ $t2)) $ ← `(LeanSubst.SubstVec.MapOps.nil)
       | _ => pure none
 
     let smap := qualify "smap"
@@ -381,9 +421,10 @@ namespace Automation
     | _ => do
       let tyExpr ← liftTermElabM $ Term.elabTerm ty none
       if ← liftCoreM $ runMetaMAsCoreM $ isDefEq tyExpr ty' then
-        if let some opsArr ← mkMapArr data xs then
+        if let MapOrLift.map opsArr ← mkMapArr data xs then
           if useTCSyntax then `(($x)[$(σ).map $opsArr]) else `($smap ($(σ).map $opsArr) $x)
-          -- if useTCSyntax then `(($x)[$(σ)]) else `($smap ($(σ)) $x)
+        else if let MapOrLift.lift opsArr ← mkMapArr data xs then
+          if useTCSyntax then `(($x)[$(σ).lift $opsArr]) else `($smap ($(σ).lift $opsArr) $x)
         else
           if useTCSyntax then `(($x)[$(σ),]) else `($smap $σ $x)
       else if let some theTy ← List.findM? (fun ty ↦ do pure (← liftCoreM $ runMetaMAsCoreM $ isDefEq (← liftTermElabM $ Term.elabTerm ty.raw none) ty')) tys then
@@ -412,308 +453,5 @@ namespace Automation
   elab "#leansubst" &"generate" tys:ident,* : command =>
     -- dbg_trace s!"{tys.getElems.toList}"
     genAllTys tys.getElems.toList.reverse
-
-  elab "#leansubst_autogen" ty:ident : command => do
-    -- Setup --
-    let tyName := ty.raw.getId
-    let tyStr := tyName.toString
-    let tyNameGlobal ← Command.liftCoreM $ realizeGlobalConstNoOverload ty.raw
-
-  --   let isDefEqTy ty' := liftCoreM $ runMetaMAsCoreM $ isDefEqGuarded ty' (.const tyNameGlobal [])
-
-  --   let qualify str := mkIdent $ .str tyName str
-  --   let pairWithTypes names : CommandElabM (List (Ident × Expr)) :=
-  --     List.mapM
-  --       (fun name => do pure ⟨name, (← getConstInfo name.getId).type⟩)
-  --       names
-
-  --   let pairWithTypes' namesAndParams : CommandElabM (List (Ident × Expr × Nat)) :=
-  --     List.mapM
-  --       (fun ⟨name, i⟩ => do pure ⟨name, (← getConstInfo name.getId).type, i⟩)
-  --       namesAndParams
-
-
-  --   let xN (n : Nat) : TSyntax `term := mkIdent (.mkStr1 $ s!"x{n}")
-  --   let xN' (n : Nat) : TSyntax `ident := mkIdent (.mkStr1 $ s!"x{n}")
-  --   let x := mkIdent `x
-  --   let z := mkIdent `z
-  --   let r := mkIdent `r
-  --   let n := mkIdent `n
-  --   let t := mkIdent `t
-  --   let σ := mkIdent `σ
-  --   let τ := mkIdent `τ
-
-  --   let identToTerm : Ident → CommandElabM (TSyntax `term) := fun x ↦ `($x:ident)
-
-  --   let varCtorNames ← liftCoreM $ runMetaMAsCoreM $ getVarCtors tyNameGlobal
-  --   let varName := varCtorNames[0]!
-  --   let varType := (← getConstInfo varName).type
-  --   let var := mkIdent varName
-
-  --   let binderCtorNamesWithParams ← liftCoreM $ runMetaMAsCoreM $ getBinderCtors tyNameGlobal
-  --   let binderCtorsWithParams : List (Ident × Nat) := binderCtorNamesWithParams.map (fun ⟨name, i⟩ ↦ ⟨mkIdent name, i⟩)
-  --   let binderCtorsWithTypesAndParams ← pairWithTypes' binderCtorsWithParams
-
-  --   let nonTaggedCtorNames ← liftCoreM $ runMetaMAsCoreM $ getNonTaggedCtors tyNameGlobal
-  --   let nonTaggedCtors := nonTaggedCtorNames.map mkIdent
-  --   let nonTaggedCtorsWithTypes ← pairWithTypes nonTaggedCtors
-
-  --   let doVarComputation
-  --     : (ty : Type) → ((ctor : Ident) → (varArg : Ident) → (otherArgs : List (Ident × Expr)) → CommandElabM ty)
-  --       → CommandElabM ty := fun _ f ↦ do
-  --     let argTypes := getForallBinderTypes varType
-  --     let argIdents := (List.range $ argTypes.length).map xN'
-  --     let argIdentsWithTypes := argIdents.zip argTypes
-  --     if let some ⟨argIdent_hd, _⟩ := argIdentsWithTypes.head? then
-  --       f var argIdent_hd (argIdents.tail.zip argTypes.tail)
-  --     else
-  --       throwAbortCommand -- TODO: better error?
-
-  --   let doNonTaggedComputation
-  --     : (ty : Type) → ((ctor : Ident) → (args : List (Ident × Expr)) → CommandElabM ty)
-  --       → CommandElabM (List ty) := fun _ f ↦ do
-  --     nonTaggedCtorsWithTypes.mapM (fun ⟨ctor, type⟩ ↦ do
-  --       let argTypes := getForallBinderTypes type
-  --       let argIdents := (List.range $ argTypes.length).map xN'
-  --       f ctor $ argIdents.zip argTypes
-  --     )
-
-  --   let doBinderComputation
-  --     : (ty : Type)
-  --       → ((ctor : Ident) → (binderArgWithType : Ident × Expr) → (otherArgs : List (Ident × Expr)) → (binderPos : Nat) → CommandElabM ty)
-  --       → CommandElabM (List ty) := fun _ f ↦ do
-  --     binderCtorsWithTypesAndParams.mapM (fun ⟨ctor, type, i⟩ ↦ do
-  --       let argTypes := getForallBinderTypes type
-  --       let argIdents := (List.range $ argTypes.length).map xN'
-  --       let argIdentsWithTypes := argIdents.zip argTypes
-  --       if let some ⟨argIdent_hd, argType_hd⟩ := argIdentsWithTypes.head? then
-  --         f ctor ⟨argIdent_hd, argType_hd⟩ (argIdents.tail.zip argTypes.tail) i
-  --       else
-  --         throwAbortCommand -- TODO: better error?
-  --     )
-
-  --   let mkBinderStx
-  --     (ctor : Ident) (binderArg : TSyntax `term) (otherArgs : List $ TSyntax `term) (i : Nat) : CommandElabM $ TSyntax `term := do
-  --     let beforeBinderArgs := (otherArgs.take i).toArray
-  --     let afterBinderArgs := (otherArgs.drop i).toArray
-  --     `($ctor $beforeBinderArgs* $binderArg $afterBinderArgs*)
-
-  --   let mkBinderStx'
-  --     (ctor : Ident) (binderArg : TSyntax `term) (otherArgs : List $ TSyntax `ident) (i : Nat) : CommandElabM $ TSyntax `term := do
-  --     let beforeBinderArgs := (otherArgs.take i).toArray
-  --     let afterBinderArgs := (otherArgs.drop i).toArray
-  --     `($ctor $beforeBinderArgs* $binderArg $afterBinderArgs*)
-
-  --   let mkBinderArgs
-  --     (ty : Name) (binderArg : TSyntax ty) (otherArgs : List $ TSyntax ty) (i : Nat) : TSyntaxArray ty :=
-  --     let beforeBinderArgs := (otherArgs.take i).toArray
-  --     let afterBinderArgs := (otherArgs.drop i).toArray
-  --     beforeBinderArgs ++ [binderArg] ++ afterBinderArgs
-
-  --   -- from_action --
-  --   let from_action := qualify "from_action"
-  --   elabCommand $ ← `(
-  --     @[coe]
-  --     def $from_action : Action $ty → $ty
-  --     | re y => $var y
-  --     | su t => t
-  --   )
-
-  --   let from_action_id := qualify "from_action_id"
-  --   elabCommand $ ← `(
-  --     @[simp, grind =]
-  --     theorem $from_action_id {$n} : $from_action (+0σ.act $n) = $var $n := by
-  --       simp [$from_action:ident]
-  --   )
-
-  --   let from_action_succ := qualify "from_action_succ"
-  --   elabCommand $ ← `(
-  --     @[simp, grind =]
-  --     theorem $from_action_succ {$n} : $from_action (+1σ.act $n) = $var ($n + 1) := by
-  --       simp [$from_action:ident]
-  --   )
-
-  --   let from_action_re := qualify "from_action_re"
-  --   elabCommand $ ← `(
-  --     @[simp, grind =]
-  --     theorem $from_action_re {$n} : $from_action (re $n) = $var $n := by
-  --       simp [$from_action:ident]
-  --   )
-
-  --   let from_action_su := qualify "from_action_su"
-  --   elabCommand $ ← `(
-  --     @[simp, grind =]
-  --     theorem $from_action_su {$t} : $from_action (su $t) = $t := by
-  --       simp [$from_action:ident]
-  --   )
-
-  --   -- Coe --
-  --   let instCoe_SubstActionTy_Ty := mkIdent $ .mkStr1 s!"instCoe_SubstAction{tyStr}_{tyStr}"
-  --   elabCommand $ ← `(
-  --     instance $instCoe_SubstActionTy_Ty:ident : Coe (Action $ty) $ty where
-  --       coe := $from_action
-  --   )
-
-  --   -- rmap and smap --
-  --   let doMapStuff : MapType → CommandElabM Unit :=
-  --     fun mapType ↦ do
-  --       let leanSubstQualify s := .mkStr2 "LeanSubst" s
-  --       let ⟨defIdent, typeIdent, instanceIdent, instanceFieldIdent, rσ, thmPfxStr⟩ : Ident × Ident × Ident × Ident × Ident × String :=
-  --         match mapType with
-  --         | .is_rmap =>
-  --           ⟨qualify "rmap", mkIdent $ leanSubstQualify "Ren", mkIdent $ leanSubstQualify "RenMap", mkIdent $ .mkStr1 "rmap", r, "ren"⟩
-  --         | .is_smap =>
-  --           ⟨qualify "smap", mkIdent $ leanSubstQualify "Subst", mkIdent $ leanSubstQualify "SubstMap", mkIdent $ .mkStr1 "smap", σ, "subst"⟩
-
-  --       let nonTaggedCases := List.toArray $ ← doNonTaggedComputation (TSyntax `Lean.Parser.Term.matchAlt) (fun ctor args ↦ do
-  --         let rhs : List (TSyntax `term) ←
-  --           List.mapM (fun ⟨t, ty⟩ ↦ do if ← isDefEqTy ty then `($defIdent $rσ $t) else `($t)) args
-  --         `(Parser.Term.matchAltExpr| | $ctor $((args.map Prod.fst).toArray)* => $ctor $(rhs.toArray)*)
-  --       )
-
-  --       let binderCases := List.toArray $ ← doBinderComputation (TSyntax `Lean.Parser.Term.matchAlt) (fun ctor ⟨binderIdent, _⟩ otherArgs i ↦ do
-  --         let otherArgs := mapFst otherArgs
-  --         let lhs ← mkBinderStx' ctor binderIdent otherArgs i
-  --         let binderRhs ← `($defIdent $(rσ).lift $binderIdent)
-  --         let rhs ← mkBinderStx' ctor binderRhs otherArgs i
-  --         `(Parser.Term.matchAltExpr| | $lhs => $rhs)
-  --       )
-
-  --       let varCase := ← doVarComputation (TSyntax `Lean.Parser.Term.matchAlt) (fun ctor varIdent otherArgs ↦ do
-  --         let lhs := List.cons varIdent (otherArgs.map Prod.fst)
-  --         let rhsVar ← `($(rσ).act $varIdent)
-  --         let rhsOther := otherArgs.tail.map Prod.fst
-  --         let rhs := List.cons rhsVar $ ← rhsOther.mapM identToTerm
-  --         match mapType with
-  --         | .is_rmap => `(Parser.Term.matchAltExpr| | $ctor $(lhs.toArray)* => $ctor $(rhs.toArray)*)
-  --         | .is_smap => `(Parser.Term.matchAltExpr| | $ctor $(lhs.toArray)* => $rhsVar)
-  --       )
-
-  --       elabCommand $ ← `(
-  --         @[simp]
-  --         def $defIdent ($rσ : $typeIdent:ident $ty) : $ty → $ty
-  --           $varCase:matchAlt
-  --           $[$nonTaggedCases:matchAlt]*
-  --           $[$binderCases:matchAlt]*
-  --       )
-
-  --       let simpCall ← match mapType with
-  --       | .is_rmap => `(tactic| simp [RenMap.rmap])
-  --       | .is_smap => `(tactic| simp [SubstMap.smap])
-
-  --       elabCommand $ ← `(
-  --         instance : $instanceIdent:ident ($ty:ident) ($ty:ident) where
-  --           $instanceFieldIdent:ident := $defIdent
-  --       )
-
-  --       _ ← doNonTaggedComputation Unit (fun ctor args ↦ do
-  --         let thmName := qualify s!"{thmPfxStr}_{ctor.getId.components.getLast!}"
-
-  --         let lhsArgs := mapFst args
-  --         let lhs ← match mapType with
-  --         | .is_rmap => `(($ctor $(lhsArgs.toArray)*)⟨$rσ⟩)
-  --         | .is_smap => `(($ctor $(lhsArgs.toArray)*)[$rσ])
-
-  --         let rhsArgs ← match mapType with
-  --         | .is_rmap => List.mapM (fun ⟨t, ty⟩ ↦ do if ← isDefEqTy ty then `($t⟨$rσ⟩) else `($t)) args
-  --         | .is_smap => List.mapM (fun ⟨t, ty⟩ ↦ do if ← isDefEqTy ty then `($t[$rσ]) else `($t)) args
-  --         let rhs ← `($ctor $(rhsArgs.toArray)*)
-
-  --         elabCommand $ ← `(
-  --           @[simp, grind =]
-  --           theorem $thmName {$(lhsArgs.toArray)*} {$rσ : $typeIdent $ty} : $lhs = $rhs := by
-  --             $simpCall:tactic
-  --         )
-  --       )
-
-  --       _ ← doBinderComputation Unit (fun ctor ⟨binderArg, _⟩ otherArgs i ↦ do
-  --         let thmName := qualify s!"{thmPfxStr}_{ctor.getId.components.getLast!}"
-  --         let otherArgs := mapFst otherArgs
-
-  --         let lhsArgs := mkBinderArgs `ident binderArg otherArgs i
-  --         let lhs ← match mapType with
-  --         | .is_rmap => `(($ctor $lhsArgs*)⟨$rσ⟩)
-  --         | .is_smap => `(($ctor $lhsArgs*)[$rσ])
-
-  --         let rhsBinder ← match mapType with
-  --         | .is_rmap => `($binderArg⟨$(rσ).lift⟩)
-  --         | .is_smap => `($binderArg[$(rσ).lift])
-  --         let rhs ← mkBinderStx' ctor rhsBinder otherArgs i
-
-  --         elabCommand $ ← `(
-  --           @[simp, grind =]
-  --           theorem $thmName {$lhsArgs*} {$rσ : $typeIdent $ty} : $lhs = $rhs := by
-  --             $simpCall:tactic
-  --         )
-  --       )
-
-  --       _ ← doVarComputation Unit (fun ctor varArg otherArgs ↦ do
-  --         let thmName := qualify s!"{thmPfxStr}_{ctor.getId.components.getLast!}"
-  --         let lhsArgs := varArg :: mapFst otherArgs
-  --         let lhs ← match mapType with
-  --         | .is_rmap => `(($ctor $(lhsArgs.toArray)*)⟨$rσ⟩)
-  --         | .is_smap => `(($ctor $(lhsArgs.toArray)*)[$rσ])
-
-  --         let rhsVar ← `($(rσ).act $varArg)
-  --         let rhsOther ← List.mapM (fun ⟨t, _⟩ ↦ `($t)) otherArgs
-  --         let rhsArgs := rhsVar :: rhsOther
-  --         let rhs ← match mapType with
-  --         | .is_rmap => `($ctor $(rhsArgs.toArray)*)
-  --         | .is_smap => pure rhsVar
-
-  --         elabCommand $ ← `(
-  --           @[simp, grind =]
-  --           theorem $thmName {$(lhsArgs.toArray)*} {$rσ : $typeIdent $ty} : $lhs = $rhs := by
-  --             $simpCall:tactic
-  --         )
-  --       )
-
-  --   doMapStuff .is_rmap
-  --   doMapStuff .is_smap
-
-  --   -- from_action --
-  --   let from_action_compose := qualify "from_action_compose"
-  --   let from_action_compose_ren := qualify "from_action_compose_ren"
-  --   elabCommand $ ← `(
-  --     @[simp]
-  --     theorem $from_action_compose {$x : Nat} {$σ $τ : Subst $ty}
-  --       : ($from_action (Subst.act $σ $x))[$τ] = $from_action (($σ ∘ $τ).act $x)
-  --     := by
-  --       simp [$from_action:ident, Subst.compose]
-  --       generalize zdef : $(σ).act $x = $z
-  --       cases $z:ident <;> simp [$from_action:ident]
-
-  --     @[simp]
-  --     theorem $from_action_compose_ren {$x : Nat} {$σ : Subst $ty} {$r : Ren $ty}
-  --       : ($from_action:ident ($(σ).act $x))⟨$r⟩ = $from_action:ident (($σ ∘ $r).act $x)
-  --     := by
-  --       simp [$from_action:ident]
-  --       generalize zdef : $(σ).act $x = $z
-  --       cases $z:ident <;> simp
-  --   )
-
-  --   -- instances --
-  --   elabCommand $ ← `(
-  --     instance : RenMapId $ty $ty where
-  --       apply_id := by subst_solve_id
-
-  --     instance : RenMapCompose $ty $ty where
-  --       apply_compose := by subst_solve_compose
-
-  --     instance : SubstMapId $ty $ty where
-  --       apply_id := by subst_solve_id
-
-  --     instance : SubstMapStable $ty $ty where
-  --       apply_stable := by subst_solve_stable
-
-  --     instance : SubstMapRenComposeLeft $ty $ty where
-  --       apply_ren_compose_left := by subst_solve_compose
-
-  --     instance : SubstMapRenComposeRight $ty $ty where
-  --       apply_ren_compose_right := by subst_solve_compose
-
-  --     instance : SubstMapCompose $ty $ty where
-  --       apply_compose := by subst_solve_compose
-  --   )
 
 end Automation

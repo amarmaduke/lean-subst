@@ -42,10 +42,16 @@ inductive Term where
 #print Ty.rmap
 #print Ty.rmap_fix
 
+
+#print Ty.rmap_empty
 #print Ty.rmap_var
 #print Ty.rmap_arrow
 #print Ty.rmap_all
 #print Ty.rmap_nat
+#print Ty.from_action_rmap
+
+#print Ty.smap
+#print Ty.smap._f
 
 ----------------------------------------------------------------------------------------------------
 -- Ty Renaming & Substitution
@@ -64,7 +70,7 @@ theorem Ty.from_action_succ {n} : from_action (𝐬1.act n) = var (n + 1) := by
   simp [from_action]
 
 @[simp]
-theorem Ty.from_acton_re {n} : from_action (re n) = var n := by simp [from_action]
+theorem Ty.from_action_re {n} : from_action (re n) = var n := by simp [from_action]
 
 @[simp]
 theorem Ty.from_action_su {t} : from_action (su t) = t := by simp [from_action]
@@ -90,8 +96,7 @@ instance : RenMap Ty [] where
   rmap _ := id
 
 @[simp]
-theorem Ty.rmap_empty {t : Ty} {r : RenVec []} : t⟨r,⟩ = t := by
-  simp only [RenMap.rmap, id]
+theorem Ty.rmap_empty {t : Ty} {r : RenVec []} : t⟨r,⟩ = t := rfl
 
 @[reducible, simp]
 instance instRenMapAll_Ty : RenMapAll [Ty] := .cons .nil
@@ -105,7 +110,7 @@ theorem Ty.rmap_nat {r : RenVec [Ty]} : (nat)⟨r,⟩ = nat := by
   simp only [RenMap.rmap]; rw [rmap]
 
 @[simp]
-theorem Ty.rmap_app {t1 t2 : Ty} {r : RenVec [Ty]} : (arrow t1 t2)⟨r,⟩ = arrow t1⟨r,⟩ t2⟨r,⟩ := by
+theorem Ty.rmap_arrow {t1 t2 : Ty} {r : RenVec [Ty]} : (arrow t1 t2)⟨r,⟩ = arrow t1⟨r,⟩ t2⟨r,⟩ := by
   simp only [RenMap.rmap]; rw [rmap]
 
 @[simp]
@@ -232,8 +237,7 @@ instance : RenMap Term [Term, Ty] where
 theorem Term.rmap_fix {r : RenVec [Term, Ty]} {t : Term} : rmap r t = t⟨r,⟩ := by simp [RenMap.rmap]
 
 @[simp]
-theorem Term.rmap_term_ty_var {x} {r : RenVec [Term, Ty]} : (var x)⟨r,⟩ = var (r.1.act x) := by
-  simp only [RenMap.rmap]; rw [rmap]
+theorem Term.rmap_term_ty_var {x} {r : RenVec [Term, Ty]} : (var x)⟨r,⟩ = var (r.1.act x) := rfl
 
 @[simp]
 theorem Term.rmap_term_ty_app {t1 t2} {r : RenVec [Term, Ty]} : (app t1 t2)⟨r,⟩ = app t1⟨r,⟩ t2⟨r,⟩ := by
