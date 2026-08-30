@@ -148,7 +148,9 @@ theorem SystemFWithNat.Term.smap_term_nrec : ∀ {x0 : Ty} {x1 x2 x3 : Term} {σ
   (Term.nrec x0 x1 x2 x3)[σ,] = Term.nrec x0 x1[σ,] x2[σ.lift [2],] x3[σ,] := by
   intros x0 x1 x2 x3 σ
   simp only [SubstMap.smap]
-  rw [Term.smap]
+  simp
+  simp only [SubstMap.smap]
+  simp
 
 #print Term.smap_ty_var
 #print Term.smap_ty_app

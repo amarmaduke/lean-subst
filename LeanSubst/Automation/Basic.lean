@@ -296,12 +296,14 @@ namespace Automation
         forEachTy tys $ mkMapSingletonInstance mapType
 
     let mkSuffixInstances (mapType : MapType) := do
-      let TheSuffix ← match mapType with | .rmap => `(RenSuffix) | .smap => `(SubstSuffix)
+      let TheSuffix ← match mapType with | .rmap => ``(RenSuffix) | .smap => ``(SubstSuffix)
       forEachSuffix tys.tail (fun sfx ↦ do
+        dbg_trace s!"SUFFIX INSTANCE: instance : {TheSuffix} {ty} [{sfx}] := .cons .nil"
         elabCommand $ ← `(
           instance : $TheSuffix $ty:ident [$sfx.toArray,*] := ⟨⟩
         )
       )
+      dbg_trace s!"SUFFIX INSTANCE: instance : {TheSuffix} {ty} [] := .cons .nil"
       elabCommand $ ← `(
         instance : $TheSuffix $ty:ident [] := ⟨⟩
       )
@@ -427,7 +429,7 @@ namespace Automation
       let rσ : Ident := match mapType with | .rmap => r | .smap => σ
       let map := match mapType with | .rmap => rmap | .smap => smap
       let map_fix := qualify s!"{mapStr}_fix"
-      let TheVec ← match mapType with | .rmap => `(RenVec) | .smap => `(SubstVec)
+      let TheVec ← match mapType with | .rmap => ``(RenVec) | .smap => ``(SubstVec)
 
       let eq ← match mapType with
       | .rmap => `($map $rσ $t = $t⟨$rσ,⟩)
@@ -456,6 +458,7 @@ namespace Automation
         let eq ← mkCtorEq fLhs fRhs ctor (fVar := match mapType with | .rmap => none | .smap => some $ smap_fVar sfx)
         let args ← mkCtorArgs ctor
         elabCommand $ ← `(
+          @[simp]
           theorem $thmName {$args.toArray*} {$rσ : $TheVec [$sfx.toArray,*]} : $eq :=
             $proof
         )
@@ -468,7 +471,7 @@ namespace Automation
       let eq ← match mapType with
       | .rmap => `(($from_action $t)⟨$rσ,⟩ = $from_action ($t⟨$rσ,⟩))
       | .smap => `(($from_action $t)[$rσ,] = $from_action ($t[$rσ,]))
-      let TheVec ← match mapType with | .rmap => `(RenVec) | .smap => `(SubstVec)
+      let TheVec ← match mapType with | .rmap => ``(RenVec) | .smap => ``(SubstVec)
       elabCommand $ ← `(
         @[simp]
         theorem $from_action_map {$t : Action $ty} {$rσ : $TheVec [$tys.toArray,*]} : $eq := by
@@ -483,6 +486,24 @@ namespace Automation
             theorem $(from_action_mapi i) {$t : Action $ty} {$rσ : $TheVec [$(tys[i]!)]} : $eq := by
               cases $t:ident <;> (first | rfl | simp | simp [$from_action:ident] | aesop)
           )
+
+    let mkMapAllInstances (mapType : MapType) := do
+      let TheMapStr := match mapType with | .rmap => "RenMap" | .smap => "SubstMap"
+      let TheMapAll ← match mapType with | .rmap => ``(LeanSubst.RenMapAll) | .smap => ``(LeanSubst.SubstMapAll)
+      let instTheMapAll_ty := mkIdent $ .mkStr1 s!"inst{TheMapStr}All_{ty.raw.getId.toString}" -- not qualified
+      dbg_trace s!"MAPALL INSTANCE: instance {instTheMapAll_ty} : {TheMapAll} [{ty}] := .cons .nil"
+      elabCommand $ ← `(
+        @[reducible, simp]
+        instance $instTheMapAll_ty:ident : $TheMapAll [$ty] := .cons .nil
+      )
+      if tys.length > 1 then
+        let tysPostfix := "_".intercalate (tys.map (fun (ty : Ident) ↦ ty.raw.getId.toString))
+        let tysPostfix' := "_".intercalate (tys.tail.map (fun (ty : Ident) ↦ ty.raw.getId.toString))
+        let instTheMapAll_tys := mkIdent $ .mkStr1 s!"inst{TheMapStr}All_{tysPostfix}" -- not qualified
+        let instTheMapAll_tys' := mkIdent $ .mkStr1 s!"inst{TheMapStr}All_{tysPostfix'}" -- not qualified
+        elabCommand $ ← `(
+          instance $instTheMapAll_tys:ident : $TheMapAll [$tys.toArray:ident,*] := .cons $instTheMapAll_tys'
+        )
 
     -- rmap
     let rmapCases ← mkAllCases (map_f .rmap false) tyNameGlobal
@@ -508,19 +529,7 @@ namespace Automation
         apply_compose := by subst_solve_compose
     )
 
-    let instRenMapAll_ty := mkIdent $ .mkStr1 s!"instRenMapAll_{ty.raw.getId.toString}" -- not qualified
-    elabCommand $ ← `(
-      @[reducible, simp]
-      instance $instRenMapAll_ty:ident : RenMapAll [$ty] := .cons .nil
-    )
-    if tys.length > 1 then
-      let tysPostfix := "_".intercalate (tys.map (·.raw.getId.toString))
-      let tysPostfix' := "_".intercalate (tys.tail.map (·.raw.getId.toString))
-      let instRenMapAll_tys := mkIdent $ .mkStr1 s!"instRenMapAll_{tysPostfix}" -- not qualified
-      let instRenMapAll_tys' := mkIdent $ .mkStr1 s!"instRenMapAll_{tysPostfix'}" -- not qualified
-      elabCommand $ ← `(
-        instance $instRenMapAll_tys:ident : RenMapAll [$tys.toArray:ident,*] := .cons $instRenMapAll_tys'
-      )
+    mkMapAllInstances .rmap
 
     -- smap
     let smapCases ← mkAllCases (map_f .smap false) tyNameGlobal (fVar := some $ smap_fVar tys)
@@ -533,8 +542,29 @@ namespace Automation
 
     mkMapInstances .smap
     mkSuffixInstances .smap
+    mkMapAllInstances .smap
     mkMapThms .smap
     mkFromActionMapThms .smap
+
+    elabCommand $ ← `(
+      instance : SubstMapEmpty $ty where
+        apply_empty := by intro $s:ident; simp [SubstMap.smap]
+
+      instance : SubstMapId $ty [$ty] where
+        apply_id := by subst_solve_id
+
+      instance : SubstMapStable $ty [$ty] where
+        apply_stable := by subst_solve_stable
+
+      instance : SubstMapRenComposeLeft $ty [$ty] where
+        apply_ren_compose_left := by subst_solve_compose
+
+      instance : SubstMapRenComposeRight $ty [$ty] where
+        apply_ren_compose_right := by subst_solve_compose
+
+      instance : SubstMapCompose $ty [$ty] where
+        apply_compose := by subst_solve_compose
+    )
 
   def genAllTys : List Ident → CommandElabM Unit
   | [] => pure ()
