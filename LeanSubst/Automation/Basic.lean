@@ -347,7 +347,7 @@ namespace Automation
               pure ⟨mkIdent ty', Syntax.mkNatLit 0⟩)
       pure $ increments.filter (fun (_, stx) ↦ match stx with | `(0) => false | _ => true)
 
-    let mkMapArr (data : ArgData) (xs : List Ident) (tys := tys) : CommandElabM $ Option MapOrLift :=
+    let mkMapArr (data : ArgData) (xs : List Ident) (tys : List Ident) : CommandElabM $ Option MapOrLift :=
       match data with
       | .binder _ => do
         let lifts ← tys.mapM $ getLiftsOfTy data xs
