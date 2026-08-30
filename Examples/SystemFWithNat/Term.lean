@@ -53,8 +53,8 @@ def x' : Option Bool := sorry
 
 #print Ty.rmap
 #print Ty.rmap._f
-#print Ty.rmap_fix
 
+#print Ty.rmap_fix
 #print Ty.rmap_empty
 
 #print Ty.rmap_var
@@ -66,6 +66,19 @@ def x' : Option Bool := sorry
 #print Ty.smap
 #print Ty.smap._f
 
+#print Ty.smap
+#print Ty.smap._f
+
+#print Ty.smap_fix
+#print Ty.smap_empty
+
+#print Ty.smap_var
+#print Ty.smap_arrow
+#print Ty.smap_all
+#print Ty.smap_nat
+#print Ty.from_action_smap
+
+
 -- Checking Term --
 #print Term.from_action
 #print Term.from_action_id
@@ -73,6 +86,7 @@ def x' : Option Bool := sorry
 #print Term.from_action_re
 #print Term.from_action_su
 
+-- rmap
 #print Term.rmap
 #print Term.rmap_fix
 
@@ -109,6 +123,50 @@ def x' : Option Bool := sorry
 #print Term.rmap_term_ty_nrec
 
 #print Term.from_action_rmap
+#print Term.from_action_rmap0
+#print Term.from_action_rmap1
+
+-- smap
+#print Term.smap
+#print Term.smap_fix
+
+#print Term.smap
+#print Term.smap._f
+
+#print Term.smap_empty
+
+#print Term.smap_term_var
+#print Term.smap_term_app
+#print Term.smap_term_lam
+#print Term.smap_term_tapp
+#print Term.smap_term_tlam
+#print Term.smap_term_zero
+#print Term.smap_term_succ
+#print Term.smap_term_nrec
+
+#print Term.smap_ty_var
+#print Term.smap_ty_app
+#print Term.smap_ty_lam
+#print Term.smap_ty_tapp
+#print Term.smap_ty_tlam
+#print Term.smap_ty_zero
+#print Term.smap_ty_succ
+#print Term.smap_ty_nrec
+
+#print Term.smap_term_ty_var
+#print Term.smap_term_ty_app
+#print Term.smap_term_ty_lam
+#print Term.smap_term_ty_tapp
+#print Term.smap_term_ty_tlam
+#print Term.smap_term_ty_zero
+#print Term.smap_term_ty_succ
+#print Term.smap_term_ty_nrec
+
+#print Term.from_action_smap
+#print Term.from_action_smap0
+#print Term.from_action_smap1
+
+
 
 theorem SystemFWithNat.Term.rmap_ty_var : ∀ {x0 : Nat} {r : RenVec [Ty]}, (Term.var x0)⟨r,⟩ = Term.var (r.fst.act x0) := by
   intros
@@ -467,17 +525,17 @@ instance : RenMapId Term [Ty] where
 instance : RenMapCompose Term [Ty] where
   apply_compose := by subst_solve_compose
 
--- @[simp]
--- def Term.smap (σ : SubstVec [Term, Ty]) : Term -> Term
--- | var x => σ.1.act x
--- | app t1 t2 => app (t1.smap σ) (t2.smap σ)
--- | lam A t => lam A[σ.2.1] (t.smap $ σ.lift [1, 0])
--- | tapp t A => tapp (t.smap σ) A[σ.2.1]
--- | tlam t => tlam (t.smap $ σ.map ((SubstVec.MapOps.ren [Ty] ⟨Ren.add Ty 1, .nil⟩) $ .lift 1 $ .nil))
--- | zero => zero
--- | succ t => succ (t.smap σ)
--- | nrec motive z s n =>
---   nrec motive[σ.2.1] (z.smap σ) (s.smap $ σ.lift [2, 0]) (n.smap σ)
+@[simp]
+def Term.smap' (σ : SubstVec [Term, Ty]) : Term -> Term
+| var x => σ.1.act x
+| app t1 t2 => app (t1.smap σ) (t2.smap σ)
+| lam A t => lam A[σ.2.1] (t.smap $ σ.lift [1, 0])
+| tapp t A => tapp (t.smap σ) A[σ.2.1]
+| tlam t => tlam (t.smap $ σ.map ((SubstVec.MapOps.ren [Ty] ⟨Ren.add Ty 1, .nil⟩) $ .lift 1 $ .nil))
+| zero => zero
+| succ t => succ (t.smap σ)
+| nrec motive z s n =>
+  nrec motive[σ.2.1] (z.smap σ) (s.smap $ σ.lift [2, 0]) (n.smap σ)
 
 instance : SubstMap Term [Term, Ty] where
   smap := Term.smap

@@ -48,8 +48,8 @@ namespace Automation
   | _ => []
 
   inductive MapType
-  | is_rmap
-  | is_smap
+  | rmap
+  | smap
 
   def xN (n : Nat) : TSyntax `term := mkIdent (.mkStr1 $ s!"x{n}")
   def xN' (n : Nat) : TSyntax `ident := mkIdent (.mkStr1 $ s!"x{n}")
@@ -130,21 +130,25 @@ namespace Automation
     let rhs ← mkCtorRhs f ctor
     `(Parser.Term.matchAltExpr| | $lhs => $rhs)
 
-  def mkVarCtorRhs (f : List Ident → CommandElabM Term) (ctor : Name) : CommandElabM $ Term := do
-    f $ ← mkCtorArgs ctor
+  def mkVarCtorRhs (f : List Ident → Term → CommandElabM Term) (ctor : Name) : CommandElabM $ Term := do
+    f (← mkCtorArgs ctor) $ mkIdent ctor
 
-  def mkVarCtorCase (f : List Ident → CommandElabM Term) (ctor : Name) : CommandElabM $ TSyntax `Lean.Parser.Term.matchAltExpr := do
+  def mkVarCtorCase (f : List Ident → Term → CommandElabM Term) (ctor : Name) : CommandElabM $ TSyntax `Lean.Parser.Term.matchAltExpr := do
     let lhs ← mkCtorLhs ctor
     let rhs ← mkVarCtorRhs f ctor
     `(Parser.Term.matchAltExpr| | $lhs => $rhs)
 
-  def mkCtorEq (fLhs : Term → CommandElabM Term) (fRhs : Expr → ArgData → Ident → List Ident → CommandElabM Term) (ctor : Name) : CommandElabM $ Term := do
+  def mkCtorEq (fLhs : Term → CommandElabM Term) (fRhs : Expr → ArgData → Ident → List Ident → CommandElabM Term) (ctor : Name) (fVar : Option (List Ident → Term → CommandElabM Term) := none): CommandElabM $ Term := do
     let lhs ← mkCtorLhs ctor >>= fLhs
-    let rhs ← mkCtorRhs fRhs ctor
+    let rhs ←
+      if ← liftCoreM $ runMetaMAsCoreM $ isVar ctor then
+        if let some fVar := fVar then mkVarCtorRhs fVar ctor else mkCtorRhs fRhs ctor
+      else
+        mkCtorRhs fRhs ctor
     `($lhs = $rhs)
 
   -- Need to give the option of handling the var case by doing more than just mapping each argument
-  def mkAllCases (f : Expr → ArgData → Ident → List Ident → CommandElabM Term) (ty : Name) (fVar : Option (List Ident → CommandElabM Term) := none) : CommandElabM $ TSyntaxArray `Lean.Parser.Term.matchAltExpr := do
+  def mkAllCases (f : Expr → ArgData → Ident → List Ident → CommandElabM Term) (ty : Name) (fVar : Option (List Ident → Term → CommandElabM Term) := none) : CommandElabM $ TSyntaxArray `Lean.Parser.Term.matchAltExpr := do
     if let some fVar := fVar then
       let nonVarCtors ← liftCoreM $ runMetaMAsCoreM $ getNonVarConstructors ty
       let nonVarCases ← nonVarCtors.toArray.mapM (mkCtorCase f)
@@ -194,15 +198,16 @@ namespace Automation
   | none : MapOrLift
 
   def genTy (tys : List Ident) : CommandElabM Unit := do
+    let toGlobal (ty : Ident) : CommandElabM Name := Command.liftCoreM $ realizeGlobalConstNoOverload ty.raw
     let ty := tys[0]!
     let tyName := ty.raw.getId
     let tyStr := tyName.toString
-    let tyNameGlobal ← Command.liftCoreM $ realizeGlobalConstNoOverload ty.raw
+    let tyNameGlobal ← toGlobal ty
 
     dbg_trace s!"Generating {ty} with list {tys}"
 
     let tyArr ← `([$tys.toArray,*])
-    let tysNamesGlobal ← tys.mapM (Command.liftCoreM $ realizeGlobalConstNoOverload ·.raw)
+    let tysNamesGlobal ← tys.mapM toGlobal
 
     let qualify str := mkIdent $ .str tyName str
 
@@ -212,29 +217,6 @@ namespace Automation
     | none => throwError "ruh roh"
     let varType := (← getConstInfo varName).type
     let var := mkIdent varName
-
-    let mkMapSingletonInstance (mapType : MapType) (ty' : Ident) := do
-      let tyList ← (tys.map (TSyntax.raw ·)).mapM (fun `($ty'') ↦ do
-        let ty'Expr ← liftTermElabM $ Term.elabTerm ty' none
-        let ty''Expr ← liftTermElabM $ Term.elabTerm ty'' none
-        if ← liftCoreM $ runMetaMAsCoreM $ isDefEq ty'Expr ty''Expr then
-          match mapType with | .is_rmap => `($(r).1) | .is_smap => `($(σ).1)
-        else
-          match mapType with | .is_rmap => `(Ren.id $ty'') | .is_smap => `(Subst.id $ty''))
-      let tyArr := (tyList.append [← `(.nil)]).toArray
-      match mapType with
-      | .is_rmap =>
-        dbg_trace s!"RMAP INSTANCE {ty} ⟨{ty'}⟩\n\n"
-        elabCommand $ ← `(
-          instance : RenMap $ty [$ty'] where
-            rmap $r:ident := $(qualify "rmap") ⟨ $tyArr:term,* ⟩
-        )
-      | .is_smap =>
-        dbg_trace s!"SMAP INSTANCE {ty} ⟨{ty'}⟩\n\n"
-        elabCommand $ ← `(
-          instance : SubstMap $ty [$ty'] where
-            smap $σ:ident := $(qualify "smap") ⟨ $tyArr:term,* ⟩
-        )
 
     let from_action := qualify "from_action"
     let from_action_id := qualify "from_action_id"
@@ -263,7 +245,68 @@ namespace Automation
         coe := $from_action
     )
 
-    -- rmap
+
+    let rmap := qualify "rmap"
+    let smap := qualify "smap"
+
+    let mkMapSingletonInstance (mapType : MapType) (ty' : Ident) := do
+      let tyList ← (tys.map (TSyntax.raw ·)).mapM (fun `($ty'') ↦ do
+        let ty'Expr ← liftTermElabM $ Term.elabTerm ty' none
+        let ty''Expr ← liftTermElabM $ Term.elabTerm ty'' none
+        if ← liftCoreM $ runMetaMAsCoreM $ isDefEq ty'Expr ty''Expr then
+          match mapType with | .rmap => `($(r).1) | .smap => `($(σ).1)
+        else
+          match mapType with | .rmap => `(Ren.id $ty'') | .smap => `(Subst.id $ty''))
+      let tyArr := (tyList.append [← `(.nil)]).toArray
+      match mapType with
+      | .rmap =>
+        elabCommand $ ← `(
+          instance : RenMap $ty [$ty'] where
+            rmap $r:ident := $rmap ⟨ $tyArr:term,* ⟩
+        )
+      | .smap =>
+        dbg_trace s!"SMAP INSTANCE {ty} ⟨{ty'}⟩\n\n"
+        elabCommand $ ← `(
+          instance : SubstMap $ty [$ty'] where
+            smap $σ:ident := $smap ⟨ $tyArr:term,* ⟩
+        )
+
+    let mkMapInstances (mapType : MapType) := do
+      match mapType with
+      | .rmap =>
+        elabCommand $ ← `(
+          instance : RenMap $ty [$tys.toArray,*] where
+            rmap := $rmap
+
+          instance : RenMap $ty [] where
+            rmap _ := id
+        )
+      | .smap =>
+        dbg_trace s!"SMAP INSTANCE {ty} ⟨{tys}⟩\n\n"
+        elabCommand $ ← `(
+          instance : SubstMap $ty [$tys.toArray,*] where
+            smap := $smap
+
+          instance : SubstMap $ty [] where
+            smap _ := id
+        )
+      -- If the length of `tys` is 1, then we've already done the only necessary RenMap
+      -- TODO: check, do we also need all prefixes here?
+      if tys.length > 1 then
+        forEachTy tys $ mkMapSingletonInstance mapType
+
+    let mkSuffixInstances (mapType : MapType) := do
+      let TheSuffix ← match mapType with | .rmap => `(RenSuffix) | .smap => `(SubstSuffix)
+      forEachSuffix tys.tail (fun sfx ↦ do
+        elabCommand $ ← `(
+          instance : $TheSuffix $ty:ident [$sfx.toArray,*] := ⟨⟩
+        )
+      )
+      elabCommand $ ← `(
+        instance : $TheSuffix $ty:ident [] := ⟨⟩
+      )
+
+    -- rmap setup
     let getLiftsOfTy (data : ArgData) (xs : List Ident) (ty : Ident)  : CommandElabM $ Term := do
       let closure := getClosureFromArgData ty data
       if let some closure := closure then
@@ -290,87 +333,170 @@ namespace Automation
       | _ => do
         pure none
 
-    let rmap := qualify "rmap"
-    let rmap_f useTCSyntax ty' data x xs (tys := tys) := match data with
-    | .var => do
+    -- smap setup
+    let getIncrementsOfTy (lifts : List Term) (tysNamesGlobal : List Name) (ty : Name) : CommandElabM $ List (Ident × Term) := do
+      let tysLiftsZip := tysNamesGlobal.zip lifts
+      let increments : List (Ident × Term) ←
+        tysLiftsZip.mapM
+          (fun ⟨ty', lift⟩ ↦ do
+            -- Is there a better way to check if two names are equal?
+            let ty'_eq_ty ← liftCoreM $ runMetaMAsCoreM $ isDefEq (← liftTermElabM $ Term.elabTerm (mkIdent ty') none) (← liftTermElabM $ Term.elabTerm (mkIdent ty) none)
+            if ¬ ty'_eq_ty ∧ (← isBoundIn ty' ty) then
+              pure ⟨mkIdent ty', lift⟩
+            else
+              pure ⟨mkIdent ty', Syntax.mkNatLit 0⟩)
+      pure $ increments.filter (fun (_, stx) ↦ match stx with | `(0) => false | _ => true)
+
+    let mkMapArr (data : ArgData) (xs : List Ident) (tys := tys) : CommandElabM $ Option MapOrLift :=
+      match data with
+      | .binder _ => do
+        let lifts ← tys.mapM $ getLiftsOfTy data xs
+        let optionLifts := lifts.map (fun stx : Term ↦ if BEq.beq stx $ Syntax.mkNatLit 0 then none else some stx)
+        -- Check if all lifts are syntactically just 0
+        if optionLifts.all (fun | none => true | some _ => false) then
+          pure none
+        else
+          let tysNamesGlobal ← tys.mapM toGlobal
+          let incrementsList ← tysNamesGlobal.mapM $ getIncrementsOfTy lifts tysNamesGlobal
+          let zipped := incrementsList.zip optionLifts
+          let ops : List $ Term × Bool ← zipped.mapM (fun ⟨incs, lift⟩ ↦ do
+            let incOps ← incs.mapM (fun ⟨ty, inc⟩ ↦
+              if BEq.beq inc $ Syntax.mkNatLit 0 then `(Ren.id $ty:ident) else `(Ren.add $ty:ident $inc))
+            let anyIncs := incs.tail.any (fun ⟨_, inc⟩ ↦ ¬ (BEq.beq inc $ Syntax.mkNatLit 0))
+
+            let tyTail := tysNamesGlobal.tail.toArray.map mkIdent
+            let op ← match (anyIncs, lift) with
+            | (false, none) => `(.skip)
+            | (true, none) => `(.ren [$tyTail,*] ⟨$incOps.tail.toArray,*, .nil⟩)
+            | (false, some ℓ) => `(.lift $ℓ)
+            | (true, some ℓ) => `(.both [$tyTail,*] ⟨$incOps.tail.toArray,*, .nil⟩ $ℓ)
+            pure ⟨op, anyIncs⟩
+          )
+          if ops.all (¬ ·.2) then -- If we don't have to apply any renamings
+            pure $ MapOrLift.lift $ ← `([$lifts.toArray,*])
+          else
+            pure $ MapOrLift.map $ ← (ops.map Prod.fst).foldrM (fun t1 t2 ↦ `($t1 $ $t2)) $ ← `(LeanSubst.SubstVec.MapOps.nil)
+      | _ => pure none
+
+    let smap_fVar (tys : List Ident) xs ctor : CommandElabM Term := do
       if (← liftCoreM $ runMetaMAsCoreM $ isDefEq (← liftTermElabM $ Term.elabTerm tys[0]!.raw none) (← liftTermElabM $ Term.elabTerm ty.raw none)) then
-        `($(r).1.act $x) -- NOTE: assumes that the type being generated is the first type in [tys]
+        `($(σ).1.act $(xs[0]!):ident) -- TODO: At the moment, this doesn't generalize to vars with data
       else
-        `($x)
+        `($ctor $(xs[0]!):ident)
+
+    -- rmap/smap arg mapping function
+    let map_f (mapType : MapType) (useTCSyntax : Bool) ty' data (x : Ident) (xs : List Ident) (tys := tys) := match data with
+    | ArgData.var => do
+      match mapType with
+      | .rmap =>
+        if (← liftCoreM $ runMetaMAsCoreM $ isDefEq (← liftTermElabM $ Term.elabTerm tys[0]!.raw none) (← liftTermElabM $ Term.elabTerm ty.raw none)) then
+          `($(r).1.act $x) -- NOTE: assumes that the type being generated is the first type in [tys]
+        else
+          `($x)
+      | .smap => throwError "smap var case"
     | _ => do
       let tyExpr ← liftTermElabM $ Term.elabTerm ty none
       if ← liftCoreM $ runMetaMAsCoreM $ isDefEq tyExpr ty' then
-        if let some liftArr ← mkLiftArr data xs (tys := tys) then
-          if useTCSyntax then `(($x)⟨$(r).lift $liftArr,⟩) else `($rmap ($(r).lift $liftArr) $x)
-        else
-          if useTCSyntax then `(($x)⟨$(r),⟩) else `($rmap $r $x)
-      else if let some theTy ← List.findM? (fun ty ↦ do pure (← liftCoreM $ runMetaMAsCoreM $ isDefEq (← liftTermElabM $ Term.elabTerm ty.raw none) ty')) tys then
-        let r' ← getTy r tys.toArray theTy
-        dbg_trace s!"\nVAR {x} with type {ty'} and rmap {r'}\n"
-        `(($x⟨$r'⟩))
+        match mapType with
+        | .rmap =>
+          if let some liftArr ← mkLiftArr data xs (tys := tys) then
+            if useTCSyntax then `(($x)⟨$(r).lift $liftArr,⟩) else `($rmap ($(r).lift $liftArr) $x)
+          else
+            if useTCSyntax then `(($x)⟨$(r),⟩) else `($rmap $r $x)
+        | .smap =>
+          if let MapOrLift.map opsArr ← mkMapArr data xs tys then
+            if useTCSyntax then `(($x)[$(σ).map $opsArr,]) else `($smap ($(σ).map $opsArr) $x)
+          else if let MapOrLift.lift opsArr ← mkMapArr data xs tys then
+            if useTCSyntax then `(($x)[$(σ).lift $opsArr,]) else `($smap ($(σ).lift $opsArr) $x)
+          else
+            if useTCSyntax then `(($x)[$(σ),]) else `($smap $σ $x)
+      else if let some theTy ← List.findM? (fun (ty : Ident) ↦ do pure (← liftCoreM $ runMetaMAsCoreM $ isDefEq (← liftTermElabM $ Term.elabTerm ty.raw none) ty')) tys then
+        match mapType with
+        | .rmap =>
+          let r' ← getTy r tys.toArray theTy
+          `(($x⟨$r'⟩))
+        | .smap =>
+          let σ' ← getTy σ tys.toArray theTy
+          `(($x)[$σ'])
       else
         `($x)
 
-    let rmapCases ← mkAllCases (rmap_f false) tyNameGlobal
+
+    let mkMapThms (mapType : MapType) := do
+      let mapStr := match mapType with | .rmap => "rmap" | .smap => "smap"
+      let rσ : Ident := match mapType with | .rmap => r | .smap => σ
+      let map := match mapType with | .rmap => rmap | .smap => smap
+      let map_fix := qualify s!"{mapStr}_fix"
+      let TheVec ← match mapType with | .rmap => `(RenVec) | .smap => `(SubstVec)
+
+      let eq ← match mapType with
+      | .rmap => `($map $rσ $t = $t⟨$rσ,⟩)
+      | .smap => `($map $rσ $t = $t[$rσ,])
+      let simp ← match mapType with | .rmap => `(by simp [RenMap.rmap]) | .smap => `(by simp [SubstMap.smap])
+      elabCommand $ ← `(
+        @[simp]
+        theorem $map_fix {$rσ : $TheVec [$tys.toArray,*]} {$t : $ty} : $eq := $simp
+      )
+
+      let map_empty := qualify s!"{mapStr}_empty"
+      let eq ← match mapType with | .rmap => `($t⟨$rσ,⟩ = $t) | .smap => `($t[$rσ,] = $t)
+      elabCommand $ ← `(
+        @[simp]
+        theorem $map_empty {$t : $ty} {$rσ : $TheVec []} : $eq := rfl
+      )
+
+      let proof ← match mapType with
+      | .rmap => `(by first | rfl | simp only [RenMap.rmap] ; rw [rmap] ; try simp | simp only [RenMap.rmap] ; aesop)
+      | .smap => `(by first | rfl | simp only [SubstMap.smap] ; rw [smap] ; try simp | simp only [SubstMap.smap] ; aesop)
+      forHeadAndEachSuffix tys (fun sfx ↦ forEachCtor tyNameGlobal (fun ctor ↦ do
+        let tyQual := if tys.length = 1 then "" else "_" ++ ("_".intercalate $ sfx.map (fun (ty : Ident) ↦ ty.raw.getId.toString.toLower))
+        let thmName := qualify s!"{mapStr}{tyQual}_{ctor.components.getLast!}"
+        let fRhs := map_f mapType true (tys := sfx)
+        let fLhs lhs : CommandElabM Term := match mapType with | .rmap => `(($lhs)⟨$(rσ),⟩) | .smap => `(($lhs)[$(rσ),])
+        let eq ← mkCtorEq fLhs fRhs ctor (fVar := match mapType with | .rmap => none | .smap => some $ smap_fVar sfx)
+        let args ← mkCtorArgs ctor
+        elabCommand $ ← `(
+          @[simp]
+          theorem $thmName {$args.toArray*} {$rσ : $TheVec [$sfx.toArray,*]} : $eq :=
+            $proof
+        )
+      ))
+
+    let mkFromActionMapThms (mapType : MapType) := do
+      let map := match mapType with | .rmap => "rmap" | .smap => "smap"
+      let from_action_map := qualify s!"from_action_{map}"
+      let rσ : Ident := match mapType with | .rmap => r | .smap => σ
+      let eq ← match mapType with
+      | .rmap => `(($from_action $t)⟨$rσ,⟩ = $from_action ($t⟨$rσ,⟩))
+      | .smap => `(($from_action $t)[$rσ,] = $from_action ($t[$rσ,]))
+      let TheVec ← match mapType with | .rmap => `(RenVec) | .smap => `(SubstVec)
+      elabCommand $ ← `(
+        @[simp]
+        theorem $from_action_map {$t : Action $ty} {$rσ : $TheVec [$tys.toArray,*]} : $eq := by
+          cases $t:ident <;> (first | rfl | simp | simp [$from_action:ident] | aesop)
+      )
+
+      let from_action_mapi (i : Nat) := qualify $ s!"from_action_{map}{i}"
+      if tys.length > 1 then
+        for i in List.range tys.length do
+          elabCommand $ ← `(
+            @[simp]
+            theorem $(from_action_mapi i) {$t : Action $ty} {$rσ : $TheVec [$(tys[i]!)]} : $eq := by
+              cases $t:ident <;> (first | rfl | simp | simp [$from_action:ident] | aesop)
+          )
+
+    -- rmap
+    let rmapCases ← mkAllCases (map_f .rmap false) tyNameGlobal
     elabCommand $ ← `(
       @[simp]
       def $rmap ($r : RenVec [$tys.toArray,*]) : $ty → $ty
       $rmapCases:matchAlt*
-
-      instance : RenMap $ty [$tys.toArray,*] where
-        rmap := $rmap
-
-      instance : RenMap $ty [] where
-        rmap _ := id
     )
 
-    -- If the length of `tys` is 1, then we've already done the only necessary RenMap
-    -- TODO: check, do we also need all prefixes here?
-    if tys.length > 1 then
-      forEachTy tys $ mkMapSingletonInstance .is_rmap
-    -- TODO: do we also need suffixes?
-    forEachSuffix tys.tail (fun sfx ↦ do
-      elabCommand $ ← `(
-        instance : RenSuffix $ty:ident [$sfx.toArray,*] := ⟨⟩
-      )
-    )
-    elabCommand $ ← `(
-      instance : RenSuffix $ty:ident [] := ⟨⟩
-    )
-
-    let rmap_fix := qualify "rmap_fix"
-    elabCommand $ ← `(
-      @[simp]
-      theorem $rmap_fix {$r : RenVec [$tys.toArray,*]} {$t : $ty} : $rmap $r $t = $t⟨$r,⟩ := by simp [RenMap.rmap]
-    )
-
-    let rmap_empty := qualify "rmap_empty"
-    elabCommand $ ← `(
-      @[simp]
-      theorem $rmap_empty {$t : $ty} {$r : RenVec []} : $t⟨$r,⟩ = $t := rfl
-    )
-
-    forHeadAndEachSuffix tys (fun pfx ↦ forEachCtor tyNameGlobal (fun ctor ↦ do
-      let tyQual := if tys.length = 1 then "" else "_" ++ ("_".intercalate $ pfx.map (fun ty ↦ ty.raw.getId.toString.toLower))
-      let thmName := qualify s!"rmap{tyQual}_{ctor.components.getLast!}"
-      dbg_trace s!"NAME: {thmName}"
-      let fRhs := rmap_f true (tys := pfx)
-      let fLhs lhs := `(($lhs)⟨$(r),⟩)
-      let eq ← mkCtorEq fLhs fRhs ctor
-      let args ← mkCtorArgs ctor
-      elabCommand $ ← `(
-        @[simp]
-        theorem $thmName {$args.toArray*} {$r : RenVec [$pfx.toArray,*]} : $eq := by
-          first | rfl | simp only [RenMap.rmap] ; rw [rmap] ; try simp | simp only [RenMap.rmap] ; aesop
-      )
-    ))
-
-    let from_action_rmap := qualify "from_action_rmap"
-    elabCommand $ ← `(
-      @[simp]
-      theorem $from_action_rmap {$t : Action $ty} {$r : RenVec [$tys.toArray,*]} : ($from_action $t)⟨$r,⟩ = $from_action ($t⟨$r,⟩) := by
-        cases $t:ident <;> (first | rfl | simp | simp [$from_action:ident] | aesop)
-    )
+    mkMapInstances .rmap
+    mkSuffixInstances .rmap
+    mkMapThms .rmap
+    mkFromActionMapThms .rmap
 
     elabCommand $ ← `(
       instance : RenMapEmpty $ty where
@@ -398,86 +524,18 @@ namespace Automation
       )
 
     -- smap
-    let getIncrementsOfTy (lifts : List Term) (ty : Name) : CommandElabM $ List (Ident × Term) := do
-      let tysLiftsZip := tysNamesGlobal.zip lifts
-      let increments : List (Ident × Term) ←
-        tysLiftsZip.mapM
-          (fun ⟨ty', lift⟩ ↦ do
-            -- Is there a better way to check if two names are equal?
-            let ty'_eq_ty ← liftCoreM $ runMetaMAsCoreM $ isDefEq (← liftTermElabM $ Term.elabTerm (mkIdent ty') none) (← liftTermElabM $ Term.elabTerm (mkIdent ty) none)
-            if ¬ ty'_eq_ty ∧ (← isBoundIn ty' ty) then
-              pure ⟨mkIdent ty', lift⟩
-            else
-              pure ⟨mkIdent ty', Syntax.mkNatLit 0⟩)
-      pure $ increments.filter (fun (_, stx) ↦ match stx with | `(0) => false | _ => true)
-
-    let mkMapArr (data : ArgData) (xs : List Ident) : CommandElabM $ Option MapOrLift :=
-      match data with
-      | .binder blah => do
-        let lifts ← tys.mapM $ getLiftsOfTy data xs
-        let optionLifts := lifts.map (fun stx : Term ↦ if BEq.beq stx $ Syntax.mkNatLit 0 then none else some stx)
-        dbg_trace s!"\nLIFTS: {optionLifts} for data {blah}\n"
-
-        -- Check if all lifts are syntactically just 0
-        if optionLifts.all (fun | none => true | some _ => false) then
-          pure none
-        else
-          let incrementsList ← tysNamesGlobal.mapM $ getIncrementsOfTy lifts
-          let zipped := incrementsList.zip optionLifts
-          let ops : List $ Term × Bool ← zipped.mapM (fun ⟨incs, lift⟩ ↦ do
-            let incOps ← incs.mapM (fun ⟨ty, inc⟩ ↦
-              if BEq.beq inc $ Syntax.mkNatLit 0 then `(Ren.id $ty:ident) else `(Ren.add $ty:ident $inc))
-            let anyIncs := incs.tail.any (fun ⟨_, inc⟩ ↦ ¬ (BEq.beq inc $ Syntax.mkNatLit 0))
-
-            let tyTail := tysNamesGlobal.tail.toArray.map mkIdent
-            dbg_trace s!"MATCHING on {(anyIncs, lift)}"
-            let op ← match (anyIncs, lift) with
-            | (false, none) => `(.skip)
-            | (true, none) => `(.ren [$tyTail,*] ⟨$incOps.tail.toArray,*, .nil⟩)
-            | (false, some ℓ) => `(.lift $ℓ)
-            | (true, some ℓ) => `(.both [$tyTail,*] ⟨$incOps.tail.toArray,*, .nil⟩ $ℓ)
-            pure ⟨op, anyIncs⟩
-          )
-          if ops.all (¬ ·.2) then -- If we don't have to apply any renamings
-            pure $ MapOrLift.lift $ ← `([$lifts.toArray,*])
-          else
-            pure $ MapOrLift.map $ ← (ops.map Prod.fst).foldrM (fun t1 t2 ↦ `($t1 $ $t2)) $ ← `(LeanSubst.SubstVec.MapOps.nil)
-      | _ => pure none
-
-    let smap := qualify "smap"
-    let smap_f useTCSyntax ty' data x xs := match data with
-    | .var => throwError "smap var case"
-    | _ => do
-      let tyExpr ← liftTermElabM $ Term.elabTerm ty none
-      if ← liftCoreM $ runMetaMAsCoreM $ isDefEq tyExpr ty' then
-        if let MapOrLift.map opsArr ← mkMapArr data xs then
-          if useTCSyntax then `(($x)[$(σ).map $opsArr]) else `($smap ($(σ).map $opsArr) $x)
-        else if let MapOrLift.lift opsArr ← mkMapArr data xs then
-          if useTCSyntax then `(($x)[$(σ).lift $opsArr]) else `($smap ($(σ).lift $opsArr) $x)
-        else
-          if useTCSyntax then `(($x)[$(σ),]) else `($smap $σ $x)
-      else if let some theTy ← List.findM? (fun ty ↦ do pure (← liftCoreM $ runMetaMAsCoreM $ isDefEq (← liftTermElabM $ Term.elabTerm ty.raw none) ty')) tys then
-        let σ' ← getTy σ tys.toArray theTy
-        `(($x)[$σ'])
-      else
-        `($x)
-    let smap_fVar xs := `($(σ).1.act $(xs[0]!):ident) -- TODO: At the moment, this doesn't generalize to vars with data
-    let smapCases ← mkAllCases (smap_f false) tyNameGlobal (fVar := some smap_fVar)
+    let smapCases ← mkAllCases (map_f .smap false) tyNameGlobal (fVar := some $ smap_fVar tys)
 
     elabCommand $ ← `(
       @[simp]
       def $smap ($σ : SubstVec [$tys.toArray,*]) : $ty → $ty
       $smapCases:matchAlt*
-
-      instance : SubstMap $ty [$tys.toArray,*] where
-        smap := $smap
-
-      instance : SubstMap $ty [] where
-        smap _ := id
     )
 
-    if tys.length > 1 then
-      forEachTy tys $ mkMapSingletonInstance .is_smap
+    mkMapInstances .smap
+    mkSuffixInstances .smap
+    mkMapThms .smap
+    mkFromActionMapThms .smap
 
   def genAllTys : List Ident → CommandElabM Unit
   | [] => pure ()
