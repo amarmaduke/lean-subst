@@ -52,10 +52,11 @@ def x' : Option Bool := sorry
 #print Ty.from_action_su
 
 #print Ty.rmap
+#print Ty.rmap._f
 #print Ty.rmap_fix
 
-
 #print Ty.rmap_empty
+
 #print Ty.rmap_var
 #print Ty.rmap_arrow
 #print Ty.rmap_all
@@ -66,9 +67,19 @@ def x' : Option Bool := sorry
 #print Ty.smap._f
 
 -- Checking Term --
+#print Term.from_action
+#print Term.from_action_id
+#print Term.from_action_succ
+#print Term.from_action_re
+#print Term.from_action_su
+
+#print Term.rmap
+#print Term.rmap_fix
 
 #print Term.rmap
 #print Term.rmap._f
+
+#print Term.rmap_empty
 
 #print Term.rmap_term_var
 #print Term.rmap_term_app
@@ -79,7 +90,35 @@ def x' : Option Bool := sorry
 #print Term.rmap_term_succ
 #print Term.rmap_term_nrec
 
+#print Term.rmap_ty_var
+#print Term.rmap_ty_app
+#print Term.rmap_ty_lam
+#print Term.rmap_ty_tapp
+#print Term.rmap_ty_tlam
+#print Term.rmap_ty_zero
+#print Term.rmap_ty_succ
+#print Term.rmap_ty_nrec
 
+#print Term.rmap_term_ty_var
+#print Term.rmap_term_ty_app
+#print Term.rmap_term_ty_lam
+#print Term.rmap_term_ty_tapp
+#print Term.rmap_term_ty_tlam
+#print Term.rmap_term_ty_zero
+#print Term.rmap_term_ty_succ
+#print Term.rmap_term_ty_nrec
+
+#print Term.from_action_rmap
+
+theorem SystemFWithNat.Term.rmap_ty_var : ∀ {x0 : Nat} {r : RenVec [Ty]}, (Term.var x0)⟨r,⟩ = Term.var (r.fst.act x0) := by
+  intros
+  simp [RenMap.rmap]
+
+theorem SystemFWithNat.Term.rmap_term_lam : ∀ {x0 : Ty} {x1 : Term} {r : RenVec [Term]},
+  (Term.lam x0 x1)⟨r,⟩ = Term.lam x0 x1⟨r.lift [1],⟩ := by
+  simp only [RenMap.rmap]
+  intro x0 x1 r
+  simp_all only [Term.rmap, Ren.apply_id1, RenVec.lift, Ren.lift_of_zero, Term.rmap_fix, RenVec.lift_proj1]
 
 ----------------------------------------------------------------------------------------------------
 -- Ty Renaming & Substitution
@@ -272,7 +311,7 @@ theorem Term.rmap_term_ty_app {t1 t2} {r : RenVec [Term, Ty]} : (app t1 t2)⟨r,
   simp only [RenMap.rmap]; rw [rmap]
 
 @[simp]
-theorem Term.rmap_term_ty_lam {A t} {r : RenVec [Term, Ty]}
+theorem Term.rmap_term_ty_lam'' {A t} {r : RenVec [Term, Ty]}
   : (lam A t)⟨r,⟩ = lam A⟨r.2.1⟩ t⟨r.lift [1, 0],⟩
 := by simp only [RenMap.rmap]; rw [rmap]; try simp
 

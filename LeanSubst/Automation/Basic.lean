@@ -252,7 +252,7 @@ namespace Automation
       else
         pure (Syntax.mkNatLit 0)
 
-    let mkLiftArr (data : ArgData) (xs : List Ident) : CommandElabM $ Option Term :=
+    let mkLiftArr (data : ArgData) (xs : List Ident) (tys := tys) : CommandElabM $ Option Term :=
       match data with
       | .binder _ => do
         let lifts ← tys.mapM $ getLiftsOfTy data xs
@@ -266,11 +266,15 @@ namespace Automation
 
     let rmap := qualify "rmap"
     let rmap_f useTCSyntax ty' data x xs (tys := tys) := match data with
-    | .var => `($(r).1.act $x) -- NOTE: assumes that the type being generated is the first type in [tys]
+    | .var => do
+      if (← liftCoreM $ runMetaMAsCoreM $ isDefEq (← liftTermElabM $ Term.elabTerm tys[0]!.raw none) (← liftTermElabM $ Term.elabTerm ty.raw none)) then
+        `($(r).1.act $x) -- NOTE: assumes that the type being generated is the first type in [tys]
+      else
+        `($x)
     | _ => do
       let tyExpr ← liftTermElabM $ Term.elabTerm ty none
       if ← liftCoreM $ runMetaMAsCoreM $ isDefEq tyExpr ty' then
-        if let some liftArr ← mkLiftArr data xs then
+        if let some liftArr ← mkLiftArr data xs (tys := tys) then
           if useTCSyntax then `(($x)⟨$(r).lift $liftArr,⟩) else `($rmap ($(r).lift $liftArr) $x)
         else
           if useTCSyntax then `(($x)⟨$(r),⟩) else `($rmap $r $x)
@@ -344,7 +348,8 @@ namespace Automation
       let args ← mkCtorArgs ctor
       elabCommand $ ← `(
         @[simp]
-        theorem $thmName {$args.toArray*} {$r : RenVec [$pfx.toArray,*]} : $eq := rfl
+        theorem $thmName {$args.toArray*} {$r : RenVec [$pfx.toArray,*]} : $eq := by
+          first | rfl | simp only [RenMap.rmap] ; rw [rmap] ; try simp | simp only [RenMap.rmap] ; aesop
       )
     ))
 
@@ -352,7 +357,7 @@ namespace Automation
     elabCommand $ ← `(
       @[simp]
       theorem $from_action_rmap {$t : Action $ty} {$r : RenVec [$tys.toArray,*]} : ($from_action $t)⟨$r,⟩ = $from_action ($t⟨$r,⟩) := by
-        cases $t:ident <;> simp [$from_action:ident]
+        cases $t:ident <;> (first | rfl | simp | simp [$from_action:ident] | aesop)
     )
 
     elabCommand $ ← `(
