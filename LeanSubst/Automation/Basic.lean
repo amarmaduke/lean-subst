@@ -185,6 +185,9 @@ namespace Automation
   def forEachCtor (ty : Name) (f : Name → CommandElabM Unit) : CommandElabM Unit := do
     for ctor in ← liftCoreM $ runMetaMAsCoreM $ getConstructors ty do f ctor
 
+  def forEachTy (tys : List Ident) (f : Ident → CommandElabM Unit) : CommandElabM Unit := do
+    for ty in tys do f ty
+
   inductive MapOrLift
   | map : Term → MapOrLift
   | lift : Term → MapOrLift
@@ -209,6 +212,29 @@ namespace Automation
     | none => throwError "ruh roh"
     let varType := (← getConstInfo varName).type
     let var := mkIdent varName
+
+    let mkMapSingletonInstance (mapType : MapType) (ty' : Ident) := do
+      let tyList ← (tys.map (TSyntax.raw ·)).mapM (fun `($ty'') ↦ do
+        let ty'Expr ← liftTermElabM $ Term.elabTerm ty' none
+        let ty''Expr ← liftTermElabM $ Term.elabTerm ty'' none
+        if ← liftCoreM $ runMetaMAsCoreM $ isDefEq ty'Expr ty''Expr then
+          match mapType with | .is_rmap => `($(r).1) | .is_smap => `($(σ).1)
+        else
+          match mapType with | .is_rmap => `(Ren.id $ty'') | .is_smap => `(Subst.id $ty''))
+      let tyArr := (tyList.append [← `(.nil)]).toArray
+      match mapType with
+      | .is_rmap =>
+        dbg_trace s!"RMAP INSTANCE {ty} ⟨{ty'}⟩\n\n"
+        elabCommand $ ← `(
+          instance : RenMap $ty [$ty'] where
+            rmap $r:ident := $(qualify "rmap") ⟨ $tyArr:term,* ⟩
+        )
+      | .is_smap =>
+        dbg_trace s!"SMAP INSTANCE {ty} ⟨{ty'}⟩\n\n"
+        elabCommand $ ← `(
+          instance : SubstMap $ty [$ty'] where
+            smap $σ:ident := $(qualify "smap") ⟨ $tyArr:term,* ⟩
+        )
 
     let from_action := qualify "from_action"
     let from_action_id := qualify "from_action_id"
@@ -301,29 +327,15 @@ namespace Automation
     -- If the length of `tys` is 1, then we've already done the only necessary RenMap
     -- TODO: check, do we also need all prefixes here?
     if tys.length > 1 then
-      for ty' in tys do
-        let tyList ← (tys.map (·.raw)).mapM (fun `($ty'') ↦ do
-          let ty'Expr ← liftTermElabM $ Term.elabTerm ty' none
-          let ty''Expr ← liftTermElabM $ Term.elabTerm ty'' none
-          if ← liftCoreM $ runMetaMAsCoreM $ isDefEq ty'Expr ty''Expr then
-            `($(r).1)
-          else
-            `(Ren.id $ty''))
-        let tyArr := (tyList.append [← `(.nil)]).toArray
-        dbg_trace s!"INSTANCE {ty} ⟨{ty'}⟩\n\n"
-        elabCommand $ ← `(
-          instance : RenMap $ty [$ty'] where
-            rmap $r:ident :=  $rmap ⟨ $tyArr:term,* ⟩
-        )
-
+      forEachTy tys $ mkMapSingletonInstance .is_rmap
     -- TODO: do we also need suffixes?
-    forEachPrefix tys (fun tys ↦ do
-      let head := tys.head!
-      let tail := tys.tail
-      dbg_trace s!"SUFFIX --- head: {head}, tail: {tail}"
+    forEachSuffix tys.tail (fun sfx ↦ do
       elabCommand $ ← `(
-        instance : RenSuffix $head:ident [$tail.toArray,*] := ⟨⟩
+        instance : RenSuffix $ty:ident [$sfx.toArray,*] := ⟨⟩
       )
+    )
+    elabCommand $ ← `(
+      instance : RenSuffix $ty:ident [] := ⟨⟩
     )
 
     let rmap_fix := qualify "rmap_fix"
@@ -459,7 +471,13 @@ namespace Automation
 
       instance : SubstMap $ty [$tys.toArray,*] where
         smap := $smap
+
+      instance : SubstMap $ty [] where
+        smap _ := id
     )
+
+    if tys.length > 1 then
+      forEachTy tys $ mkMapSingletonInstance .is_smap
 
   def genAllTys : List Ident → CommandElabM Unit
   | [] => pure ()
