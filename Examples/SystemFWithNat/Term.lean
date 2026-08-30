@@ -144,6 +144,12 @@ def x' : Option Bool := sorry
 #print Term.smap_term_succ
 #print Term.smap_term_nrec
 
+theorem SystemFWithNat.Term.smap_term_nrec : ∀ {x0 : Ty} {x1 x2 x3 : Term} {σ : SubstVec [Term]},
+  (Term.nrec x0 x1 x2 x3)[σ,] = Term.nrec x0 x1[σ,] x2[σ.lift [2],] x3[σ,] := by
+  intros x0 x1 x2 x3 σ
+  simp only [SubstMap.smap]
+  rw [Term.smap]
+
 #print Term.smap_ty_var
 #print Term.smap_ty_app
 #print Term.smap_ty_lam
@@ -667,7 +673,7 @@ theorem Term.smap_term_succ {t} {σ : SubstVec [Term]} : (succ t)[σ,] = succ t[
   simp only [SubstMap.smap]; rw [smap]; try simp
 
 @[simp]
-theorem Term.smap_term_nrec {m z s n} {σ : SubstVec [Term]}
+theorem Term.smap_term_nrec' {m z s n} {σ : SubstVec [Term]}
   : (nrec m z s n)[σ,] = nrec m z[σ,] s[σ.lift [2],] n[σ,]
 := by simp only [SubstMap.smap]; rw [smap]; try simp
 

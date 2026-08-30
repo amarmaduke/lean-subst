@@ -446,8 +446,8 @@ namespace Automation
       )
 
       let proof ← match mapType with
-      | .rmap => `(by first | rfl | simp only [RenMap.rmap] ; rw [rmap] ; try simp | simp only [RenMap.rmap] ; aesop)
-      | .smap => `(by first | rfl | simp only [SubstMap.smap] ; rw [smap] ; try simp | simp only [SubstMap.smap] ; aesop)
+      | .rmap => `(by first | rfl | simp only [RenMap.rmap] ; rw [$rmap:ident] ; try simp | simp only [RenMap.rmap] ; simp ; aesop)
+      | .smap => `(by first | rfl | simp only [SubstMap.smap] ; rw [$smap:ident] ; try simp | simp only [SubstMap.smap] ; simp ; aesop)
       forHeadAndEachSuffix tys (fun sfx ↦ forEachCtor tyNameGlobal (fun ctor ↦ do
         let tyQual := if tys.length = 1 then "" else "_" ++ ("_".intercalate $ sfx.map (fun (ty : Ident) ↦ ty.raw.getId.toString.toLower))
         let thmName := qualify s!"{mapStr}{tyQual}_{ctor.components.getLast!}"
@@ -456,7 +456,6 @@ namespace Automation
         let eq ← mkCtorEq fLhs fRhs ctor (fVar := match mapType with | .rmap => none | .smap => some $ smap_fVar sfx)
         let args ← mkCtorArgs ctor
         elabCommand $ ← `(
-          @[simp]
           theorem $thmName {$args.toArray*} {$rσ : $TheVec [$sfx.toArray,*]} : $eq :=
             $proof
         )
