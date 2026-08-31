@@ -560,14 +560,15 @@ theorem Subst.rewrite_lift_compose_ren_left
     rw [<-Ren.lift_of_succ]
 
 theorem Subst.rewrite_lift_compose_ren_left_vec :
-  ∀ {V : List (Type u2)} [RenMapLaws V]
+  ∀ {V : List (Type u2)} [RenMapAll V] --[RenMapLaws V]
   {k : List Nat} {r : RenVec V} {τ : SubstVec V},
   (r >> τ).lift k = r.lift k >> τ.lift k
-| [], _, k, r, τ => by simp
-| .cons _ _, _, [], (r, rs), (τ, τs) => by simp
-| .cons _ _, @RenMapLaws.cons _ _ _ _ _ _ _ _, .cons k ks, (r, rs), (τ, τs) => by
-  have ih := rewrite_lift_compose_ren_left_vec (k := ks) (r := rs) (τ := τs)
-  simp [ih]
+:= sorry
+-- | [], _, k, r, τ => by simp
+-- | .cons _ _, _, [], (r, rs), (τ, τs) => by simp
+-- | .cons _ _, @RenMapLaws.cons _ _ _ _ _ _ _ _, .cons k ks, (r, rs), (τ, τs) => by
+--   have ih := rewrite_lift_compose_ren_left_vec (k := ks) (r := rs) (τ := τs)
+--   simp [ih]
 
 theorem Subst.lift_compose_ren_right_k1
   [RenMap T [T]] [RenMapId T [T]] [RenMapCompose T [T]]
@@ -598,17 +599,26 @@ theorem Subst.lift_compose_ren_right
 --   (σ >> r).lift k = σ.lift k >> r.lift k
 -- := sorry
 
-theorem Subst.lift_compose_ren_right_vec :
-  ∀ {V : List (Type u2)} [SubstMapAll V] [RenMapLaws V]
+theorem SubstVec.suffix_lift_commute :
+  ∀ {V : List (Type u2)} [RenMapAll V]
   {k} {σ : SubstVec V} {r : RenVec V},
-  (σ >> r).lift k = σ.lift k >> r.lift k
-| [], _, _, k, σ, r => by simp
-| .cons _ _, _, _, [], (σ, σs), (r, rs) => by simp
-| .cons _ _, _, @RenMapLaws.cons _ _ _ _ _ _ _ _, .cons k ks, (σ, σs), (r, rs) =>
-  have ih := lift_compose_ren_right_vec (k := ks) (σ := σs) (r := rs)
-  by
-    simp [ih]; congr
-    sorry
+  (σ.suffix r).lift k = (σ.lift k).suffix r
+| [], _, _, .nil, .nil => by simp
+| .cons _ _, _, [], (σ, σs), (r, rs) => by simp
+| .cons _ _, _, .cons k ks, (σ, σs), (r, rs) =>
+  have ih := suffix_lift_commute (k := ks) (σ := σs) (r := rs)
+  by simp [*]; congr; sorry
+
+theorem Subst.lift_compose_ren_right_vec :
+  ∀ {V : List (Type u2)} [SubstMapAll V] [RenMapAll V] --[RenMapLaws V]
+  {k} {σ : SubstVec V} {r : RenVec V},
+  (σ >> r).lift k = (σ.lift k).suffix r >>> r.lift k
+:= sorry
+-- | [], _, _, k, .nil, .nil => by simp; sorry
+-- | .cons _ _, _, _, [], (σ, σs), (r, rs) => by simp; sorry
+-- | .cons V Vs, _, @RenMapLaws.cons _ _ _ _ _ _ _ _, .cons k ks, (σ, σs), (r, rs) =>
+--   have ih := lift_compose_ren_right_vec (k := ks) (σ := σs) (r := rs)
+--   by simp [*]; congr; sorry
 
 theorem Subst.rewrite_lift_compose_k1
   [RenMapAll [T]] [SubstMap T [T]] [SubstMapRenComposeLeft T [T]] [SubstMapRenComposeRight T [T]]
@@ -646,10 +656,11 @@ theorem Subst.rewrite_lift_compose_vec
 := sorry
 
 @[simp]
-theorem Subst.compose_ren_left_vec_map_commute
-  {r : RenVec V} {τ : SubstVec V} {ops : SubstVec.MapOps V}
-  : (r >> τ).map ops = r.lift ops.to >> τ.map ops
-:= sorry
+theorem Subst.compose_ren_left_vec_map_commute :
+  ∀ {V : List (Type u2)} {r : RenVec V} {τ : SubstVec V} {ops : SubstVec.MapOps V},
+  (r >> τ).map ops = r.lift ops.to >> τ.map ops
+| [], .nil, .nil, .nil => sorry
+| .cons _ _, (r, rs), (τ, τs), ops => sorry
 
 @[simp]
 theorem Subst.compose_ren_right_vec_map_commute
