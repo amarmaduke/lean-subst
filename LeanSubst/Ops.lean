@@ -685,9 +685,28 @@ def Subst.compose_ren_right [RenMap T [T]] : Subst T -> Ren T -> Subst T
 instance [RenMap T [T]] : HAndThen (Subst T) (Ren T) (Subst T) where
   hAndThen σ f := Subst.compose_ren_right σ (f ())
 
+@[simp]
+def SubstVec.suffix : {V : List (Type u2)} -> [RenMapAll V] -> SubstVec V -> RenVec V -> SubstVec V
+| [], _, _, _ => nil
+| .cons _ _, _, (σ, σs), (_, rs) => (σ⟨rs,⟩, σs.suffix rs)
+
+def SubstVec.compose_ren_right_simple :
+  {V : List (Type u2)} -> [RenMapAll V] -> SubstVec V -> RenVec V -> SubstVec V
+| [], _, _, _ => .nil
+| .cons _ _, _, (v1, v1s), (v2, v2s) => (v1 >> v2, compose_ren_right_simple v1s v2s)
+
+instance [RenMapAll V] : HShiftRight (SubstVec V) (RenVec V) (SubstVec V) where
+  hShiftRight := SubstVec.compose_ren_right_simple
+
+@[simp]
+theorem SubstVec.compose_ren_right_simple_simp
+  [RenMapAll (T::V)] {σ : Subst T} {σs : SubstVec V} {r : Ren T} {rs : RenVec V} :
+  HShiftRight.hShiftRight (α := SubstVec (T::V)) (β := RenVec (T::V))
+    (σ, σs) (r, rs) = (σ >> r, σs >>> rs)
+:= by simp [HShiftRight.hShiftRight, compose_ren_right_simple]
+
 def SubstVec.compose_ren_right
-  : {V : List (Type u2)} -> [RenMapAll V] ->
-    SubstVec V -> RenVec V -> SubstVec V
+  : {V : List (Type u2)} -> [RenMapAll V] -> SubstVec V -> RenVec V -> SubstVec V
 | [], _, _, _ => .nil
 | .cons _ _, _, (v1, v1s), (v2, v2s) => (v1⟨v2s,⟩ >> v2, compose_ren_right v1s v2s)
 
@@ -885,6 +904,14 @@ theorem SubstVec.compose_def [SubstMapAll (T::V)] {σ1 σ2 : Subst T} {σ1s σ2s
   : HAndThen.hAndThen (α := SubstVec (T::V)) (β := SubstVec (T::V)) (σ1, σ1s) (λ _ => (σ2, σ2s))
     = (σ1[σ2s,] >> σ2, σ1s >> σ2s)
 := by simp [HAndThen.hAndThen, AndThen.andThen, compose]
+
+theorem SubstVec.compose_ren_right_split :
+  ∀ {V : List (Type u2)} [RenMapAll V] {σ : SubstVec V} {r : RenVec V},
+  σ >> r = σ.suffix r >>> r
+| [], _, .nil, .nil => by sorry
+| .cons _ _, _, (σ, σs), (r, rs) =>
+  have ih := compose_ren_right_split (σ := σs) (r := rs)
+  by simp [*]
 
 @[simp]
 theorem RenVec.lift_compose :

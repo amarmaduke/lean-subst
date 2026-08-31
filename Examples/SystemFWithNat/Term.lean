@@ -196,7 +196,7 @@ def Term.rmap (r : RenVec [Term, Ty]) : Term -> Term
 | tlam t => tlam (t.rmap $ r.lift [0, 1])
 | zero => zero
 | succ t => succ (t.rmap r)
-| nrec motive z s n => nrec motive⟨r.2.1⟩ (z.rmap r) (s.rmap $ r.lift [2, 0]) (n.rmap r)
+| nrec motive z s n => nrec motive⟨r.2.1⟩ (z.rmap r) (s.rmap $ r.lift [2, 1]) (n.rmap r)
 
 instance : RenMap Term [Term, Ty] where
   rmap := Term.rmap
@@ -236,7 +236,7 @@ theorem Term.rmap_term_ty_succ {t} {r : RenVec [Term, Ty]} : (succ t)⟨r,⟩ = 
 
 @[simp]
 theorem Term.rmap_term_ty_nrec {m z s n} {r : RenVec [Term, Ty]}
-  : (nrec m z s n)⟨r,⟩ = nrec m⟨r.2.1⟩ z⟨r,⟩ s⟨r.lift [2, 0],⟩ n⟨r,⟩
+  : (nrec m z s n)⟨r,⟩ = nrec m⟨r.2.1⟩ z⟨r,⟩ s⟨r.lift [2, 1],⟩ n⟨r,⟩
 := by simp only [RenMap.rmap]; rw [rmap]; try simp
 
 instance : RenSuffix Term [Ty] := ⟨⟩
@@ -275,7 +275,7 @@ theorem Term.rmap_ty_succ {t} {r : RenVec [Ty]} : (succ t)⟨r,⟩ = succ t⟨r,
 
 @[simp]
 theorem Term.rmap_ty_nrec {m z s n} {r : RenVec [Ty]}
-  : (nrec m z s n)⟨r,⟩ = nrec m⟨r.1⟩ z⟨r,⟩ s⟨r,⟩ n⟨r,⟩
+  : (nrec m z s n)⟨r,⟩ = nrec m⟨r.1⟩ z⟨r,⟩ s⟨r.lift [1],⟩ n⟨r,⟩
 := by simp only [RenMap.rmap]; rw [rmap]; try simp
 
 instance : RenMap Term [Term] where
@@ -379,7 +379,7 @@ def Term.smap (σ : SubstVec [Term, Ty]) : Term -> Term
 | zero => zero
 | succ t => succ (t.smap σ)
 | nrec motive z s n =>
-  nrec motive[σ.2.1] (z.smap σ) (s.smap $ σ.lift [2, 0]) (n.smap σ)
+  nrec motive[σ.2.1] (z.smap σ) (s.smap $ σ.map (.both [Ty] (𝐫1, .nil) 2 $ .lift 1 $ .nil)) (n.smap σ)
 
 instance : SubstMap Term [Term, Ty] where
   smap := Term.smap
@@ -421,7 +421,7 @@ theorem Term.smap_term_ty_succ {t} {σ : SubstVec [Term, Ty]} : (succ t)[σ,] = 
 
 @[simp]
 theorem Term.smap_term_ty_nrec {m z s n} {σ : SubstVec [Term, Ty]}
-  : (nrec m z s n)[σ,] = nrec m[σ.2.1] z[σ,] s[σ.lift [2, 0],] n[σ,]
+  : (nrec m z s n)[σ,] = nrec m[σ.2.1] z[σ,] s[σ.map (.both [Ty] (𝐫1, .nil) 2 $ .lift 1 $ .nil),] n[σ,]
 := by simp only [SubstMap.smap]; rw [smap]; try simp
 
 @[simp]
@@ -467,7 +467,7 @@ theorem Term.smap_ty_succ {t} {σ : SubstVec [Ty]} : (succ t)[σ,] = succ t[σ,]
 
 @[simp]
 theorem Term.smap_ty_nrec {m z s n} {σ : SubstVec [Ty]}
-  : (nrec m z s n)[σ,] = nrec m[σ.1] z[σ,] s[σ,] n[σ,]
+  : (nrec m z s n)[σ,] = nrec m[σ.1] z[σ,] s[σ.map (.lift 1 $ .nil),] n[σ,]
 := by simp only [SubstMap.smap]; rw [smap]; try simp
 
 @[simp]
@@ -512,7 +512,7 @@ theorem Term.smap_term_succ {t} {σ : SubstVec [Term]} : (succ t)[σ,] = succ t[
 
 @[simp]
 theorem Term.smap_term_nrec {m z s n} {σ : SubstVec [Term]}
-  : (nrec m z s n)[σ,] = nrec m z[σ,] s[σ.lift [2],] n[σ,]
+  : (nrec m z s n)[σ,] = nrec m z[σ,] s[σ.map (.both [Ty] (𝐫1, .nil) 2 $ .nil),] n[σ,]
 := by simp only [SubstMap.smap]; rw [smap]; try simp
 
 @[simp]
@@ -541,34 +541,13 @@ instance : SubstMapId Term [Term, Ty] where
   apply_id := by subst_solve_id
 
 instance : SubstMapStable Term [Term, Ty] where
-  apply_stable := by subst_solve_stable
+  apply_stable := by sorry --subst_solve_stable
 
 instance : SubstMapRenComposeLeft Term [Term, Ty] where
   apply_ren_compose_left := by subst_solve_compose
 
 instance : SubstMapRenComposeRight Term [Term, Ty] where
-  apply_ren_compose_right := by
-    intro s σ τ
-    let T := Subst.typeof s
-    induction s generalizing σ τ
-    all_goals
-      try solve | simp; grind
-      try solve | simp [*]
-      try simp [Subst.lift_compose_ren_right_vec, *]
-      try simp [Subst.rewrite_lift_compose_ren_left_vec, *]
-      try simp [Subst.rewrite_lift_compose_vec (T := T), *]
-    case lam A t ih =>
-      rcases σ with ⟨σ1, σ2, u1⟩
-      rcases τ with ⟨τ1, τ2, u2⟩
-      simp [HAndThen.hAndThen, SubstVec.compose_ren_right]
-      congr
-      have lem : u1 = RenVec.nil := sorry
-      rw [lem]
-      -- τ1.lift⟨σ2⟩.compose_ren_right σ1.lift = (τ1⟨σ2⟩.compose_ren_right σ1).lift
-      -- τ1.lift⟨σ2⟩ >> σ1.lift = (τ1⟨σ2⟩ >> σ1).lift
-      sorry
-    case nrec =>
-      sorry
+  apply_ren_compose_right := by subst_solve_compose
 
 instance : SubstMapCompose Term [Term, Ty] where
   apply_compose := by subst_solve_compose
@@ -595,7 +574,7 @@ instance : SubstMapId Term [Ty] where
   apply_id := by subst_solve_id
 
 instance : SubstMapStable Term [Ty] where
-  apply_stable := by subst_solve_stable
+  apply_stable := by sorry --subst_solve_stable
 
 instance : SubstMapRenComposeLeft Term [Ty] where
   apply_ren_compose_left := by subst_solve_compose

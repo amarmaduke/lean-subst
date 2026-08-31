@@ -408,17 +408,12 @@ macro "subst_solve_compose" : tactic => `(tactic| {
     try solve | simp; grind
     try solve | simp [*]
     try simp [Subst.lift_compose_ren_right_vec, *]
+    try simp [SubstVec.compose_ren_right_split, *]
     try simp [Subst.rewrite_lift_compose_ren_left_vec, *]
     try simp [Subst.rewrite_lift_compose_vec (T := T), *]
-  -- intro s σ τ
-  -- induction s generalizing σ τ
-  -- any_goals solve | simp +instances [*]
-  -- try any_goals solve | (
-  --   try simp [-Subst.rewrite_lift, *]
-  --   try funext; case _ x =>
-  --   try rw [<-Ren.to_lift]
-  --   try simp [-Subst.rewrite_lift, *]
-  --   try grind)
+    try solve | congr
+    try solve | congr 1
+    try solve | congr 2
 })
 
 end LeanSubst
