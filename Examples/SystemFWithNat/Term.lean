@@ -547,7 +547,28 @@ instance : SubstMapRenComposeLeft Term [Term, Ty] where
   apply_ren_compose_left := by subst_solve_compose
 
 instance : SubstMapRenComposeRight Term [Term, Ty] where
-  apply_ren_compose_right := by subst_solve_compose
+  apply_ren_compose_right := by
+    intro s σ τ
+    let T := Subst.typeof s
+    induction s generalizing σ τ
+    all_goals
+      try solve | simp; grind
+      try solve | simp [*]
+      try simp [Subst.lift_compose_ren_right_vec, *]
+      try simp [Subst.rewrite_lift_compose_ren_left_vec, *]
+      try simp [Subst.rewrite_lift_compose_vec (T := T), *]
+    case lam A t ih =>
+      rcases σ with ⟨σ1, σ2, u1⟩
+      rcases τ with ⟨τ1, τ2, u2⟩
+      simp [HAndThen.hAndThen, SubstVec.compose_ren_right]
+      congr
+      have lem : u1 = RenVec.nil := sorry
+      rw [lem]
+      -- τ1.lift⟨σ2⟩.compose_ren_right σ1.lift = (τ1⟨σ2⟩.compose_ren_right σ1).lift
+      -- τ1.lift⟨σ2⟩ >> σ1.lift = (τ1⟨σ2⟩ >> σ1).lift
+      sorry
+    case nrec =>
+      sorry
 
 instance : SubstMapCompose Term [Term, Ty] where
   apply_compose := by subst_solve_compose

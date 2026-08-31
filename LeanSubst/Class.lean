@@ -40,6 +40,16 @@ theorem Ren.apply_id2 [RenMap S [T1, T2]] [RenMapId S [T1, T2]] {s : S} : s⟨id
 class RenMapCompose (S : Type u1) (V : List (Type u2)) [RenMap S V] where
   apply_compose {s : S} {r1 r2 : RenVec V} : s⟨r1,⟩⟨r2,⟩ = s⟨r1 >> r2,⟩
 
+class RenMapSuffixCommute (S : Type u1) (V : List (Type u2)) [RenMap S [S]] [RenMap S V] [RenSuffix S V] where
+  apply_suffix_commute {s : S} {r1 : Ren S} {r2 : RenVec V} : s⟨r1⟩⟨r2,⟩ = s⟨r2,⟩⟨r1⟩
+
+@[grind =]
+theorem Ren.suffix_commute
+  [RenMap S [S]] [RenMap S V] [RenSuffix S V] [RenMapSuffixCommute S V]
+  {s : S} {r1 : Ren S} {r2 : RenVec V}
+  : s⟨r1⟩⟨r2,⟩ = s⟨r2,⟩⟨r1⟩
+:= RenMapSuffixCommute.apply_suffix_commute
+
 class inductive RenMapLaws : (V : List (Type u2)) -> Sort _ where
 | nil : RenMapLaws []
 | cons {V Vs}
@@ -152,6 +162,27 @@ instance [RenMap S V] [RenSuffix S V] [RenMapCompose S V] : RenMapCompose (Subst
     simp [RenMap.rmap, Subst.rmap1]; funext; case _ i =>
     cases s; case _ f =>
     simp; cases (f i) <;> simp
+
+@[grind =]
+theorem Ren.rmap_suffix_commute_action
+  [RenMap S [S]] [RenMap S V] [RenSuffix S V] [RenMapSuffixCommute S V]
+  {s : Action S} {r1 : Ren S} {r2 : RenVec V}
+  : s⟨r1⟩⟨r2,⟩ = s⟨r2,⟩⟨r1⟩
+:= by
+  cases s <;> simp
+  rw [Ren.suffix_commute]
+
+@[grind =]
+theorem Ren.rmap_suffix_commute_subst
+  [RenMap S [S]] [RenMap S V] [RenSuffix S V] [RenMapSuffixCommute S V]
+  {s : Subst S} {r1 : Ren S} {r2 : RenVec V}
+  : s⟨r1⟩⟨r2,⟩ = s⟨r2,⟩⟨r1⟩
+:= by
+  cases s; case _ f =>
+  simp [RenMap.rmap, Subst.rmap1, Subst.rmap0]
+  funext; case _ x =>
+  cases (f x) <;> simp
+  rw [Ren.suffix_commute]
 
 class SubstMapStable (S : Type u1) (V : List $ Type u2) [RenMap S V] [SubstMap S V] where
   apply_stable (r : RenVec V) (σ : SubstVec V) : r.to = σ -> rmap (S := S) r = smap σ
