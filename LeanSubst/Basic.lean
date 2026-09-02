@@ -6,7 +6,7 @@ import LeanSubst.Glue
 
 namespace LeanSubst
 
-universe u1 u2 u3
+universe u u1 u2 u3
 variable {S : Type u1} {T : Type u2} {U : Type u3}
 
 @[reducible]
@@ -18,12 +18,15 @@ abbrev Var (T : Type u2) := Nat
 structure Ren (T : Type u2) : Type u2 where
   act : Nat -> Nat
 
+inductive RenUnit : Type u where
+  | unit : RenUnit
+
 @[instance_reducible]
 def RenVec : List (Type u2) -> Type u2
-| [] => PUnit
+| [] => RenUnit
 | .cons x xs => Ren x × RenVec xs
 
-def RenVec.nil : RenVec [] := PUnit.unit
+def RenVec.nil : RenVec [] := RenUnit.unit
 
 class RenSuffix (S : Type u1) (V : List (Type u2)) where
 
@@ -32,7 +35,7 @@ class RenMap (S : Type u1) (V : List (Type u2)) where
 
 class inductive RenMapAll : List (Type u2) -> Sort _ where
 | nil : RenMapAll []
-| cons {V Vs} [i1 : RenMap V [V]] [i2 : RenMap V Vs] [i3 : RenSuffix V Vs]
+| cons {V Vs} [RenMap V [V]] [RenMap V Vs] [RenSuffix V Vs]
   : RenMapAll Vs -> RenMapAll (V::Vs)
 
 export RenMap (rmap)
@@ -88,12 +91,15 @@ export Action (re su)
 structure Subst (T : Type u2) where
   inner : Nat -> Action T
 
+inductive SubstUnit : Type u where
+  | unit : SubstUnit
+
 @[instance_reducible]
 def SubstVec : List (Type u2) -> Type u2
-| [] => PUnit
+| [] => SubstUnit
 | .cons x xs => Subst x × SubstVec xs
 
-def SubstVec.nil : SubstVec [] := PUnit.unit
+def SubstVec.nil : SubstVec [] := SubstUnit.unit
 
 class SubstAction (T : Type u1) (A : Type u2) (U : outParam (Type u3)) where
   act (σ : Subst T) : A -> U
@@ -110,7 +116,7 @@ class SubstMap (S : Type u1) (V : List (Type u2)) where
 
 class inductive SubstMapAll : List (Type u2) -> Sort _ where
 | nil : SubstMapAll []
-| cons {V Vs} [i1 : SubstMap V [V]] [i2 : SubstMap V Vs] [i3 : SubstSuffix V Vs]
+| cons {V Vs} [SubstMap V [V]] [SubstMap V Vs] [SubstSuffix V Vs]
   : SubstMapAll Vs -> SubstMapAll (V::Vs)
 
 --  smap : ∀ (i : Fin V.length), SubstMap V[i] [V[i]]
