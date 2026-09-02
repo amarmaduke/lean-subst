@@ -32,159 +32,129 @@ inductive Term where
 
 -- set_option diagnostics true
 
-#leansubst generate Ty, Term
+-- #leansubst generate Ty, Term
 
-def r : Ren Ty := sorry
+-- -- Checking Ty --
+-- #print Ty.from_action
+-- #print Ty.from_action_id
+-- #print Ty.from_action_succ
+-- #print Ty.from_action_re
+-- #print Ty.from_action_su
 
-def rvec : RenVec [Term, Ty] := sorry
+-- #print Ty.rmap
+-- #print Ty.rmap._f
 
-def x : Ty := sorry
-def x' : Option Bool := sorry
+-- #print Ty.rmap_fix
+-- #print Ty.rmap_empty
 
-#check x⟨r⟩
-#check x⟨rvec.2.1⟩
+-- #print Ty.rmap_var
+-- #print Ty.rmap_arrow
+-- #print Ty.rmap_all
+-- #print Ty.rmap_nat
+-- #print Ty.from_action_rmap
 
--- Checking Ty --
-#print Ty.from_action
-#print Ty.from_action_id
-#print Ty.from_action_succ
-#print Ty.from_action_re
-#print Ty.from_action_su
+-- #print Ty.smap
+-- #print Ty.smap._f
 
-#print Ty.rmap
-#print Ty.rmap._f
+-- #print Ty.smap
+-- #print Ty.smap._f
 
-#print Ty.rmap_fix
-#print Ty.rmap_empty
+-- #print Ty.smap_fix
+-- #print Ty.smap_empty
 
-#print Ty.rmap_var
-#print Ty.rmap_arrow
-#print Ty.rmap_all
-#print Ty.rmap_nat
-#print Ty.from_action_rmap
-
-#print Ty.smap
-#print Ty.smap._f
-
-#print Ty.smap
-#print Ty.smap._f
-
-#print Ty.smap_fix
-#print Ty.smap_empty
-
-#print Ty.smap_var
-#print Ty.smap_arrow
-#print Ty.smap_all
-#print Ty.smap_nat
-#print Ty.from_action_smap
+-- #print Ty.smap_var
+-- #print Ty.smap_arrow
+-- #print Ty.smap_all
+-- #print Ty.smap_nat
+-- #print Ty.from_action_smap
 
 
--- Checking Term --
-#print Term.from_action
-#print Term.from_action_id
-#print Term.from_action_succ
-#print Term.from_action_re
-#print Term.from_action_su
+-- -- Checking Term --
+-- #print Term.from_action
+-- #print Term.from_action_id
+-- #print Term.from_action_succ
+-- #print Term.from_action_re
+-- #print Term.from_action_su
 
--- rmap
-#print Term.rmap
-#print Term.rmap_fix
+-- -- rmap
+-- #print Term.rmap
+-- #print Term.rmap_fix
 
-#print Term.rmap
-#print Term.rmap._f
+-- #print Term.rmap
+-- #print Term.rmap._f
 
-#print Term.rmap_empty
+-- #print Term.rmap_empty
 
-#print Term.rmap_term_var
-#print Term.rmap_term_app
-#print Term.rmap_term_lam
-#print Term.rmap_term_tapp
-#print Term.rmap_term_tlam
-#print Term.rmap_term_zero
-#print Term.rmap_term_succ
-#print Term.rmap_term_nrec
+-- #print Term.rmap_term_var
+-- #print Term.rmap_term_app
+-- #print Term.rmap_term_lam
+-- #print Term.rmap_term_tapp
+-- #print Term.rmap_term_tlam
+-- #print Term.rmap_term_zero
+-- #print Term.rmap_term_succ
+-- #print Term.rmap_term_nrec
 
-#print Term.rmap_ty_var
-#print Term.rmap_ty_app
-#print Term.rmap_ty_lam
-#print Term.rmap_ty_tapp
-#print Term.rmap_ty_tlam
-#print Term.rmap_ty_zero
-#print Term.rmap_ty_succ
-#print Term.rmap_ty_nrec
+-- #print Term.rmap_ty_var
+-- #print Term.rmap_ty_app
+-- #print Term.rmap_ty_lam
+-- #print Term.rmap_ty_tapp
+-- #print Term.rmap_ty_tlam
+-- #print Term.rmap_ty_zero
+-- #print Term.rmap_ty_succ
+-- #print Term.rmap_ty_nrec
 
-#print Term.rmap_term_ty_var
-#print Term.rmap_term_ty_app
-#print Term.rmap_term_ty_lam
-#print Term.rmap_term_ty_tapp
-#print Term.rmap_term_ty_tlam
-#print Term.rmap_term_ty_zero
-#print Term.rmap_term_ty_succ
-#print Term.rmap_term_ty_nrec
+-- #print Term.rmap_term_ty_var
+-- #print Term.rmap_term_ty_app
+-- #print Term.rmap_term_ty_lam
+-- #print Term.rmap_term_ty_tapp
+-- #print Term.rmap_term_ty_tlam
+-- #print Term.rmap_term_ty_zero
+-- #print Term.rmap_term_ty_succ
+-- #print Term.rmap_term_ty_nrec
 
-#print Term.from_action_rmap
-#print Term.from_action_rmap0
-#print Term.from_action_rmap1
+-- #print Term.from_action_rmap
+-- #print Term.from_action_rmap0
+-- #print Term.from_action_rmap1
 
--- smap
-#print Term.smap
-#print Term.smap_fix
+-- -- smap
+-- #print Term.smap
+-- #print Term.smap_fix
 
-#print Term.smap
-#print Term.smap._f
+-- #print Term.smap
+-- #print Term.smap._f
 
-#print Term.smap_empty
+-- #print Term.smap_empty
 
-#print Term.smap_term_var
-#print Term.smap_term_app
-#print Term.smap_term_lam
-#print Term.smap_term_tapp
-#print Term.smap_term_tlam
-#print Term.smap_term_zero
-#print Term.smap_term_succ
-#print Term.smap_term_nrec
+-- #print Term.smap_term_var
+-- #print Term.smap_term_app
+-- #print Term.smap_term_lam
+-- #print Term.smap_term_tapp
+-- #print Term.smap_term_tlam
+-- #print Term.smap_term_zero
+-- #print Term.smap_term_succ
+-- #print Term.smap_term_nrec
 
-theorem SystemFWithNat.Term.smap_term_nrec : ∀ {x0 : Ty} {x1 x2 x3 : Term} {σ : SubstVec [Term]},
-  (Term.nrec x0 x1 x2 x3)[σ,] = Term.nrec x0 x1[σ,] x2[σ.lift [2],] x3[σ,] := by
-  intros x0 x1 x2 x3 σ
-  simp only [SubstMap.smap]
-  simp
-  simp only [SubstMap.smap]
-  simp
+-- #print Term.smap_ty_var
+-- #print Term.smap_ty_app
+-- #print Term.smap_ty_lam
+-- #print Term.smap_ty_tapp
+-- #print Term.smap_ty_tlam
+-- #print Term.smap_ty_zero
+-- #print Term.smap_ty_succ
+-- #print Term.smap_ty_nrec
 
-#print Term.smap_ty_var
-#print Term.smap_ty_app
-#print Term.smap_ty_lam
-#print Term.smap_ty_tapp
-#print Term.smap_ty_tlam
-#print Term.smap_ty_zero
-#print Term.smap_ty_succ
-#print Term.smap_ty_nrec
+-- #print Term.smap_term_ty_var
+-- #print Term.smap_term_ty_app
+-- #print Term.smap_term_ty_lam
+-- #print Term.smap_term_ty_tapp
+-- #print Term.smap_term_ty_tlam
+-- #print Term.smap_term_ty_zero
+-- #print Term.smap_term_ty_succ
+-- #print Term.smap_term_ty_nrec
 
-#print Term.smap_term_ty_var
-#print Term.smap_term_ty_app
-#print Term.smap_term_ty_lam
-#print Term.smap_term_ty_tapp
-#print Term.smap_term_ty_tlam
-#print Term.smap_term_ty_zero
-#print Term.smap_term_ty_succ
-#print Term.smap_term_ty_nrec
-
-#print Term.from_action_smap
-#print Term.from_action_smap0
-#print Term.from_action_smap1
-
-
-
-theorem SystemFWithNat.Term.rmap_ty_var : ∀ {x0 : Nat} {r : RenVec [Ty]}, (Term.var x0)⟨r,⟩ = Term.var (r.fst.act x0) := by
-  intros
-  simp [RenMap.rmap]
-
-theorem SystemFWithNat.Term.rmap_term_lam : ∀ {x0 : Ty} {x1 : Term} {r : RenVec [Term]},
-  (Term.lam x0 x1)⟨r,⟩ = Term.lam x0 x1⟨r.lift [1],⟩ := by
-  simp only [RenMap.rmap]
-  intro x0 x1 r
-  simp_all only [Term.rmap, Ren.apply_id1, RenVec.lift, Ren.lift_of_zero, Term.rmap_fix, RenVec.lift_proj1]
+-- #print Term.from_action_smap
+-- #print Term.from_action_smap0
+-- #print Term.from_action_smap1
 
 ----------------------------------------------------------------------------------------------------
 -- Ty Renaming & Substitution
@@ -296,7 +266,7 @@ theorem Ty.smap_nat {σ : SubstVec [Ty]} : (nat)[σ,] = nat := by
   simp only [SubstMap.smap]; rw [smap]
 
 @[simp]
-theorem Ty.smap_app {t1 t2 : Ty} {σ : SubstVec [Ty]} : (arrow t1 t2)[σ,] = arrow t1[σ,] t2[σ,] := by
+theorem Ty.smap_arrow {t1 t2 : Ty} {σ : SubstVec [Ty]} : (arrow t1 t2)[σ,] = arrow t1[σ,] t2[σ,] := by
   simp only [SubstMap.smap]; rw [smap]
 
 @[simp]
@@ -486,12 +456,12 @@ theorem Term.from_action_rmap {t : Action Term} {r : RenVec [Term, Ty]}
 := by cases t <;> simp [from_action]
 
 @[simp]
-theorem Term.from_action_rmap1 {t : Action Term} {r : RenVec [Term]}
+theorem Term.from_action_rmap0 {t : Action Term} {r : RenVec [Term]}
   : (from_action t)⟨r,⟩ = from_action t⟨r,⟩
 := by cases t <;> simp [from_action]
 
 @[simp]
-theorem Term.from_action_rmap2 {t : Action Term} {r : RenVec [Ty]}
+theorem Term.from_action_rmap1 {t : Action Term} {r : RenVec [Ty]}
   : (from_action t)⟨r,⟩ = from_action t⟨r,⟩
 := by cases t <;> simp [from_action]
 
@@ -534,7 +504,7 @@ instance : RenMapCompose Term [Ty] where
   apply_compose := by subst_solve_compose
 
 @[simp]
-def Term.smap' (σ : SubstVec [Term, Ty]) : Term -> Term
+def Term.smap (σ : SubstVec [Term, Ty]) : Term -> Term
 | var x => σ.1.act x
 | app t1 t2 => app (t1.smap σ) (t2.smap σ)
 | lam A t => lam A[σ.2.1] (t.smap $ σ.lift [1, 0])
@@ -589,7 +559,7 @@ theorem Term.smap_term_ty_nrec {m z s n} {σ : SubstVec [Term, Ty]}
 := by simp only [SubstMap.smap]; rw [smap]; try simp
 
 @[simp]
-theorem Term.from_action_smap_term_ty {t : Action Term} {σ : SubstVec [Term, Ty]}
+theorem Term.from_action_smap {t : Action Term} {σ : SubstVec [Term, Ty]}
   : (from_action t)[σ,] = from_action t[σ,]
 := by cases t <;> simp [from_action]
 
@@ -635,7 +605,7 @@ theorem Term.smap_ty_nrec {m z s n} {σ : SubstVec [Ty]}
 := by simp only [SubstMap.smap]; rw [smap]; try simp
 
 @[simp]
-theorem Term.from_action_smap_ty {t : Action Term} {σ : SubstVec [Ty]}
+theorem Term.from_action_smap1 {t : Action Term} {σ : SubstVec [Ty]}
   : (from_action t)[σ,] = from_action t[σ,]
 := by cases t <;> simp [from_action]
 
@@ -675,12 +645,12 @@ theorem Term.smap_term_succ {t} {σ : SubstVec [Term]} : (succ t)[σ,] = succ t[
   simp only [SubstMap.smap]; rw [smap]; try simp
 
 @[simp]
-theorem Term.smap_term_nrec' {m z s n} {σ : SubstVec [Term]}
+theorem Term.smap_term_nrec {m z s n} {σ : SubstVec [Term]}
   : (nrec m z s n)[σ,] = nrec m z[σ,] s[σ.lift [2],] n[σ,]
 := by simp only [SubstMap.smap]; rw [smap]; try simp
 
 @[simp]
-theorem Term.from_action_smap_term {t : Action Term} {σ : SubstVec [Term]}
+theorem Term.from_action_smap0 {t : Action Term} {σ : SubstVec [Term]}
   : (from_action t)[σ,] = from_action t[σ,]
 := by cases t <;> simp [from_action]
 

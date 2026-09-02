@@ -265,7 +265,6 @@ namespace Automation
             rmap $r:ident := $rmap ⟨ $tyArr:term,* ⟩
         )
       | .smap =>
-        dbg_trace s!"SMAP INSTANCE {ty} ⟨{ty'}⟩\n\n"
         elabCommand $ ← `(
           instance : SubstMap $ty [$ty'] where
             smap $σ:ident := $smap ⟨ $tyArr:term,* ⟩
@@ -282,7 +281,6 @@ namespace Automation
             rmap _ := id
         )
       | .smap =>
-        dbg_trace s!"SMAP INSTANCE {ty} ⟨{tys}⟩\n\n"
         elabCommand $ ← `(
           instance : SubstMap $ty [$tys.toArray,*] where
             smap := $smap
@@ -298,12 +296,10 @@ namespace Automation
     let mkSuffixInstances (mapType : MapType) := do
       let TheSuffix ← match mapType with | .rmap => ``(RenSuffix) | .smap => ``(SubstSuffix)
       forEachSuffix tys.tail (fun sfx ↦ do
-        dbg_trace s!"SUFFIX INSTANCE: instance : {TheSuffix} {ty} [{sfx}] := .cons .nil"
         elabCommand $ ← `(
           instance : $TheSuffix $ty:ident [$sfx.toArray,*] := ⟨⟩
         )
       )
-      dbg_trace s!"SUFFIX INSTANCE: instance : {TheSuffix} {ty} [] := .cons .nil"
       elabCommand $ ← `(
         instance : $TheSuffix $ty:ident [] := ⟨⟩
       )
@@ -491,7 +487,6 @@ namespace Automation
       let TheMapStr := match mapType with | .rmap => "RenMap" | .smap => "SubstMap"
       let TheMapAll ← match mapType with | .rmap => ``(LeanSubst.RenMapAll) | .smap => ``(LeanSubst.SubstMapAll)
       let instTheMapAll_ty := mkIdent $ .mkStr1 s!"inst{TheMapStr}All_{ty.raw.getId.toString}" -- not qualified
-      dbg_trace s!"MAPALL INSTANCE: instance {instTheMapAll_ty} : {TheMapAll} [{ty}] := .cons .nil"
       elabCommand $ ← `(
         @[reducible, simp]
         instance $instTheMapAll_ty:ident : $TheMapAll [$ty] := .cons .nil
@@ -573,7 +568,6 @@ namespace Automation
     genTy (ty :: tys)
 
   elab "#leansubst" &"generate" tys:ident,* : command =>
-    -- dbg_trace s!"{tys.getElems.toList}"
     genAllTys tys.getElems.toList.reverse
 
 end Automation
