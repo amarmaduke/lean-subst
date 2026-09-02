@@ -63,21 +63,46 @@ theorem SubstVec.compose_ren_left_proj {r1 : Ren T} {r2 : RenVec V} {τ1 : Subst
   : HAndThen.hAndThen (α := RenVec (T::V)) (β := SubstVec (T::V))
     (r1, r2) (λ _ => (τ1, τ2))
     = (r1 >> τ1, r2 >> τ2)
-:= by sorry
+:= by simp [HAndThen.hAndThen, compose_ren_left]
 
 @[simp]
 theorem SubstVec.compose_ren_right_proj [RenMapAll (T::V)] {σ1 : Subst T} {σ2 : SubstVec V} {r1 : Ren T} {r2 : RenVec V}
   : HAndThen.hAndThen (α := SubstVec (T::V)) (β := RenVec (T::V))
     (σ1, σ2) (λ _ => (r1, r2))
-    = (σ1 >> r1, σ2 >> r2)
-:= by sorry
+    = (σ1⟨r2,⟩ >> r1, σ2 >> r2)
+:= by simp [HAndThen.hAndThen, compose_ren_right]
 
 @[simp]
 theorem SubstVec.compose_proj [SubstMapAll (T::V)] {σ1 τ1 : Subst T} {σ2 τ2 : SubstVec V}
   : HAndThen.hAndThen (α := SubstVec (T::V)) (β := SubstVec (T::V))
     (σ1, σ2) (λ _ => (τ1, τ2))
-    = (σ1 >> τ1, σ2 >> τ2)
-:= by sorry
+    = (σ1[τ2,] >> τ1, σ2 >> τ2)
+:= by simp [HAndThen.hAndThen, AndThen.andThen, compose]
+
+@[simp]
+theorem SubstVec.compose_ren_left_components2
+  {r1 : Ren T1} {τ1 : Subst T1} {r2 : Ren T2} {τ2 : Subst T2}
+  : HAndThen.hAndThen (α := RenVec [T1, T2]) (β := SubstVec [T1, T2])
+    (r1, r2, .nil) (λ _ => (τ1, τ2, .nil))
+    = (r1 >> τ1, r2 >> τ2, .nil)
+:= by simp [HAndThen.hAndThen, compose_ren_left]
+
+@[simp]
+theorem SubstVec.compose_ren_right_components2
+  [RenMapAll [T1, T2]] [RenMapEmpty T2] {σ1 : Subst T1} {r1 : Ren T1} {σ2 : Subst T2} {r2 : Ren T2}
+  : HAndThen.hAndThen (α := SubstVec [T1, T2]) (β := RenVec [T1, T2])
+    (σ1, σ2, .nil) (λ _ => (r1, r2, .nil))
+    = ((σ1⟨r2⟩ : Subst T1) >> r1, σ2 >> r2, .nil)
+:= by simp [HAndThen.hAndThen, compose_ren_right]
+
+@[simp]
+theorem SubstVec.compose_components2
+  [SubstMapAll [T1, T2]] [SubstMapEmpty T2] {σ1 τ1 : Subst T1} {σ2 τ2 : Subst T2}
+  : HAndThen.hAndThen (α := SubstVec [T1, T2]) (β := SubstVec [T1, T2])
+    (σ1, σ2, .nil) (λ _ => (τ1, τ2, .nil))
+    = (σ1[τ2] >> τ1, σ2 >> τ2, .nil)
+:= by simp [HAndThen.hAndThen, AndThen.andThen, compose]
+
 
 -- @[simp]
 -- theorem SubstVec.compose_components1 {σ1 τ1 : Subst T1} [SubstMapAll [T1]]
