@@ -43,14 +43,18 @@ namespace Automation
 
   def mapSnd {α β} (ℓ : List (α × β)) := ℓ.map Prod.snd
 
+  -- We use this to get the types of all the arguments in a constructor
   def getForallBinderTypes : Expr → List Expr
   | .forallE _ t b _ => t :: getForallBinderTypes b
   | _ => []
 
+  -- A lot of the metaprogramming stuff is replicated between rmap and smap, with minor changes here and there.
+  -- Therefore, we often write functions that take a MapType as a flag argument and produce the definition, theorem, etc.
   inductive MapType
   | rmap
   | smap
 
+  -- Names of variables
   def xN (n : Nat) : TSyntax `term := mkIdent (.mkStr1 $ s!"x{n}")
   def xN' (n : Nat) : TSyntax `ident := mkIdent (.mkStr1 $ s!"x{n}")
   def x := mkIdent `x
@@ -63,13 +67,13 @@ namespace Automation
   def σ := mkIdent `σ
   def τ := mkIdent `τ
 
-  def CtorArgBindData := List $ Term × Term
-
+  -- For each constructor argument in which something is bound, we need to keep track of how many of each thing is bound.
   inductive ArgData
   | binder : List (Term × Ident) → ArgData -- (Term × Ident) corresponds to ([num bound closure] × [type being bound])
   | var
   | none
 
+  -- The "closure" is a function that takes the arguments of the constructor and returns the number of bound variables.
   def getClosureFromArgData (ty : Ident) : ArgData → Option Term
   | .binder xs => (xs.find? (fun (_, ty') => BEq.beq ty' ty)).map (·.1)
   | _ => none
@@ -114,6 +118,7 @@ namespace Automation
   def mkCtorArgs (ctor : Name) : CommandElabM $ List Ident := do
     pure $ List.map xN' $ List.range $ (← numArgsInCtor ctor)
 
+  -- Applies f to each argument
   def mkCtorRhs (f : Expr → ArgData → Ident → List Ident → CommandElabM Term) (ctor : Name) : CommandElabM $ Term := do
     let ctorType := (← getConstInfo ctor).type
     let argTypes := getForallBinderTypes ctorType
@@ -147,7 +152,7 @@ namespace Automation
         mkCtorRhs fRhs ctor
     `($lhs = $rhs)
 
-  -- Need to give the option of handling the var case by doing more than just mapping each argument
+  -- We need to give the option of handling the var case by doing more than just mapping each argument, hence the fVar argument here.
   def mkAllCases (f : Expr → ArgData → Ident → List Ident → CommandElabM Term) (ty : Name) (fVar : Option (List Ident → Term → CommandElabM Term) := none) : CommandElabM $ TSyntaxArray `Lean.Parser.Term.matchAltExpr := do
     if let some fVar := fVar then
       let nonVarCtors ← liftCoreM $ runMetaMAsCoreM $ getNonVarConstructors ty
@@ -160,6 +165,7 @@ namespace Automation
       let ctors ← liftCoreM $ runMetaMAsCoreM $ getConstructors ty
       ctors.toArray.mapM (mkCtorCase f)
 
+  -- Given an RenVec or SubstVec, extracts the correctly-typed entry.
   def getTy (rσ : Ident) (tys : Array Ident) (ty : Ident) : CommandElabM Term := do
     let pos := tys.idxOf ty
     let mut stx ← `($rσ)
@@ -167,6 +173,7 @@ namespace Automation
       stx ← `($stx.2)
     `($stx.1)
 
+  -- Applies a computation for each suffix in the list Tys.
   def forEachSuffix : (tys : List Ident) → (f : List Ident → CommandElabM Unit) → CommandElabM Unit
   | [], _ => pure ()
   | tys@(.cons _ tys'), f => do
@@ -192,11 +199,13 @@ namespace Automation
   def forEachTy (tys : List Ident) (f : Ident → CommandElabM Unit) : CommandElabM Unit := do
     for ty in tys do f ty
 
+  -- We use this as a return value to indicate whether the returned term should be applied as a map or as a lift.
   inductive MapOrLift
   | map : Term → MapOrLift
   | lift : Term → MapOrLift
   | none : MapOrLift
 
+  -- The main function
   def genTy (tys : List Ident) : CommandElabM Unit := do
     let toGlobal (ty : Ident) : CommandElabM Name := Command.liftCoreM $ realizeGlobalConstNoOverload ty.raw
     let ty := tys[0]!
@@ -419,7 +428,7 @@ namespace Automation
       else
         `($x)
 
-
+    -- theorems
     let mkMapThms (mapType : MapType) := do
       let mapStr := match mapType with | .rmap => "rmap" | .smap => "smap"
       let rσ : Ident := match mapType with | .rmap => r | .smap => σ
@@ -500,7 +509,7 @@ namespace Automation
           instance $instTheMapAll_tys:ident : $TheMapAll [$tys.toArray:ident,*] := .cons $instTheMapAll_tys'
         )
 
-    -- rmap
+    -- Executing rmap stuff
     let rmapCases ← mkAllCases (map_f .rmap false) tyNameGlobal
     elabCommand $ ← `(
       @[simp]
@@ -526,7 +535,7 @@ namespace Automation
 
     mkMapAllInstances .rmap
 
-    -- smap
+    -- Executing smap stuff
     let smapCases ← mkAllCases (map_f .smap false) tyNameGlobal (fVar := some $ smap_fVar tys)
 
     elabCommand $ ← `(
