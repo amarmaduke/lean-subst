@@ -1,4 +1,3 @@
-import Batteries.Lean.TagAttribute
 import Lean.Elab
 
 namespace LeanSubstAttributes

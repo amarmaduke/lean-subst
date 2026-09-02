@@ -600,9 +600,7 @@ theorem Subst.lift_compose_ren_right
 
 @[simp]
 theorem Subst.rename_lift_commute
-  [RenMap S [S]] [RenMap S V] [RenSuffix S V]
-  [SubstMap S [S]] [SubstMap S V] [SubstSuffix S V]
-  [SubstMapSuffixCommute S V]
+  [RenMap S [S]] [RenMap S V] [RenSuffix S V]  [SuffixCommuteRenRen S V]
   {k} {σ : Subst S} {r : RenVec V}
   : (σ.lift k)⟨r,⟩ = σ⟨r,⟩.lift k
 := by
@@ -674,9 +672,7 @@ theorem Subst.rewrite_lift_compose
 
 @[simp]
 theorem Subst.subst_lift_commute
-  [RenMap S [S]] [RenMap S V] [RenSuffix S V]
-  [SubstMap S [S]] [SubstMap S V] [SubstSuffix S V]
-  [SubstMapSuffixCommute S V]
+  [RenMap S [S]] [SubstMap S V] [SubstSuffix S V] [SuffixCommuteRenSub S V]
   {k} {σ : Subst S} {τ : SubstVec V}
   : (σ.lift k)[τ,] = σ[τ,].lift k
 := by
@@ -686,9 +682,11 @@ theorem Subst.subst_lift_commute
   cases Nat.decLt i k
   case _ h =>
     simp [ite]
-    cases (f (i - k)) <;> simp
+    cases (f (i - k))
+    case re => simp only [RenMap.rmap, Action.rmap1]
     case _ t =>
-    rw [Subst.suffix_ren_sub]
+      simp only [RenMap.rmap, Action.rmap1]
+      rw [Subst.suffix_ren_sub]
   case _ h => simp [ite]
 
 -- theorem SubstVec.suffix_lift_commute :
@@ -722,9 +720,7 @@ theorem Subst.rmap_compose_ren_left_commute
 
 @[simp]
 theorem Subst.rmap_compose_ren_right_commute
-  [RenMap S [S]] [RenMap S V] [RenSuffix S V]
-  [SubstMap S [S]] [SubstMap S V] [SubstSuffix S V]
-  [SubstMapSuffixCommute S V]
+  [RenMap S [S]] [RenMap S V] [RenSuffix S V]  [SuffixCommuteRenRen S V]
   {r : RenVec V} {σ : Subst S} {k : Ren S}
   : (σ >> k)⟨r,⟩ = σ⟨r,⟩ >> k
 := by
@@ -736,9 +732,7 @@ theorem Subst.rmap_compose_ren_right_commute
 
 @[simp]
 theorem Subst.rmap_compose_commute
-  [RenMap S [S]] [RenMap S V] [RenSuffix S V]
-  [SubstMap S [S]] [SubstMap S V] [SubstSuffix S V]
-  [SubstMapSuffixCommute S V]
+  [SubstMap S [S]] [RenMap S V] [RenSuffix S V]  [SuffixCommuteSubRen S V]
   {r : RenVec V} {σ τ : Subst S}
   : (σ >> τ)⟨r,⟩ = σ⟨r,⟩ >> τ⟨r,⟩
 := by

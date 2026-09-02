@@ -198,9 +198,6 @@ instance : RenSuffix Ty [] := ⟨⟩
 instance : RenMap Ty [] where
   rmap _ := id
 
-@[simp]
-theorem Ty.rmap_empty {t : Ty} {r : RenVec []} : t⟨r,⟩ = t := rfl
-
 @[reducible, simp]
 instance instRenMapAll_Ty : RenMapAll [Ty] := .cons .nil
 
@@ -251,10 +248,6 @@ instance : SubstSuffix Ty [] := ⟨⟩
 instance : SubstMap Ty [] where
   smap _ := id
 
-@[simp]
-theorem Ty.smap_empty {t : Ty} {σ : SubstVec []} : t[σ,] = t := by
-  simp only [SubstMap.smap, id]
-
 @[reducible, simp]
 instance instSubstMapAll_Ty : SubstMapAll [Ty] := .cons .nil
 
@@ -278,11 +271,6 @@ theorem Ty.smap_all {t} {σ : SubstVec [Ty]} : (all t)[σ,] = all t[σ.lift [1],
 theorem Ty.from_action_smap {t : Action Ty} {σ : SubstVec [Ty]}
   : (from_action t)[σ,] = from_action t[σ,]
 := by cases t <;> simp
-
-instance : SubstMapSuffixCommute Ty [] where
-  ren_ren := by subst_solve_compose
-  ren_sub := by subst_solve_compose
-  sub_ren := by subst_solve_compose
 
 instance : SubstMapEmpty Ty where
   apply_empty := by intro s; simp [SubstMap.smap]
@@ -475,10 +463,6 @@ instance : RenSuffix Term [] := ⟨⟩
 instance : RenMap Term [] where
   rmap _ := id
 
-@[simp]
-theorem Term.rmap_empty {t : Term} {r : RenVec []} : t⟨r,⟩ = t := by
-  simp [RenMap.rmap, id]
-
 @[reducible, simp]
 instance instRenMapAll_Term : RenMapAll [Term] := .cons .nil
 
@@ -492,26 +476,13 @@ instance : RenMapId Term [Term, Ty] where
   apply_id := by subst_solve_id
 
 instance : RenMapCompose Term [Term, Ty] where
-  apply_compose := by
-    intro s σ τ
-    let T := Subst.typeof s
-    induction s generalizing σ τ
-    all_goals
-      -- try solve | simp; grind
-      try solve | simp [*]
-      try simp [Subst.lift_compose_ren_right_vec, *]
-      try simp [SubstVec.compose_ren_right_split, *]
-      try simp [Subst.rewrite_lift_compose_ren_left_vec, *]
-      -- try simp [Subst.rewrite_lift_compose_vec (T := T), *]
-      -- try solve | congr
-      -- try solve | congr 1
-      -- try solve | congr 2
-
-instance : RenMapVecDef Term Term [] where
-  apply_vecdef := by intro s r; induction s generalizing r <;> simp [*]
+  apply_compose := by subst_solve_compose
 
 instance : RenMapEmpty Term where
   apply_empty := by intro s; simp [RenMap.rmap]
+
+instance : RenMapVecDef Term Term [] where
+  apply_vecdef := by intro s r; induction s generalizing r <;> simp [*]
 
 instance : RenMapId Term [Term] where
   apply_id := by subst_solve_id
@@ -680,52 +651,20 @@ instance : SubstSuffix Term [] := ⟨⟩
 instance : SubstMap Term [] where
   smap _ := id
 
-@[simp]
-theorem Term.smap_empty {t : Term} {σ : SubstVec []} : t[σ,] = t := by
-  simp only [SubstMap.smap, id]
-
 @[reducible, simp]
 instance instSubstMapAll_Term : SubstMapAll [Term] := .cons .nil
 
 @[reducible, simp]
 instance instSubstMapAll_Term_Ty : SubstMapAll [Term, Ty] := .cons instSubstMapAll_Ty
 
-instance : SubstMapSuffixCommute Term [] where
+instance : SuffixCommuteRenRen Term [Ty] where
   ren_ren := by subst_solve_compose
+
+instance : SuffixCommuteRenSub Term [Ty] where
   ren_sub := by subst_solve_compose
+
+instance : SuffixCommuteSubRen Term [Ty] where
   sub_ren := by subst_solve_compose
-
-instance : SubstMapSuffixCommute Term [Ty] where
-  ren_ren := by subst_solve_compose
-  ren_sub := by subst_solve_compose
-  sub_ren := by
-    intro s σ τ
-    let T := Subst.typeof s
-    induction s generalizing σ τ
-    all_goals try solve | simp [*]
-    all_goals try solve |
-      rcases σ with ⟨σ1, σ2, σ3, σ4, σ5, σ6, σ7, σ8⟩
-      rcases τ with ⟨τ1, τ2, τ3, τ4, τ5, τ6, τ7, τ8⟩
-      try simp [Subst.rewrite_lift_compose (T := T), *]
-      try simp [Subst.lift_compose_ren_right (T := T), *]
-      try simp [Subst.rewrite_lift_compose_ren_left (T := T), *]
-      try solve | congr
-      try solve | congr 1
-      try solve | congr 2
-      try solve | grind
-    case lam =>
-      try rcases σ with ⟨σ1, σ2, σ3, σ4, σ5, σ6, σ7, σ8⟩
-      try rcases τ with ⟨τ1, τ2, τ3, τ4, τ5, τ6, τ7, τ8⟩
-      try simp [Subst.rewrite_lift_compose (T := T), *]
-      try simp [Subst.lift_compose_ren_right (T := T), *]
-      try simp [Subst.rewrite_lift_compose_ren_left (T := T), *]
-
-      sorry
-    case tlam =>
-      sorry
-    case nrec =>
-      sorry
-    --all_goals solve | simp; grind
 
 instance : SubstMapVecDef Term Term [Ty] where
   apply_vecdef := by intro s σ; induction s generalizing σ <;> simp [*]
@@ -778,7 +717,7 @@ instance : SubstMapCompose Term [Term, Ty] where
 instance : SubstMapCompose Term [Term] where
   apply_compose := by subst_solve_compose
 
-instance : SubstMapCompose Term [Ty] where
+instance t: SubstMapCompose Term [Ty] where
   apply_compose := by subst_solve_compose
 
 end SystemFWithNat

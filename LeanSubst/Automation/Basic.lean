@@ -2,10 +2,12 @@ import LeanSubst
 import Lean.Elab.Tactic
 import Lean.Elab.Term.TermElabM
 import LeanSubst.Automation.Attributes
-import Aesop
 
 namespace Automation
-  open Lean Elab Tactic Meta LeanSubst Command Aesop LeanSubstAttributes
+  open Lean Elab Elab.Term Tactic Meta LeanSubst Command LeanSubstAttributes
+
+  @[inline]
+  def runMetaMAsCoreM {α : Type} (x : MetaM α) : CoreM α := Prod.fst <$> x.run {} {}
 
   def getConstructors (typeName : Name) : MetaM (List Name) := do
     match (← getEnv).find? typeName with
@@ -322,7 +324,7 @@ namespace Automation
           let closureApp ← `(term| $closure $(xs.toArray)*)
           let closureAppExpr ← liftTermElabM $ Term.elabTerm closureApp none
           let closureAppExprReduced ← liftCoreM $ runMetaMAsCoreM $ reduce closureAppExpr
-          liftTermElabM closureAppExprReduced.toSyntax
+          liftTermElabM (exprToSyntax closureAppExprReduced)
         else
           pure closure
       else
@@ -453,8 +455,8 @@ namespace Automation
       )
 
       let proof ← match mapType with
-      | .rmap => `(by first | rfl | simp only [RenMap.rmap] ; rw [$rmap:ident] ; try simp | simp only [RenMap.rmap] ; simp ; aesop)
-      | .smap => `(by first | rfl | simp only [SubstMap.smap] ; rw [$smap:ident] ; try simp | simp only [SubstMap.smap] ; simp ; aesop)
+      | .rmap => `(by first | rfl | simp only [RenMap.rmap] ; rw [$rmap:ident] ; try simp | simp only [RenMap.rmap] ; simp)
+      | .smap => `(by first | rfl | simp only [SubstMap.smap] ; rw [$smap:ident] ; try simp | simp only [SubstMap.smap] ; simp)
       forHeadAndEachSuffix tys (fun sfx ↦ forEachCtor tyNameGlobal (fun ctor ↦ do
         let tyQual := if tys.length = 1 then "" else "_" ++ ("_".intercalate $ sfx.map (fun (ty : Ident) ↦ ty.raw.getId.toString.toLower))
         let thmName := qualify s!"{mapStr}{tyQual}_{ctor.components.getLast!}"
@@ -480,7 +482,7 @@ namespace Automation
       elabCommand $ ← `(
         @[simp]
         theorem $from_action_map {$t : Action $ty} {$rσ : $TheVec [$tys.toArray,*]} : $eq := by
-          cases $t:ident <;> (first | rfl | simp | simp [$from_action:ident] | aesop)
+          cases $t:ident <;> (first | rfl | simp | simp [$from_action:ident])
       )
 
       let from_action_mapi (i : Nat) := qualify $ s!"from_action_{map}{i}"
@@ -489,7 +491,7 @@ namespace Automation
           elabCommand $ ← `(
             @[simp]
             theorem $(from_action_mapi i) {$t : Action $ty} {$rσ : $TheVec [$(tys[i]!)]} : $eq := by
-              cases $t:ident <;> (first | rfl | simp | simp [$from_action:ident] | aesop)
+              cases $t:ident <;> (first | rfl | simp | simp [$from_action:ident])
           )
 
     let mkMapAllInstances (mapType : MapType) := do

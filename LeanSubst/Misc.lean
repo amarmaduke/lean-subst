@@ -406,8 +406,8 @@ macro "subst_solve_compose" : tactic => `(tactic| {
   induction s generalizing σ τ
   all_goals try solve | simp [*]
   all_goals try solve |
-    rcases σ with ⟨σ1, σ2, σ3, σ4, σ5, σ6, σ7, σ8⟩
-    rcases τ with ⟨τ1, τ2, τ3, τ4, τ5, τ6, τ7, τ8⟩
+    try rcases σ with ⟨σ1, σ2, σ3, σ4, σ5, σ6, σ7, σ8⟩
+    try rcases τ with ⟨τ1, τ2, τ3, τ4, τ5, τ6, τ7, τ8⟩
     try simp [Subst.rewrite_lift_compose (T := T), *]
     try simp [Subst.lift_compose_ren_right (T := T), *]
     try simp [Subst.rewrite_lift_compose_ren_left (T := T), *]

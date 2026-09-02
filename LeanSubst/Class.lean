@@ -40,33 +40,35 @@ theorem Ren.apply_id2 [RenMap S [T1, T2]] [RenMapId S [T1, T2]] {s : S} : s⟨id
 class RenMapCompose (S : Type u1) (V : List (Type u2)) [RenMap S V] where
   apply_compose {s : S} {r1 r2 : RenVec V} : s⟨r1,⟩⟨r2,⟩ = s⟨r1 >> r2,⟩
 
-class SubstMapSuffixCommute (S : Type u1) (V : List (Type u2)) [RenMap S [S]] [SubstMap S [S]]
-  [RenMap S V] [RenSuffix S V] [SubstMap S V] [SubstSuffix S V]
-where
+class SuffixCommuteRenRen (S : Type u1) (V : List (Type u2)) [RenMap S [S]] [RenMap S V] [RenSuffix S V] where
   ren_ren {s : S} {r1 : Ren S} {r2 : RenVec V} : s⟨r1⟩⟨r2,⟩ = s⟨r2,⟩⟨r1⟩
+
+class SuffixCommuteRenSub (S : Type u1) (V : List (Type u2)) [RenMap S [S]] [SubstMap S V] [SubstSuffix S V] where
   ren_sub {s : S} {r : Ren S} {τ : SubstVec V} : s⟨r⟩[τ,] = s[τ,]⟨r⟩
+
+class SuffixCommuteSubRen (S : Type u1) (V : List (Type u2)) [SubstMap S [S]] [RenMap S V] [RenSuffix S V] where
   sub_ren {s : S} {σ : Subst S} {r : RenVec V} : s[σ]⟨r,⟩ = s⟨r,⟩[σ⟨r,⟩]
 
 @[grind =]
 theorem Subst.suffix_ren_ren
-  [RenMap S [S]] [SubstMap S [S]] [RenMap S V] [RenSuffix S V] [SubstMap S V] [SubstSuffix S V]
-  [SubstMapSuffixCommute S V] {s : S} {r1 : Ren S} {r2 : RenVec V}
+  [RenMap S [S]] [RenMap S V] [RenSuffix S V]  [SuffixCommuteRenRen S V]
+  {s : S} {r1 : Ren S} {r2 : RenVec V}
   : s⟨r1⟩⟨r2,⟩ = s⟨r2,⟩⟨r1⟩
-:= SubstMapSuffixCommute.ren_ren
+:= SuffixCommuteRenRen.ren_ren
 
 @[grind =]
 theorem Subst.suffix_ren_sub
-  [RenMap S [S]] [SubstMap S [S]] [RenMap S V] [RenSuffix S V] [SubstMap S V] [SubstSuffix S V]
-  [SubstMapSuffixCommute S V] {s : S} {r : Ren S} {τ : SubstVec V}
+  [RenMap S [S]] [SubstMap S V] [SubstSuffix S V] [SuffixCommuteRenSub S V]
+  {s : S} {r : Ren S} {τ : SubstVec V}
   : s⟨r⟩[τ,] = s[τ,]⟨r⟩
-:= SubstMapSuffixCommute.ren_sub
+:= SuffixCommuteRenSub.ren_sub
 
 @[grind =]
 theorem Subst.suffix_sub_ren
-  [RenMap S [S]] [SubstMap S [S]] [RenMap S V] [RenSuffix S V] [SubstMap S V] [SubstSuffix S V]
-  [SubstMapSuffixCommute S V] {s : S} {σ : Subst S} {r : RenVec V}
+  [SubstMap S [S]] [RenMap S V] [RenSuffix S V]  [SuffixCommuteSubRen S V]
+  {s : S} {σ : Subst S} {r : RenVec V}
   : s[σ]⟨r,⟩ = s⟨r,⟩[σ⟨r,⟩]
-:= SubstMapSuffixCommute.sub_ren
+:= SuffixCommuteSubRen.sub_ren
 
 -- class inductive RenMapLaws : (V : List (Type u2)) -> Sort _ where
 -- | nil : RenMapLaws []
@@ -188,8 +190,8 @@ instance [RenMap S V] [RenSuffix S V] [RenMapCompose S V] : RenMapCompose (Subst
 
 @[grind =]
 theorem Subst.suffix_ren_ren_commute_action
-  [RenMap S [S]] [SubstMap S [S]] [RenMap S V] [RenSuffix S V] [SubstMap S V] [SubstSuffix S V]
-  [SubstMapSuffixCommute S V] {s : Action S} {r1 : Ren S} {r2 : RenVec V}
+  [RenMap S [S]] [RenMap S V] [RenSuffix S V]  [SuffixCommuteRenRen S V]
+  {s : Action S} {r1 : Ren S} {r2 : RenVec V}
   : s⟨r1⟩⟨r2,⟩ = s⟨r2,⟩⟨r1⟩
 := by
   cases s <;> simp
@@ -197,8 +199,8 @@ theorem Subst.suffix_ren_ren_commute_action
 
 @[grind =]
 theorem Subst.suffix_ren_ren_commute_subst
-  [RenMap S [S]] [SubstMap S [S]] [RenMap S V] [RenSuffix S V] [SubstMap S V] [SubstSuffix S V]
-  [SubstMapSuffixCommute S V] {s : Subst S} {r1 : Ren S} {r2 : RenVec V}
+  [RenMap S [S]] [RenMap S V] [RenSuffix S V]  [SuffixCommuteRenRen S V]
+  {s : Subst S} {r1 : Ren S} {r2 : RenVec V}
   : s⟨r1⟩⟨r2,⟩ = s⟨r2,⟩⟨r1⟩
 := by
   cases s; case _ f =>
@@ -209,8 +211,8 @@ theorem Subst.suffix_ren_ren_commute_subst
 
 @[grind =]
 theorem Subst.suffix_sub_ren_commute_action
-  [RenMap S [S]] [SubstMap S [S]] [RenMap S V] [RenSuffix S V] [SubstMap S V] [SubstSuffix S V]
-  [SubstMapSuffixCommute S V] {s : Action S} {σ : Subst S} {r : RenVec V}
+  [SubstMap S [S]] [RenMap S V] [RenSuffix S V]  [SuffixCommuteSubRen S V]
+  {s : Action S} {σ : Subst S} {r : RenVec V}
   : s[σ]⟨r,⟩ = s⟨r,⟩[σ⟨r,⟩]
 := by
   cases s <;> simp
@@ -218,8 +220,8 @@ theorem Subst.suffix_sub_ren_commute_action
 
 @[grind =]
 theorem Subst.suffix_sub_ren_commute_subst
-  [RenMap S [S]] [SubstMap S [S]] [RenMap S V] [RenSuffix S V] [SubstMap S V] [SubstSuffix S V]
-  [SubstMapSuffixCommute S V] {s : Subst S} {σ : Subst S} {r : RenVec V}
+  [SubstMap S [S]] [RenMap S V] [RenSuffix S V]  [SuffixCommuteSubRen S V]
+  {s : Subst S} {σ : Subst S} {r : RenVec V}
   : s[σ]⟨r,⟩ = s⟨r,⟩[σ⟨r,⟩]
 := by
   cases s; case _ f =>
@@ -231,8 +233,8 @@ theorem Subst.suffix_sub_ren_commute_subst
 
 @[grind =]
 theorem Subst.suffix_ren_sub_commute_action
-  [RenMap S [S]] [SubstMap S [S]] [RenMap S V] [RenSuffix S V] [SubstMap S V] [SubstSuffix S V]
-  [SubstMapSuffixCommute S V] {s : Action S} {r : Ren S} {τ : SubstVec V}
+  [RenMap S [S]] [SubstMap S V] [SubstSuffix S V] [SuffixCommuteRenSub S V]
+  {s : Action S} {r : Ren S} {τ : SubstVec V}
   : s⟨r⟩[τ,] = s[τ,]⟨r⟩
 := by
   cases s <;> simp
@@ -240,8 +242,8 @@ theorem Subst.suffix_ren_sub_commute_action
 
 @[grind =]
 theorem Subst.suffix_ren_sub_commute_subst
-  [RenMap S [S]] [SubstMap S [S]] [RenMap S V] [RenSuffix S V] [SubstMap S V] [SubstSuffix S V]
-  [SubstMapSuffixCommute S V] {s : Subst S} {r : Ren S} {τ : SubstVec V}
+  [RenMap S [S]] [SubstMap S V] [SubstSuffix S V] [SuffixCommuteRenSub S V]
+  {s : Subst S} {r : Ren S} {τ : SubstVec V}
   : s⟨r⟩[τ,] = s[τ,]⟨r⟩
 := by
   cases s; case _ f =>
@@ -542,19 +544,32 @@ where
     funext; case _ i =>
     cases (f i) <;> simp
 
-instance [RenMap T (T::V)] [RenMapAll (T::V)] [SubstMap T (T::V)] [RenMapVecDef T T V] [SubstMapRenComposeRight T (T::V)]
+instance [RenMap T (T::V)] [inst : RenMapAll (T::V)] [SubstMap T (T::V)] [RenMapVecDef T T V] [SubstMapRenComposeRight T (T::V)]
   : SubstMapRenComposeRight (Subst T) (T::V)
 where
   apply_ren_compose_right := by
     intro s σ τ
-    cases s; sorry
+    cases s; case _ f =>
+    simp [SubstMap.smap, RenMap.rmap, Subst.rmap0, Subst.smap0]
+    funext; case _ i =>
+    cases (f i) <;> simp; case _ x =>
+    rcases σ with ⟨σ, σs⟩
+    rcases τ with ⟨τ, τs⟩
+    simp [Subst.rmap1, Subst.act, SubstAction.act]
+    cases τ; case _ g =>
+    simp; cases (g x) <;> simp
+    cases inst; simp
+    rw [Ren.apply_vecdef]
 
 instance [RenMap S V] [RenMapAll V] [SubstMap S V] [RenSuffix S V] [SubstSuffix S V] [SubstMapRenComposeRight S V]
   : SubstMapRenComposeRight (Subst S) V
 where
   apply_ren_compose_right := by
-    intro s; cases s
-    sorry
+    intro s r σ
+    cases s; case _ f =>
+    simp [SubstMap.smap, RenMap.rmap, Subst.rmap1, Subst.smap1]
+    funext; case _ i =>
+    cases (f i) <;> simp
 
 theorem Subst.apply_compose_lemma [SubstMap T (T::V)] :
   ∀ [SubstMapAll (T::V)] [SubstMapCompose T (T::V)] [SubstMapVecDef T T V]
