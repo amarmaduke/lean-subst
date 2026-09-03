@@ -19,4 +19,4 @@ root = "Examples"
 
 [[lean_exe]]
 name = "lean-subst"
-root = "Main"
+root = "Examples"
