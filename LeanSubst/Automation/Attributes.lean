@@ -18,7 +18,7 @@ namespace LeanSubstAttributes
 
   initialize leanSubstBinder : ParametricAttribute $ List (Term × Ident × Nat) ← registerParametricAttribute {
     name := `leansubst_binder_attr,
-    descr := "Blah",
+    descr := "Indicates that a constructor binds variables.",
     getParam := fun
     | name, stx@`(attr| _leansubst_binder [ $closures,* ] [ $tys,* ] [ $ps,* ]) => do
       let ret := Array.zip closures.getElems (Array.zip tys.getElems ps.getElems)
@@ -28,12 +28,11 @@ namespace LeanSubstAttributes
 
   initialize leanSubstBinder' : ParametricAttribute Nat ← registerParametricAttribute {
     name := `leansubst_binder',
-    descr := "Blah",
+    descr := "Indicates that a constructor binds variables.",
     getParam := fun
     | name, stx@`(Lean.Parser.Attr.simple| $_ $n:num) => do
       pure n.getNat
     | name, stx@`(Lean.Parser.Term.attrInstance| $_) => do
-      dbg_trace s!"oh no {name}, {stx}"
       pure 0
   }
 
