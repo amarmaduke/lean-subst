@@ -125,15 +125,15 @@ theorem Typing.fundamental {Γ t A} : Γ ⊢ t : A -> Γ ⊨ t : A
 | .var j, σ, h => h j
 | .lam (A := A) (B := B) (t := t) tj, σ, h =>
   have norm : SN Red t[σ.lift] := ℒ.sound $ tj.fundamental σ.lift (𝒞.lift A h)
-  have body (r : Ren Term) (a : Term) (j : ℰ A a) : ℰ B t[σ.lift >> su a :: r.to] := by
-    simp [Subst.rewrite_lift, Subst.compose_compose_left_succ (T := Term)]
-    exact tj.fundamental (su a :: (σ >> r)) (𝒞.su j $ 𝒞.rename r h)
+  have body (r : Ren Term) (a : Term) (j : ℰ A a) : ℰ B t[σ.lift >> su a :: r.to] :=
+    tj.fundamental (su a :: (σ >> r)) (𝒞.su j $ 𝒞.rename r h)
+      |> cast (by simp [Subst.rewrite_lift, Subst.compose_compose_left_succ (T := Term)])
   ℰ.lam norm (ℛ.lam.2 $ body |> cast (by simp))
 | .app fj aj, σ, h => ℰ.app (fj.fundamental σ h) (aj.fundamental σ h)
 
 theorem Typing.strong_normalization {Γ t A} (j : Γ ⊢ t : A) : SN Red t :=
   have lem : Γ ⊨ t : A := j.fundamental
-  have lem : ℰ A t := lem 𝐬0 (λ {i} {T} h => ℒ.var (LR T) i) |> cast (by simp)
+  have lem : ℰ A t := lem 𝐬0 (λ {i T} h => ℒ.var (LR T) i) |> cast (by simp)
   ℒ.sound lem
 
 end STLC

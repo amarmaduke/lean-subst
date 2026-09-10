@@ -268,25 +268,14 @@ mutual
   @[simp]
   theorem Value.rmap_compose : ∀ {s : Value} {r1 r2 : RenVec [Value, Ty]}, s⟨r1,⟩⟨r2,⟩ = s⟨r1 >> r2,⟩
   | .var x, _, _ => by simp
-  | .lam A t, r1, r2 =>
-    have ih := t.rmap_compose (r1 := r1.lift [1, 0]) (r2 := r2.lift [1, 0])
-    by simp [*]
-  | .tlam t, r1, r2 =>
-    have ih := t.rmap_compose (r1 := r1.lift [0, 1]) (r2 := r2.lift [0, 1])
-    by simp [*]
+  | .lam A t, r1, r2 => by simp [Term.rmap_compose]
+  | .tlam t, r1, r2 => by simp [Term.rmap_compose]
 
   @[simp]
   theorem Term.rmap_compose : ∀ {s : Term} {r1 r2 : RenVec [Value, Ty]}, s⟨r1,⟩⟨r2,⟩ = s⟨r1 >> r2,⟩
-  | .val v, r1, r2 =>
-    have ih := v.rmap_compose (r1 := r1) (r2 := r2)
-    by simp [*]
-  | .app f a, r1, r2 =>
-    have ih1 := f.rmap_compose (r1 := r1) (r2 := r2)
-    have ih2 := a.rmap_compose (r1 := r1) (r2 := r2)
-    by simp [*]
-  | .tapp f A, r1, r2 =>
-    have ih := f.rmap_compose (r1 := r1) (r2 := r2)
-    by simp [*]
+  | .val v, r1, r2 => by simp [Value.rmap_compose]
+  | .app f a, r1, r2 => by simp [Term.rmap_compose]
+  | .tapp f A, r1, r2 => by simp [Term.rmap_compose]
 end
 
 instance : RenMapCompose Value [Value, Ty] where

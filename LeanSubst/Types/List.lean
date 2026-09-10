@@ -1,5 +1,6 @@
 
 import LeanSubst.Class
+import LeanSubst.Types.Option
 
 namespace LeanSubst
 
@@ -32,6 +33,18 @@ instance [RenMap S V] [RenMapCompose S V] : RenMapCompose (List S) V where
 theorem List.rmap_append [RenMap S V] {xs ys : List S} {r : RenVec V}
   : (xs ++ ys)⟨r,⟩ = xs⟨r,⟩ ++ ys⟨r,⟩
 := by induction xs generalizing ys <;> simp [*]
+
+@[simp]
+theorem List.rmap_get? [RenMap S V] {x : List S} {n : Nat} {r : RenVec V}
+  : x[n]?⟨r,⟩ = x⟨r,⟩[n]?
+:= by
+  induction x generalizing n r <;> simp [*]
+  case cons => cases n <;> simp [*]
+
+theorem List.rmap_length [RenMap S V] {x : List S} {r : RenVec V}
+  : x⟨r,⟩.length = x.length
+:= by
+  induction x generalizing r <;> simp [*]
 
 def List.smap [SubstMap S V] (σ : SubstVec V) : List S -> List S
 | [] => []

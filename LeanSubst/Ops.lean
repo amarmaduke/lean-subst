@@ -617,7 +617,7 @@ theorem Ren.compose_add_succ_left {k} : add T (k + 1) = 𝐫1 >> add T k := by
   simp [HAndThen.hAndThen, AndThen.andThen, add, succ, compose]; grind
 
 def Subst.compose [SubstMap T [T]] : Subst T -> Subst T -> Subst T
-| σ, τ => .mk λ n => (σ.act n)[τ]
+| σ, τ => .mk fun n => (σ.act n)[τ]
 
 instance [SubstMap T [T]] : AndThen (Subst T) where
   andThen σ f := Subst.compose σ (f ())

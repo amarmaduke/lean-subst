@@ -8,7 +8,7 @@ variable {V : Type} {B : V -> Nat -> Prop} {C : V -> Nat -> Prop}
 
 inductive Term (V : Type) (B : V -> Nat -> Prop) (C : V -> Nat -> Prop) where
 | var : Nat -> Term V B C
-| bind {n} (v : V) {h : B v n} (t : Term V B C) (ts : Fin n -> Term V B C) : Term V B C
+| bind {n} (v : V) {h : B v n} (t : Term V B C) : Term V B C
 | ctor {n} (v : V) {h : C v n} (ts : Fin n -> Term V B C) : Term V B C
 
 @[coe]
@@ -36,7 +36,7 @@ instance : Coe (Action $ Term V B C) (Term V B C) where
 @[simp]
 def Term.rmap (r : RenVec [Term V B C]) : Term V B C -> Term V B C
 | var x => var (r.1.act x)
-| bind (h := h) v t ts => bind (h := h) v (t.rmap $ r.lift [1]) (λ i => (ts i).rmap r)
+| bind (n := n) (h := h) v t => bind (h := h) v (t.rmap $ r.lift [n])
 | ctor (h := h) v ts => ctor (h := h) v (λ i => (ts i).rmap r)
 
 instance : RenMap (Term V B C) [Term V B C] where
@@ -66,8 +66,8 @@ theorem Term.rmap_ctor {n} {v} {h : C v n} {ts : Fin n -> Term V B C} {r : RenVe
 := by simp only [RenMap.rmap]; rw [rmap]
 
 @[simp]
-theorem Term.rmap_bind {n} {v} {h : B v n} {t : Term V B C} {ts : Fin n -> Term V B C} {r : RenVec [Term V B C]} :
-  (bind (h := h) v t ts)⟨r,⟩ = bind (h := h) v t⟨r.lift [1],⟩ (λ i => (ts i)⟨r,⟩)
+theorem Term.rmap_bind {n} {v} {h : B v n} {t : Term V B C} {r : RenVec [Term V B C]} :
+  (bind (h := h) v t)⟨r,⟩ = bind (h := h) v t⟨r.lift [n],⟩
 := by simp only [RenMap.rmap]; rw [rmap]
 
 @[simp]
@@ -87,7 +87,7 @@ instance : RenMapCompose (Term V B C) [Term V B C] where
 @[simp]
 def Term.smap (σ : SubstVec [Term V B C]) : Term V B C -> Term V B C
 | var x => σ.1.act x
-| bind (h := h) v t ts => bind (h := h) v (t.smap $ σ.lift [1]) (λ i => (ts i).smap σ)
+| bind (n := n) (h := h) v t => bind (h := h) v (t.smap $ σ.lift [n])
 | ctor (h := h) v ts => ctor (h := h) v (λ i => (ts i).smap σ)
 
 instance : SubstMap (Term V B C) [Term V B C] where
@@ -117,8 +117,8 @@ theorem Term.smap_ctor {n} {v} {h : C v n} {ts : Fin n -> Term V B C} {σ : Subs
 := by simp only [SubstMap.smap]; rw [smap]
 
 @[simp]
-theorem Term.smap_bind {n} {v} {h : B v n} {t : Term V B C} {ts : Fin n -> Term V B C} {σ : SubstVec [Term V B C]} :
-  (bind (h := h) v t ts)[σ,] = bind (h := h) v t[σ.lift [1],] (λ i => (ts i)[σ,])
+theorem Term.smap_bind {n} {v} {h : B v n} {t : Term V B C} {σ : SubstVec [Term V B C]} :
+  (bind (h := h) v t)[σ,] = bind (h := h) v t[σ.lift [n],]
 := by simp only [SubstMap.smap]; rw [smap]
 
 @[simp]

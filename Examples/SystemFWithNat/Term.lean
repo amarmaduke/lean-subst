@@ -24,12 +24,12 @@ inductive Term where
 | tlam (t : Term) : Term
 | zero : Term
 | succ : Term -> Term
-| nrec (motive : Ty) (z : Term) (s : Term) (n : Term) : Term
+| nrec (z : Term) (s : Term) (n : Term) : Term
 
 #leansubst var Term.var
 #leansubst bind Term at pos 1 in Term.lam
 #leansubst bind Ty at pos 0 in Term.tlam
-#leansubst bind 2 of Term at pos 2 in Term.nrec
+#leansubst bind 2 of Term at pos 1 in Term.nrec
 
 #leansubst generate Term, Ty
 

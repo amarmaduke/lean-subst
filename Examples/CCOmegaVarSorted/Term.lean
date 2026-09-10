@@ -19,6 +19,7 @@ inductive Term where
 -- Why do we care about annotating variables, or this example in particular?
 -- Because it lets us trivially compute the universe of a term:
 
+@[simp]
 def Term.universe : Term -> Univ
 | var u _ => u
 | univ (.prop) => .pred 0
@@ -187,5 +188,13 @@ instance : SubstMapRenComposeRight Term [Term] where
 
 instance : SubstMapCompose Term [Term] where
   apply_compose := by subst_solve_compose
+
+theorem Term.universe_rename {r : Ren Term}
+  : ∀ {t : Term}, Term.universe t⟨r⟩ = t.universe
+| var u x => by simp
+| univ u => by simp
+| app f a => by simp [universe_rename]
+| lam A t => by simp [universe_rename]
+| pi A B => by simp [universe_rename]
 
 end CCOmegaVarSorted
