@@ -35,8 +35,7 @@ class RenMap (S : Type u1) (V : List (Type u2)) where
 
 class inductive RenMapAll : List (Type u2) -> Sort _ where
 | nil : RenMapAll []
-| cons {V Vs} [RenMap V [V]] [RenMap V Vs] [RenSuffix V Vs]
-  : RenMapAll Vs -> RenMapAll (V::Vs)
+| cons {V Vs} [RenMap V (V::Vs)] : RenMapAll Vs -> RenMapAll (V::Vs)
 
 export RenMap (rmap)
 
@@ -67,10 +66,22 @@ elab_rules : term
 | `($t⟨ $elems,* ⟩) => do
   let t_elab <- elabTermAndSynthesize t none
   let expected <- inferType t_elab
+  dbg_trace s!"{expected}"
+  dbg_trace s!"{elems.getElems}"
   let elems <- List.mapM id $ elems.getElems.foldl (λ acc t => elabTermAndSynthesize t none :: acc) []
-  let elems_ty <- List.mapM id $ elems.map inferType |> List.map MetaM.promote |> List.map get_ty_arg
+  dbg_trace s!"{elems}"
+  let elems_ty <- List.mapM id $ elems.dropLast.map inferType |> List.map MetaM.promote |> List.map get_ty_arg
+  let last_ty : List Lean.Expr :=
+    match elems.getLast? with
+    | some e =>
+      let ty := inferType e
+      sorry
+    | none => []
+  dbg_trace s!"{elems_ty}"
   let list_ann <- form_list elems_ty.reverse
+  dbg_trace s!"{list_ann}"
   let elems_stx <- form_prod `(RenVec.nil) elems.reverse
+  dbg_trace s!"{elems_stx}"
   let stx : TermElabM Lean.Syntax := `(@rmap _ $list_ann _ $elems_stx $t)
   let stx <- stx
   elabTermAndSynthesize stx expected
@@ -118,8 +129,7 @@ class SubstMap (S : Type u1) (V : List (Type u2)) where
 
 class inductive SubstMapAll : List (Type u2) -> Sort _ where
 | nil : SubstMapAll []
-| cons {V Vs} [SubstMap V [V]] [SubstMap V Vs] [SubstSuffix V Vs]
-  : SubstMapAll Vs -> SubstMapAll (V::Vs)
+| cons {V Vs} [SubstMap V (V::Vs)] : SubstMapAll Vs -> SubstMapAll (V::Vs)
 
 --  smap : ∀ (i : Fin V.length), SubstMap V[i] [V[i]]
 
