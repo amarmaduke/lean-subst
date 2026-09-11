@@ -63,8 +63,10 @@ syntax:max (name := «term_⟨_,+⟩») term noWs "⟨" term ,+ "⟩" : term
 open Lean.Meta in
 open Lean.Elab.Term in
 open Subst.Syntax in
-elab_rules <= expected
+elab_rules : term
 | `($t⟨ $elems,* ⟩) => do
+  let t_elab <- elabTermAndSynthesize t none
+  let expected <- inferType t_elab
   let elems <- List.mapM id $ elems.getElems.foldl (λ acc t => elabTermAndSynthesize t none :: acc) []
   let elems_ty <- List.mapM id $ elems.map inferType |> List.map MetaM.promote |> List.map get_ty_arg
   let list_ann <- form_list elems_ty.reverse
@@ -129,8 +131,10 @@ syntax:max (name := «term_[_,+]») term noWs "[" term ,+ "]" : term
 open Lean.Meta in
 open Lean.Elab.Term in
 open Subst.Syntax in
-elab_rules <= expected
+elab_rules : term
 | `($t[ $elems,* ]) => do
+  let t_elab <- elabTermAndSynthesize t none
+  let expected <- inferType t_elab
   let elems <- List.mapM id $ elems.getElems.foldl (λ acc t => elabTermAndSynthesize t none :: acc) []
   let elems_ty <- List.mapM id $ elems.map inferType |> List.map MetaM.promote |> List.map get_ty_arg
   let list_ann <- form_list elems_ty.reverse

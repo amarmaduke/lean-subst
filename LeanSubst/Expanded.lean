@@ -139,7 +139,7 @@ theorem SubstVec.compose_ren_right_components2
   [RenMapAll [T1, T2]] [RenMapEmpty T2] {σ1 : Subst T1} {r1 : Ren T1} {σ2 : Subst T2} {r2 : Ren T2}
   : HAndThen.hAndThen (α := SubstVec [T1, T2]) (β := RenVec [T1, T2])
     (σ1, σ2, .nil) (λ _ => (r1, r2, .nil))
-    = ((σ1⟨r2⟩ : Subst T1) >> r1, σ2 >> r2, .nil)
+    = (σ1⟨r2⟩ >> r1, σ2 >> r2, .nil)
 := by simp [HAndThen.hAndThen, compose_ren_right]
 
 @[simp]
@@ -148,7 +148,7 @@ theorem SubstVec.compose_ren_right_components3
   {σ3 : Subst T3} {r3 : Ren T3}
   : HAndThen.hAndThen (α := SubstVec [T1, T2, T3]) (β := RenVec [T1, T2, T3])
     (σ1, σ2, σ3, .nil) (λ _ => (r1, r2, r3, .nil))
-    = ((σ1⟨r2, r3⟩ : Subst T1) >> r1, (σ2⟨r3⟩ : Subst T2) >> r2, σ3 >> r3, .nil)
+    = (σ1⟨r2, r3⟩ >> r1, (σ2⟨r3⟩ : Subst T2) >> r2, σ3 >> r3, .nil)
 := by simp [HAndThen.hAndThen, compose_ren_right]
 
 @[simp]
@@ -157,7 +157,7 @@ theorem SubstVec.compose_ren_right_components4
   {σ3 : Subst T3} {r3 : Ren T3} {σ4 : Subst T4} {r4 : Ren T4}
   : HAndThen.hAndThen (α := SubstVec [T1, T2, T3, T4]) (β := RenVec [T1, T2, T3, T4])
     (σ1, σ2, σ3, σ4, .nil) (λ _ => (r1, r2, r3, r4, .nil))
-    = ((σ1⟨r2, r3, r4⟩ : Subst T1) >> r1, (σ2⟨r3, r4⟩ : Subst T2) >> r2, (σ3⟨r4⟩ : Subst T3) >> r3, σ4 >> r4, .nil)
+    = (σ1⟨r2, r3, r4⟩ >> r1, (σ2⟨r3, r4⟩ : Subst T2) >> r2, (σ3⟨r4⟩ : Subst T3) >> r3, σ4 >> r4, .nil)
 := by simp [HAndThen.hAndThen, compose_ren_right]
 @[simp]
 theorem SubstVec.compose_components1
