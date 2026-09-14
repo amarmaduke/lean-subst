@@ -10,10 +10,10 @@ namespace LeanSubst.Subst.Syntax
   open Lean in
   def MetaM.promote {α} (x : Meta.MetaM α) : Elab.Term.TermElabM α := x
 
-  def form_list : List Lean.Expr -> TermElabM (Lean.TSyntax `term)
-  | [] => `(List.nil)
+  def form_list (b : TermElabM $ Lean.TSyntax `term) : List Lean.Expr -> TermElabM (Lean.TSyntax `term)
+  | [] => b
   | .cons x xs => do
-    let xs' <- form_list xs
+    let xs' <- form_list b xs
     `(List.cons $(<- exprToSyntax x) $xs')
 
   def form_prod (b : TermElabM $ Lean.TSyntax `term)

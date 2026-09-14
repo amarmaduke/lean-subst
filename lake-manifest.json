@@ -1,16 +1,6 @@
 {"version": "1.2.0",
  "packagesDir": ".lake/packages",
- "packages":
- [{"url": "https://github.com/amarmaduke/lilac",
-   "type": "git",
-   "subDir": null,
-   "scope": "amarmaduke",
-   "rev": "8924478f47eaff544494d1b9012e6731b3941d05",
-   "name": "lilac",
-   "manifestFile": "lake-manifest.json",
-   "inputRev": "8924478f47eaff544494d1b9012e6731b3941d05",
-   "inherited": false,
-   "configFile": "lakefile.toml"}],
+ "packages": [],
  "name": "«lean-subst»",
  "lakeDir": ".lake",
  "fixedToolchain": false}

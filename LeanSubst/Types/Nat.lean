@@ -13,7 +13,6 @@ def Nat.rmap (r : Ren T) : Nat -> Nat
 instance : RenMap Nat [T] where
   rmap r := Nat.rmap r.1
 
-@[simp, grind =]
-theorem Nat.rmap_simp {r : Ren T} {n} : n⟨r⟩ = r.act n := by simp [RenMap.rmap, Nat.rmap]
+theorem Nat.rmap_simp {r : Ren T} {n : Nat} : n⟨r⟩ = r.act n := by simp [RenMap.rmap, Nat.rmap]
 
 end LeanSubst

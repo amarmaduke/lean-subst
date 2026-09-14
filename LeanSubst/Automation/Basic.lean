@@ -413,7 +413,7 @@ namespace Automation
           `($(r).1.act $x) -- NOTE: assumes that the type being generated is the first type in [tys]
         else
           `($x)
-      | .smap => throwError s!"LeanSubst error: encountered MapType.smap when mapping the var case for type {ty}, but this should not happen in the MapType.smap case (it has to build its own var RHS rather than just mapping the arguments)."
+      | .smap => throwError "smap var case"
     | _ => do
       let tyExpr ← liftTermElabM $ Term.elabTerm ty none
       if ← liftCoreM $ runMetaMAsCoreM $ isDefEq tyExpr ty' then

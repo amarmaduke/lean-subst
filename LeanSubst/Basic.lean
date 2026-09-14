@@ -8,6 +8,12 @@ namespace LeanSubst
 
 universe u u1 u2 u3
 variable {S : Type u1} {T : Type u2} {U : Type u3}
+variable {V : List (Type u2)}
+
+class AltCons (S : outParam $ Type u1) (T : Type u2) where
+  altCons : S -> T -> T
+
+infixr:67 (name := «_.:_») " .: " => AltCons.altCons
 
 @[reducible]
 def Subst.typeof {T : Type u2} (_ : T) : Type u2 := T
@@ -28,6 +34,10 @@ def RenVec : List (Type u2) -> Type u2
 
 def RenVec.nil : RenVec [] := RenUnit.unit
 
+def RenVec.cons (r : Ren T) (v : RenVec V) : RenVec (T::V) := (r, v)
+
+infixr:67 (name := RenVec.cons_notation) " .: " => RenVec.cons
+
 class RenSuffix (S : Type u1) (V : List (Type u2)) where
 
 class RenMap (S : Type u1) (V : List (Type u2)) where
@@ -39,59 +49,81 @@ class inductive RenMapAll : List (Type u2) -> Sort _ where
 
 export RenMap (rmap)
 
-macro:max (name := «term_⟨_,⟩») t:term noWs "⟨" r:term ",⟩" : term => `(rmap $r $t)
--- syntax:max (name := «term_⟨_,⟩») term noWs "⟨" term ",⟩" : term
-syntax:max (name := «term_⟨_,+⟩») term noWs "⟨" term ,+ "⟩" : term
-
--- open Lean.Meta in
--- open Lean.Elab.Term in
--- open Subst.Syntax in
--- elab_rules : term
--- | `($t⟨ $r ,⟩) => do
---   let t' <- elabTermAndSynthesize t none
---   let t_ty <- inferType t'
---   let r' <- elabTermAndSynthesize r none
---   let r_ty <- inferType r' |> get_ty_arg
---   let inst_ty : Lean.TSyntax `term <- `(RenMap $(<- exprToSyntax t_ty) $(<- exprToSyntax r_ty))
---   let inst_ty <- elabTermAndSynthesize inst_ty none
---   let (result, _) <- simp inst_ty default
---   let inst <- synthInstance result.expr
---   let stx : Lean.TSyntax `term <- `(@rmap _ _ $(<- exprToSyntax inst) $r $t)
---   elabTermAndSynthesize stx none
+--macro:max (name := «term_⟨_,⟩») t:term noWs "⟨" r:term ",⟩" : term => `(rmap $r $t)
+syntax:max (name := «term_⟨_,*⟩») term noWs "⟨" term,* "⟩" : term
+syntax:max (name := «term_⟨_,*;_⟩») term noWs "⟨" term,* ";" term "⟩" : term
 
 open Lean.Meta in
 open Lean.Elab.Term in
 open Subst.Syntax in
-elab_rules : term
-| `($t⟨ $elems,* ⟩) => do
-  let t_elab <- elabTermAndSynthesize t none
-  let expected <- inferType t_elab
-  dbg_trace s!"{expected}"
-  dbg_trace s!"{elems.getElems}"
+@[term_elab «term_⟨_,*⟩»]
+def elab_rmap : TermElab := fun stx expected => do
+  let `($t⟨ $elems,* ⟩) := stx
+    | Lean.Elab.throwUnsupportedSyntax
+  -- let t_elab <- elabTermAndSynthesize t expected
+  -- let expected <- inferType t_elab
   let elems <- List.mapM id $ elems.getElems.foldl (λ acc t => elabTermAndSynthesize t none :: acc) []
-  dbg_trace s!"{elems}"
-  let elems_ty <- List.mapM id $ elems.dropLast.map inferType |> List.map MetaM.promote |> List.map get_ty_arg
-  let last_ty : List Lean.Expr :=
-    match elems.getLast? with
-    | some e =>
-      let ty := inferType e
-      sorry
-    | none => []
-  dbg_trace s!"{elems_ty}"
-  let list_ann <- form_list elems_ty.reverse
-  dbg_trace s!"{list_ann}"
+  let elems_ty <- List.mapM id $ elems.map inferType |> List.map MetaM.promote |> List.map get_ty_arg
+  let list_ann <- form_list `(List.nil) elems_ty.reverse
   let elems_stx <- form_prod `(RenVec.nil) elems.reverse
-  dbg_trace s!"{elems_stx}"
   let stx : TermElabM Lean.Syntax := `(@rmap _ $list_ann _ $elems_stx $t)
   let stx <- stx
   elabTermAndSynthesize stx expected
+
+open Lean.Meta in
+open Lean.Elab.Term in
+open Subst.Syntax in
+@[term_elab «term_⟨_,*;_⟩»]
+def elab_rmap_with_vec : TermElab := fun stx expected => do
+  let `($t⟨ $elems,* ; $tail⟩) := stx
+    | Lean.Elab.throwUnsupportedSyntax
+  -- let t_elab <- elabTermAndSynthesize t expected
+  -- let expected <- inferType t_elab
+  let elems <- List.mapM id $ elems.getElems.foldl (λ acc t => elabTermAndSynthesize t none :: acc) []
+  let elems_ty <- List.mapM id $ elems.map inferType |> List.map MetaM.promote |> List.map get_ty_arg
+  let tail_elab <- elabTermAndSynthesize tail none
+  let tail_ty <- inferType tail_elab |> get_ty_arg
+  let tail_ty_stx := exprToSyntax tail_ty
+  let list_ann <- form_list tail_ty_stx elems_ty.reverse
+  let elems_stx <- form_prod (pure tail) elems.reverse
+  let stx : TermElabM Lean.Syntax := `(@rmap _ $list_ann _ $elems_stx $t)
+  let stx <- stx
+  elabTermAndSynthesize stx expected
+
+-- open Lean.Meta in
+-- open Lean.Elab.Term in
+-- open Subst.Syntax in
+-- elab_rules : term <= expected
+-- | `($t⟨ $elems,* ⟩) => do
+--   let t_elab <- elabTermAndSynthesize t expected
+--   let expected <- inferType t_elab
+--   let elems <- List.mapM id $ elems.getElems.foldl (λ acc t => elabTermAndSynthesize t none :: acc) []
+--   let elems_ty <- List.mapM id $ elems.map inferType |> List.map MetaM.promote |> List.map get_ty_arg
+--   let list_ann <- form_list `(List.nil) elems_ty.reverse
+--   let elems_stx <- form_prod `(RenVec.nil) elems.reverse
+--   let stx : TermElabM Lean.Syntax := `(@rmap _ $list_ann _ $elems_stx $t)
+--   let stx <- stx
+--   elabTermAndSynthesize stx expected
+-- | `($t⟨ $elems,* ; $tail ⟩) => do
+--   let t_elab <- elabTermAndSynthesize t none
+--   let expected <- inferType t_elab
+--   let elems <- List.mapM id $ elems.getElems.foldl (λ acc t => elabTermAndSynthesize t none :: acc) []
+--   let elems_ty <- List.mapM id $ elems.map inferType |> List.map MetaM.promote |> List.map get_ty_arg
+--   let tail_elab <- elabTermAndSynthesize tail none
+--   let tail_ty <- inferType tail_elab |> get_ty_arg
+--   let tail_ty_stx := exprToSyntax tail_ty
+--   let list_ann <- form_list tail_ty_stx elems_ty.reverse
+--   let elems_stx <- form_prod (pure tail) elems.reverse
+--   let stx : TermElabM Lean.Syntax := `(@rmap _ $list_ann _ $elems_stx $t)
+--   let stx <- stx
+--   elabTermAndSynthesize stx expected
 
 @[app_unexpander rmap]
 def unexpand_rmap : Lean.PrettyPrinter.Unexpander
 | `($_ ($r1, RenVec.nil) $t) => `($t⟨$r1⟩)
 | `($_ ($r1, $r2, RenVec.nil) $t) => `($t⟨$r1, $r2⟩)
 | `($_ ($r1, $r2, $r3, RenVec.nil) $t) => `($t⟨$r1, $r2, $r3⟩)
-| `($_ $r $t) => `($t⟨$r,⟩)
+| `($_ $r $t) => `($t⟨;$r⟩)
 | _ => throw ()
 
 inductive Action (T : Type u2) where
@@ -114,6 +146,10 @@ def SubstVec : List (Type u2) -> Type u2
 
 def SubstVec.nil : SubstVec [] := SubstUnit.unit
 
+def SubstVec.cons (σ : Subst T) (v : SubstVec V) : SubstVec (T::V) := (σ, v)
+
+infixr:67 (name := SubstVec.cons_notation) " .: " => SubstVec.cons
+
 class SubstAction (T : Type u1) (A : Type u2) (U : outParam (Type u3)) where
   act (σ : Subst T) : A -> U
 
@@ -135,8 +171,8 @@ class inductive SubstMapAll : List (Type u2) -> Sort _ where
 
 export SubstMap (smap)
 
-macro:max (name := «term_[_,]») t:term noWs "[" σ:term ",]" : term => `(smap $σ $t)
-syntax:max (name := «term_[_,+]») term noWs "[" term ,+ "]" : term
+syntax:max (name := «term_[_,*]») term noWs "[" term ,* "]" : term
+syntax:max (name := «term_[_,*;_]») term noWs "[" term ,* ";" term "]" : term
 
 open Lean.Meta in
 open Lean.Elab.Term in
@@ -147,8 +183,21 @@ elab_rules : term
   let expected <- inferType t_elab
   let elems <- List.mapM id $ elems.getElems.foldl (λ acc t => elabTermAndSynthesize t none :: acc) []
   let elems_ty <- List.mapM id $ elems.map inferType |> List.map MetaM.promote |> List.map get_ty_arg
-  let list_ann <- form_list elems_ty.reverse
+  let list_ann <- form_list `(List.nil) elems_ty.reverse
   let elems_stx <- form_prod `(SubstVec.nil) elems.reverse
+  let stx : TermElabM Lean.Syntax := `(@smap _ $list_ann _ $elems_stx $t)
+  let stx <- stx
+  elabTermAndSynthesize stx expected
+| `($t[ $elems,* ; $tail ]) => do
+  let t_elab <- elabTermAndSynthesize t none
+  let expected <- inferType t_elab
+  let elems <- List.mapM id $ elems.getElems.foldl (λ acc t => elabTermAndSynthesize t none :: acc) []
+  let elems_ty <- List.mapM id $ elems.map inferType |> List.map MetaM.promote |> List.map get_ty_arg
+  let tail_elab <- elabTermAndSynthesize tail none
+  let tail_ty <- inferType tail_elab |> get_ty_arg
+  let tail_ty_stx := exprToSyntax tail_ty
+  let list_ann <- form_list tail_ty_stx elems_ty.reverse
+  let elems_stx <- form_prod (pure tail) elems.reverse
   let stx : TermElabM Lean.Syntax := `(@smap _ $list_ann _ $elems_stx $t)
   let stx <- stx
   elabTermAndSynthesize stx expected
@@ -158,7 +207,7 @@ def unexpand_smap : Lean.PrettyPrinter.Unexpander
 | `($_ ($σ1, SubstVec.nil) $t) => `($t[$σ1])
 | `($_ ($σ1, $σ2, SubstVec.nil) $t) => `($t[$σ1, $σ2])
 | `($_ ($σ1, $σ2, $σ3, SubstVec.nil) $t) => `($t[$σ1, $σ2, $σ3])
-| `($_ $σ $t) => `($t[$σ,])
+| `($_ $σ $t) => `($t[;$σ])
 | _ => throw ()
 
 end LeanSubst
