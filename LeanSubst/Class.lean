@@ -26,10 +26,10 @@ variable {V : List (Type u2)}
 -- := RenMapEmpty.apply_empty
 
 class RenMapId (S : Type u1) (V : List (Type u2)) [RenMap S V] where
-  apply_id {s : S} : s⟨;RenVec.id V⟩ = s
+  apply_id {s : S} : s⟨.id V,⟩ = s
 
 @[simp]
-theorem Ren.apply_id [RenMap S V] [RenMapId S V] {s : S} : s⟨;RenVec.id V⟩ = s := RenMapId.apply_id
+theorem Ren.apply_id [RenMap S V] [RenMapId S V] {s : S} : s⟨.id V,⟩ = s := RenMapId.apply_id
 
 @[simp]
 theorem Ren.apply_id1 [RenMap S [T]] [RenMapId S [T]] {s : S} : s⟨id T⟩ = s := RenMapId.apply_id
@@ -38,7 +38,7 @@ theorem Ren.apply_id1 [RenMap S [T]] [RenMapId S [T]] {s : S} : s⟨id T⟩ = s 
 theorem Ren.apply_id2 [RenMap S [T1, T2]] [RenMapId S [T1, T2]] {s : S} : s⟨id T1, id T2⟩ = s := RenMapId.apply_id
 
 class RenMapCompose (S : Type u1) (V : List (Type u2)) [RenMap S V] where
-  apply_compose {s : S} {r1 r2 : RenVec V} : s⟨;r1⟩⟨;r2⟩ = s⟨;r1 >> r2⟩
+  apply_compose {s : S} {r1 r2 : RenVec V} : s⟨r1,⟩⟨r2,⟩ = s⟨r1 >> r2,⟩
 
 -- class SuffixCommuteRenRen (S : Type u1) (V : List (Type u2)) [RenMap S [S]] [RenMap S V] [RenSuffix S V] where
 --   ren_ren {s : S} {r1 : Ren S} {r2 : RenVec V} : s⟨r1⟩⟨r2,⟩ = s⟨r2,⟩⟨r1⟩
@@ -102,7 +102,7 @@ class RenMapCompose (S : Type u1) (V : List (Type u2)) [RenMap S V] where
 
 @[simp, grind =]
 theorem Ren.apply_compose [RenMap S V] [RenMapCompose S V] {s : S} {r1 r2 : RenVec V}
-  : s⟨;r1⟩⟨;r2⟩ = s⟨;r1 >> r2⟩
+  : s⟨r1,⟩⟨r2,⟩ = s⟨r1 >> r2,⟩
 := RenMapCompose.apply_compose
 
 -- @[simp, grind =]
@@ -281,10 +281,10 @@ theorem Subst.apply_stable
 -- := SubstMapVecDef.apply_vecdef
 
 class SubstMapId (S : Type u1) (V : List $ Type u2) [SubstMap S V] where
-  apply_id {s : S} : s[;SubstVec.id V] = s
+  apply_id {s : S} : s[.id V,] = s
 
 @[simp]
-theorem Subst.apply_id [SubstMap S V] [SubstMapId S V] {s : S} : s[; SubstVec.id V] = s := SubstMapId.apply_id
+theorem Subst.apply_id [SubstMap S V] [SubstMapId S V] {s : S} : s[.id V,] = s := SubstMapId.apply_id
 
 @[simp]
 theorem Subst.apply_id1 [SubstMap S [T]] [SubstMapId S [T]] {s : S} : s[id T] = s := SubstMapId.apply_id
@@ -293,7 +293,7 @@ theorem Subst.apply_id1 [SubstMap S [T]] [SubstMapId S [T]] {s : S} : s[id T] = 
 theorem Subst.apply_id2 [SubstMap S [T1, T2]] [SubstMapId S [T1, T2]] {s : S} : s[id T1, id T2] = s := SubstMapId.apply_id
 
 class SubstMapRenComposeLeft (S : Type u1) (V : List $ Type u2) [RenMap S V] [SubstMap S V] where
-  apply_ren_compose_left {s : S} {r : RenVec V} {τ : SubstVec V} : s⟨;r⟩[;τ] = s[;r >> τ]
+  apply_ren_compose_left {s : S} {r : RenVec V} {τ : SubstVec V} : s⟨r,⟩[τ,] = s[r >> τ,]
 
 -- @[simp, grind =]
 -- theorem Subst.apply_ren_compose_left
@@ -317,7 +317,7 @@ class SubstMapRenComposeLeft (S : Type u1) (V : List $ Type u2) [RenMap S V] [Su
 -- := Subst.apply_ren_compose_left
 
 class SubstMapRenComposeRight (S : Type u1) (V : List $ Type u2) [RenMap S V] [RenMapAll V] [SubstMap S V] where
-  apply_ren_compose_right {s : S} {r : RenVec V} {σ : SubstVec V} : s[;σ]⟨;r⟩ = s[;σ >> r]
+  apply_ren_compose_right {s : S} {r : RenVec V} {σ : SubstVec V} : s[σ,]⟨r,⟩ = s[σ >> r,]
 
 -- @[simp, grind =]
 -- theorem Subst.apply_ren_compose_right
@@ -342,13 +342,13 @@ class SubstMapRenComposeRight (S : Type u1) (V : List $ Type u2) [RenMap S V] [R
 --   sorry
 
 class SubstMapCompose (S : Type u1) (V : List $ Type u2) [SubstMap S V] [SubstMapAll V] where
-  apply_compose {s : S} {σ τ : SubstVec V} : s[;σ][;τ] = s[;σ >> τ]
+  apply_compose {s : S} {σ τ : SubstVec V} : s[σ,][τ,] = s[σ >> τ,]
 
 @[simp, grind =]
 theorem Subst.apply_compose
   [SubstMap S V] [SubstMapAll V] [SubstMapCompose S V]
   {s : S} {σ1 σ2 : SubstVec V}
-  : s[;σ1][;σ2] = s[;σ1 >> σ2]
+  : s[σ1,][σ2,] = s[σ1 >> σ2,]
 := SubstMapCompose.apply_compose
 
 -- class inductive RenMapLaws : (V : List (Type u2)) -> Sort _ where

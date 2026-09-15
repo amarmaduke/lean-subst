@@ -10,17 +10,17 @@ variable {V : List (Type u2)}
 
 def List.rmap [RenMap S V] (r : RenVec V) : List S -> List S
 | [] => []
-| .cons x xs => x⟨;r⟩ :: rmap r xs
+| .cons x xs => x⟨r,⟩ :: rmap r xs
 
 instance [RenMap S V] : RenMap (List S) V where
   rmap := List.rmap
 
 @[simp, grind =]
-theorem List.rmap_nil [RenMap S V] {r : RenVec V} : (@List.nil S)⟨;r⟩ = [] := by
+theorem List.rmap_nil [RenMap S V] {r : RenVec V} : (@List.nil S)⟨r,⟩ = [] := by
   simp [RenMap.rmap, List.rmap]
 
 @[simp, grind =]
-theorem List.rmap_cons [RenMap S V] {x} {xs : List S} {r : RenVec V} : (x::xs)⟨;r⟩ = x⟨;r⟩::xs⟨;r⟩ := by
+theorem List.rmap_cons [RenMap S V] {x} {xs : List S} {r : RenVec V} : (x::xs)⟨r,⟩ = x⟨r,⟩::xs⟨r,⟩ := by
   simp [RenMap.rmap, List.rmap]
 
 instance [RenMap S V] [RenMapId S V] : RenMapId (List S) V where
@@ -31,34 +31,34 @@ instance [RenMap S V] [RenMapCompose S V] : RenMapCompose (List S) V where
 
 @[simp]
 theorem List.rmap_append [RenMap S V] {xs ys : List S} {r : RenVec V}
-  : (xs ++ ys)⟨;r⟩ = xs⟨;r⟩ ++ ys⟨;r⟩
+  : (xs ++ ys)⟨r,⟩ = xs⟨r,⟩ ++ ys⟨r,⟩
 := by induction xs generalizing ys <;> simp [*]
 
 @[simp]
 theorem List.rmap_get? [RenMap S V] {x : List S} {n : Nat} {r : RenVec V}
-  : x[n]?⟨;r⟩ = x⟨;r⟩[n]?
+  : x[n]?⟨r,⟩ = x⟨r,⟩[n]?
 := by
   induction x generalizing n r <;> simp [*]
   case cons => cases n <;> simp [*]
 
 theorem List.rmap_length [RenMap S V] {x : List S} {r : RenVec V}
-  : x⟨;r⟩.length = x.length
+  : x⟨r,⟩.length = x.length
 := by
   induction x generalizing r <;> simp [*]
 
 def List.smap [SubstMap S V] (σ : SubstVec V) : List S -> List S
 | [] => []
-| .cons x xs => x[;σ] :: smap σ xs
+| .cons x xs => x[σ,] :: smap σ xs
 
 instance [SubstMap S V] : SubstMap (List S) V where
   smap := List.smap
 
 @[simp, grind =]
-theorem List.smap_none [SubstMap S V] {σ : SubstVec V} : (@List.nil S)[;σ] = [] := by
+theorem List.smap_none [SubstMap S V] {σ : SubstVec V} : (@List.nil S)[σ,] = [] := by
   simp [SubstMap.smap, List.smap]
 
 @[simp, grind =]
-theorem List.smap_some [SubstMap S V] {x} {xs : List S} {σ : SubstVec V} : (x::xs)[;σ] = x[;σ]::xs[;σ]
+theorem List.smap_some [SubstMap S V] {x} {xs : List S} {σ : SubstVec V} : (x::xs)[σ,] = x[σ,]::xs[σ,]
 := by simp [SubstMap.smap, List.smap]
 
 instance [RenMap S V] [SubstMap S V] [SubstMapId S V] : SubstMapId (List S) V where
