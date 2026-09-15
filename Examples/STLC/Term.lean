@@ -139,7 +139,6 @@ instance : SubstMapCompose Term [Term] where
     case app => simp [*]
     case lam =>
       simp [*]
-      sorry
     -- rcases σ with ⟨σ1, σ2, σ3, σ4, σ5, σ6, σ7, σ8⟩
     -- rcases τ with ⟨τ1, τ2, τ3, τ4, τ5, τ6, τ7, τ8⟩
     -- simp [Subst.rewrite_lift_compose (T := T), *]
