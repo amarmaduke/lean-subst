@@ -2,7 +2,7 @@
 import Lean.Elab.Term
 import Lean.Elab.SyntheticMVars
 
-import LeanSubst.Glue
+-- import LeanSubst.Glue
 
 namespace LeanSubst
 
@@ -42,37 +42,30 @@ class inductive RenMapAll : List (Type u2) -> Sort _ where
 export RenMap (rmap)
 
 macro:max (name := «term_⟨_,⟩») t:term noWs "⟨" r:term ",⟩" : term => `(rmap $r $t)
-syntax:max (name := «term_⟨_,*⟩») term noWs "⟨" term,* "⟩" : term
 
-open Lean.Meta in
-open Lean.Elab.Term in
-open Subst.Syntax in
-@[term_elab «term_⟨_,*⟩»]
-def elab_rmap : TermElab := fun stx expected => do
-  let `($t⟨ $elems,* ⟩) := stx
-    | Lean.Elab.throwUnsupportedSyntax
-  let ren_meta : TermElabM Lean.Syntax := `(Ren _)
-  let ren_meta <- ren_meta
-  let ren_meta <- elabTerm ren_meta none
-  let elems <- List.mapM id $ elems.getElems.foldl (λ acc t => elabTermAndSynthesize t ren_meta :: acc) []
-  let elems_ty <- List.mapM id $ elems.map inferType |> List.map MetaM.promote |> List.map get_ty_arg
-  let list_ann <- form_list `(List.nil) elems_ty.reverse
-  let elems_stx <- form_prod `(RenVec.nil) elems.reverse
-  let stx : TermElabM Lean.Syntax := `(@rmap _ $list_ann _ $elems_stx $t)
-  let stx <- stx
-  elabTermAndSynthesize stx expected
+syntax:max (name := «term_⟨_,*⟩») term noWs "⟨" term,* "⟩" : term
+open Lean in
+macro_rules
+| `($t⟨ $elems,* ⟩) => do
+  let elems := elems.getElems
+  let rec expand_rmap_lit (i : Nat) (result : TSyntax `term) : MacroM Syntax := do
+    match i with
+    | 0 => pure result
+    | i + 1 => expand_rmap_lit i (<- `(RenVec.cons $(elems[i]!) $result))
+  let ren <- expand_rmap_lit elems.size (<- `(RenVec.nil))
+  let ren : TSyntax `term := TSyntax.mk ren
+  `(rmap $ren $t)
 
 syntax (name := «term·⟨_,*⟩») "·⟨" withoutPosition(term,*,?) "⟩" : term
 open Lean in
 macro_rules
 | `(·⟨ $elems,* ⟩) => do
-  let rec expand_renvec_lit (i : Nat) (skip : Bool) (result : TSyntax `term) : MacroM Syntax := do
-    match i, skip with
-    | 0,     _     => pure result
-    | i + 1, true  => expand_renvec_lit i false result
-    | i + 1, false => expand_renvec_lit i true  (<- ``(RenVec.cons $(⟨elems.elemsAndSeps[i]!⟩) $result))
-  let size := elems.elemsAndSeps.size
-  expand_renvec_lit size (size % 2 == 0) (<- ``(RenVec.nil))
+  let elems := elems.getElems
+  let rec expand_renvec_lit (i : Nat) (result : TSyntax `term) : MacroM Syntax := do
+    match i with
+    | 0 => pure result
+    | i + 1 => expand_renvec_lit i (<- `(RenVec.cons $(elems[i]!) $result))
+  expand_renvec_lit elems.size (<- `(RenVec.nil))
 
 @[app_unexpander RenVec.nil]
 meta def RenVec.unexpand_nil : Lean.PrettyPrinter.Unexpander
@@ -131,34 +124,30 @@ class inductive SubstMapAll : List (Type u2) -> Sort _ where
 export SubstMap (smap)
 
 macro:max (name := «term_[_,]») t:term noWs "[" σ:term ",]" : term => `(smap $σ $t)
-syntax:max (name := «term_[_,*]») term noWs "[" term ,* "]" : term
 
-open Lean.Meta in
-open Lean.Elab.Term in
-open Subst.Syntax in
-@[term_elab «term_[_,*]»]
-def elab_smap : TermElab := fun stx expected => do
-  let `($t[ $elems,* ]) := stx
-    | Lean.Elab.throwUnsupportedSyntax
-  let elems <- List.mapM id $ elems.getElems.foldl (λ acc t => elabTermAndSynthesize t none :: acc) []
-  let elems_ty <- List.mapM id $ elems.map inferType |> List.map MetaM.promote |> List.map get_ty_arg
-  let list_ann <- form_list `(List.nil) elems_ty.reverse
-  let elems_stx <- form_prod `(SubstVec.nil) elems.reverse
-  let stx : TermElabM Lean.Syntax := `(@smap _ $list_ann _ $elems_stx $t)
-  let stx <- stx
-  elabTermAndSynthesize stx expected
+syntax:max (name := «term_[_,*]») term noWs "[" term ,* "]" : term
+open Lean in
+macro_rules
+| `($t[ $elems,* ]) => do
+  let elems := elems.getElems
+  let rec expand_smap_lit (i : Nat) (result : TSyntax `term) : MacroM Syntax := do
+    match i with
+    | 0 => pure result
+    | i + 1 => expand_smap_lit i (<- `(SubstVec.cons $(elems[i]!) $result))
+  let subst <- expand_smap_lit elems.size (<- `(SubstVec.nil))
+  let subst : TSyntax `term := TSyntax.mk subst
+  `(smap $subst $t)
 
 syntax (name := «term·[_,*]») "·[" withoutPosition(term,*,?) "]" : term
 open Lean in
 macro_rules
 | `(·[ $elems,* ]) => do
-  let rec expand_substvec_lit (i : Nat) (skip : Bool) (result : TSyntax `term) : MacroM Syntax := do
-    match i, skip with
-    | 0,     _     => pure result
-    | i + 1, true  => expand_substvec_lit i false result
-    | i + 1, false => expand_substvec_lit i true  (<- ``(SubstVec.cons $(⟨elems.elemsAndSeps[i]!⟩) $result))
-  let size := elems.elemsAndSeps.size
-  expand_substvec_lit size (size % 2 == 0) (<- ``(SubstVec.nil))
+  let elems := elems.getElems
+  let rec expand_substvec_lit (i : Nat) (result : TSyntax `term) : MacroM Syntax := do
+    match i with
+    | 0 => pure result
+    | i + 1 => expand_substvec_lit i (<- `(SubstVec.cons $(elems[i]!) $result))
+  expand_substvec_lit elems.size (<- `(SubstVec.nil))
 
 @[app_unexpander SubstVec.nil]
 meta def SubstVec.unexpand_nil : Lean.PrettyPrinter.Unexpander

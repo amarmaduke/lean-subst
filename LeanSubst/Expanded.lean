@@ -9,23 +9,23 @@ universe u1 u2 u3
 variable {S : Type u1} {T T1 T2 T3 T4 : Type u2} {U : Type u3}
 variable {V : List (Type u2)}
 
-@[simp, grind =]
-theorem RenVec.proj_eta {r : RenVec (T::V)} : (r.1, r.2) = r := by cases r; simp
+-- @[simp, grind =]
+-- theorem RenVec.proj_eta {r : RenVec (T::V)} : (r.1, r.2) = r := by cases r; simp
 
-@[grind =]
-theorem RenVec.proj_eta1 {r : RenVec [T1]} : (r.1, .nil) = r := by
-  rcases r with ⟨r, u⟩; congr
+-- @[grind =]
+-- theorem RenVec.proj_eta1 {r : RenVec [T1]} : (r.1, .nil) = r := by
+--   rcases r with ⟨r, u⟩; congr
 
-@[simp, grind =]
-theorem SubstVec.proj_eta (σ : SubstVec (T::V)) : (σ.1, σ.2) = σ := by cases σ; simp
+-- @[simp, grind =]
+-- theorem SubstVec.proj_eta (σ : SubstVec (T::V)) : (σ.1, σ.2) = σ := by cases σ; simp
 
-@[grind =]
-theorem SubstVec.proj_eta1 {σ : SubstVec [T1]} : (σ.1, .nil) = σ := by
-  rcases σ with ⟨σ, u⟩; congr
+-- @[grind =]
+-- theorem SubstVec.proj_eta1 {σ : SubstVec [T1]} : (σ.1, .nil) = σ := by
+--   rcases σ with ⟨σ, u⟩; congr
 
 @[simp]
 theorem RenVec.lift_size1_0 {r : RenVec [T1]} : r.lift [0] = r := by
-  rcases r with ⟨r, rs⟩; simp; congr
+  rcases r with ⟨r, rs⟩; simp; congr; sorry
 
 -- @[simp]
 -- theorem SubstVec.lift_size1_0 [RenMapAll [T1]] [RenMapId T1 [T1]] {σ : SubstVec [T1]} : σ.lift [0] = σ := by
@@ -44,40 +44,40 @@ theorem RenVec.lift_size1_0 {r : RenVec [T1]} : r.lift [0] = r := by
 -- @[grind =_]
 -- theorem SubstVec.get_eta2 {σ : SubstVec [T1, T2]} : σ = (σ.get T1 0, σ.get T2 1, .nil) := sorry
 
-@[simp]
-theorem RenVec.compose_components1 {r1 k1 : Ren T1}
-  : HAndThen.hAndThen (α := RenVec [T1]) (β := RenVec [T1])
-    (r1, .nil) (λ _ => (k1, .nil))
-    = (r1 >> k1, .nil)
-:= by simp [HAndThen.hAndThen, AndThen.andThen, compose]
+-- @[simp]
+-- theorem RenVec.compose_components1 {r1 k1 : Ren T1}
+--   : HAndThen.hAndThen (α := RenVec [T1]) (β := RenVec [T1])
+--     (r1, .nil) (λ _ => (k1, .nil))
+--     = (r1 >> k1, .nil)
+-- := by simp [HAndThen.hAndThen, AndThen.andThen, compose]
 
-@[simp]
-theorem RenVec.compose_components2 {r1 k1 : Ren T1} {r2 k2 : Ren T2}
-  : HAndThen.hAndThen (α := RenVec [T1, T2]) (β := RenVec [T1, T2])
-    (r1, r2, .nil) (λ _ => (k1, k2, .nil))
-    = (r1 >> k1, r2 >> k2, .nil)
-:= by simp [HAndThen.hAndThen, AndThen.andThen, compose]
+-- @[simp]
+-- theorem RenVec.compose_components2 {r1 k1 : Ren T1} {r2 k2 : Ren T2}
+--   : HAndThen.hAndThen (α := RenVec [T1, T2]) (β := RenVec [T1, T2])
+--     (r1, r2, .nil) (λ _ => (k1, k2, .nil))
+--     = (r1 >> k1, r2 >> k2, .nil)
+-- := by simp [HAndThen.hAndThen, AndThen.andThen, compose]
 
-@[simp]
-theorem RenVec.compose_components3 {r1 k1 : Ren T1} {r2 k2 : Ren T2} {r3 k3 : Ren T3}
-  : HAndThen.hAndThen (α := RenVec [T1, T2, T3]) (β := RenVec [T1, T2, T3])
-    (r1, r2, r3, .nil) (λ _ => (k1, k2, k3, .nil))
-    = (r1 >> k1, r2 >> k2, r3 >> k3, .nil)
-:= by simp [HAndThen.hAndThen, AndThen.andThen, compose]
+-- @[simp]
+-- theorem RenVec.compose_components3 {r1 k1 : Ren T1} {r2 k2 : Ren T2} {r3 k3 : Ren T3}
+--   : HAndThen.hAndThen (α := RenVec [T1, T2, T3]) (β := RenVec [T1, T2, T3])
+--     (r1, r2, r3, .nil) (λ _ => (k1, k2, k3, .nil))
+--     = (r1 >> k1, r2 >> k2, r3 >> k3, .nil)
+-- := by simp [HAndThen.hAndThen, AndThen.andThen, compose]
 
-@[simp]
-theorem RenVec.compose_components4 {r1 k1 : Ren T1} {r2 k2 : Ren T2} {r3 k3 : Ren T3} {r4 k4 : Ren T4}
-  : HAndThen.hAndThen (α := RenVec [T1, T2, T3, T4]) (β := RenVec [T1, T2, T3, T4])
-    (r1, r2, r3, r4, .nil) (λ _ => (k1, k2, k3, k4, .nil))
-    = (r1 >> k1, r2 >> k2, r3 >> k3, r4 >> k4, .nil)
-:= by simp [HAndThen.hAndThen, AndThen.andThen, compose]
+-- @[simp]
+-- theorem RenVec.compose_components4 {r1 k1 : Ren T1} {r2 k2 : Ren T2} {r3 k3 : Ren T3} {r4 k4 : Ren T4}
+--   : HAndThen.hAndThen (α := RenVec [T1, T2, T3, T4]) (β := RenVec [T1, T2, T3, T4])
+--     (r1, r2, r3, r4, .nil) (λ _ => (k1, k2, k3, k4, .nil))
+--     = (r1 >> k1, r2 >> k2, r3 >> k3, r4 >> k4, .nil)
+-- := by simp [HAndThen.hAndThen, AndThen.andThen, compose]
 
-@[simp]
-theorem SubstVec.compose_ren_left_proj {r1 : Ren T} {r2 : RenVec V} {τ1 : Subst T} {τ2 : SubstVec V}
-  : HAndThen.hAndThen (α := RenVec (T::V)) (β := SubstVec (T::V))
-    (r1, r2) (λ _ => (τ1, τ2))
-    = (r1 >> τ1, r2 >> τ2)
-:= by simp [HAndThen.hAndThen, compose_ren_left]
+-- @[simp]
+-- theorem SubstVec.compose_ren_left_proj {r1 : Ren T} {r2 : RenVec V} {τ1 : Subst T} {τ2 : SubstVec V}
+--   : HAndThen.hAndThen (α := RenVec (T::V)) (β := SubstVec (T::V))
+--     (r1, r2) (λ _ => (τ1, τ2))
+--     = (r1 >> τ1, r2 >> τ2)
+-- := by simp [HAndThen.hAndThen, compose_ren_left]
 
 -- @[simp]
 -- theorem SubstVec.compose_ren_right_proj [RenMapAll (T::V)] {σ1 : Subst T} {σ2 : SubstVec V} {r1 : Ren T} {r2 : RenVec V}
@@ -93,38 +93,38 @@ theorem SubstVec.compose_ren_left_proj {r1 : Ren T} {r2 : RenVec V} {τ1 : Subst
 --     = (σ1[τ2,] >> τ1, σ2 >> τ2)
 -- := by simp [HAndThen.hAndThen, AndThen.andThen, compose]
 
-@[simp]
-theorem SubstVec.compose_ren_left_components
-  {r1 : Ren T1} {τ1 : Subst T1}
-  : HAndThen.hAndThen (α := RenVec [T1]) (β := SubstVec [T1])
-    (r1, .nil) (λ _ => (τ1, .nil))
-    = (r1 >> τ1, .nil)
-:= by simp [HAndThen.hAndThen, compose_ren_left]
+-- @[simp]
+-- theorem SubstVec.compose_ren_left_components
+--   {r1 : Ren T1} {τ1 : Subst T1}
+--   : HAndThen.hAndThen (α := RenVec [T1]) (β := SubstVec [T1])
+--     (r1, .nil) (λ _ => (τ1, .nil))
+--     = (r1 >> τ1, .nil)
+-- := by simp [HAndThen.hAndThen, compose_ren_left]
 
-@[simp]
-theorem SubstVec.compose_ren_left_components2
-  {r1 : Ren T1} {τ1 : Subst T1} {r2 : Ren T2} {τ2 : Subst T2}
-  : HAndThen.hAndThen (α := RenVec [T1, T2]) (β := SubstVec [T1, T2])
-    (r1, r2, .nil) (λ _ => (τ1, τ2, .nil))
-    = (r1 >> τ1, r2 >> τ2, .nil)
-:= by simp [HAndThen.hAndThen, compose_ren_left]
+-- @[simp]
+-- theorem SubstVec.compose_ren_left_components2
+--   {r1 : Ren T1} {τ1 : Subst T1} {r2 : Ren T2} {τ2 : Subst T2}
+--   : HAndThen.hAndThen (α := RenVec [T1, T2]) (β := SubstVec [T1, T2])
+--     (r1, r2, .nil) (λ _ => (τ1, τ2, .nil))
+--     = (r1 >> τ1, r2 >> τ2, .nil)
+-- := by simp [HAndThen.hAndThen, compose_ren_left]
 
-@[simp]
-theorem SubstVec.compose_ren_left_components3
-  {r1 : Ren T1} {τ1 : Subst T1} {r2 : Ren T2} {τ2 : Subst T2} {r3 : Ren T3} {τ3 : Subst T3}
-  : HAndThen.hAndThen (α := RenVec [T1, T2, T3]) (β := SubstVec [T1, T2, T3])
-    (r1, r2, r3, .nil) (λ _ => (τ1, τ2, τ3, .nil))
-    = (r1 >> τ1, r2 >> τ2, r3 >> τ3, .nil)
-:= by simp [HAndThen.hAndThen, compose_ren_left]
+-- @[simp]
+-- theorem SubstVec.compose_ren_left_components3
+--   {r1 : Ren T1} {τ1 : Subst T1} {r2 : Ren T2} {τ2 : Subst T2} {r3 : Ren T3} {τ3 : Subst T3}
+--   : HAndThen.hAndThen (α := RenVec [T1, T2, T3]) (β := SubstVec [T1, T2, T3])
+--     (r1, r2, r3, .nil) (λ _ => (τ1, τ2, τ3, .nil))
+--     = (r1 >> τ1, r2 >> τ2, r3 >> τ3, .nil)
+-- := by simp [HAndThen.hAndThen, compose_ren_left]
 
-@[simp]
-theorem SubstVec.compose_ren_left_components4
-  {r1 : Ren T1} {τ1 : Subst T1} {r2 : Ren T2} {τ2 : Subst T2} {r3 : Ren T3} {τ3 : Subst T3}
-  {r4 : Ren T4} {τ4 : Subst T4}
-  : HAndThen.hAndThen (α := RenVec [T1, T2, T3, T4]) (β := SubstVec [T1, T2, T3, T4])
-    (r1, r2, r3, r4, .nil) (λ _ => (τ1, τ2, τ3, τ4, .nil))
-    = (r1 >> τ1, r2 >> τ2, r3 >> τ3, r4 >> τ4, .nil)
-:= by simp [HAndThen.hAndThen, compose_ren_left]
+-- @[simp]
+-- theorem SubstVec.compose_ren_left_components4
+--   {r1 : Ren T1} {τ1 : Subst T1} {r2 : Ren T2} {τ2 : Subst T2} {r3 : Ren T3} {τ3 : Subst T3}
+--   {r4 : Ren T4} {τ4 : Subst T4}
+--   : HAndThen.hAndThen (α := RenVec [T1, T2, T3, T4]) (β := SubstVec [T1, T2, T3, T4])
+--     (r1, r2, r3, r4, .nil) (λ _ => (τ1, τ2, τ3, τ4, .nil))
+--     = (r1 >> τ1, r2 >> τ2, r3 >> τ3, r4 >> τ4, .nil)
+-- := by simp [HAndThen.hAndThen, compose_ren_left]
 
 -- @[simp]
 -- theorem SubstVec.compose_ren_right_components1

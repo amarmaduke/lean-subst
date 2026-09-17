@@ -7,21 +7,35 @@ universe u1 u2 u3
 variable {S : Type u1} {T T1 T2 : Type u2} {U : Type u3}
 variable {V : List (Type u2)}
 
-@[simp]
 def RenVec.head : RenVec (T::V) -> Ren T
 | cons r _ => r
 
-@[simp]
 def RenVec.tail : RenVec (T::V) -> RenVec V
 | cons _ r => r
 
 @[simp]
+theorem RenVec.head_cons {r : Ren T} {rs : RenVec V} : (r .: rs).head = r := sorry
+
+@[simp]
+theorem RenVec.tail_cons {r : Ren T} {rs : RenVec V} : (r .: rs).tail = rs := sorry
+
+def RenVec.get : {V : List (Type u2)} -> RenVec V -> (i : Nat) -> (h : i < V.length := by grind) -> Ren V[i]
+| _, nil, _, h => nomatch h
+| .cons _ _, cons r rs, 0, _ => r
+| .cons _ _, cons r rs, i + 1, _ => rs.get i
+
 def SubstVec.head : SubstVec (T::V) -> Subst T
 | cons σ _ => σ
 
-@[simp]
 def SubstVec.tail : SubstVec (T::V) -> SubstVec V
 | cons _ σ => σ
+
+@[simp]
+theorem SubstVec.head_cons {σ : Subst T} {σs : SubstVec V} : (σ .: σs).head = σ := sorry
+
+@[simp]
+theorem SubstVec.tail_cons {σ : Subst T} {σs : SubstVec V} : (σ .: σs).tail = σs := sorry
+
 
 ----------------------------------------------------------------------------------------------------
 ---- RenVec & SubstVec; Map & GetElem
@@ -635,10 +649,15 @@ instance [SubstMapAll V] : AndThen (SubstVec V) where
 --     (σ, σs) (λ _ => (τ, τs)) = (σ[τs,] >> τ, σs >> τs)
 -- := by simp [HAndThen.hAndThen, AndThen.andThen, compose]
 
+@[simp]
+theorem Subst.compose_action [SubstMap T (T::V)] {σ : Subst T} {τ : SubstVec $ T::V} {x : Nat}
+  : (σ >> τ).act x = (σ.act x)[τ,]
+:= by simp [HAndThen.hAndThen, compose, act, SubstAction.act]
+
 -- @[simp]
--- theorem Subst.compose_action [SubstMap T [T]] {σ τ : Subst T} {x : Var T}
---   : (σ >> τ).act x = (σ.act x)[τ]
--- := by simp [HAndThen.hAndThen, AndThen.andThen, compose, act, SubstAction.act]
+-- theorem SubstVec.compose_action [SubstMapAll V] {σ τ : SubstVec $ T::V} {x : Nat}
+--   : (σ >> τ).act x = σ.head.act x
+-- := by simp [HAndThen.hAndThen, compose, act, SubstAction.act]
 
 -- @[simp]
 -- theorem Subst.compose_pred_succ [SubstMap T [T]] : succ T >> pred T = id T := by

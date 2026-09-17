@@ -48,7 +48,7 @@ instance : Coe (Action Term) Term where
 
 @[simp]
 def Term.rmap (r : RenVec [Term]) : Term -> Term
-| var x => var (r.1.act x)
+| var x => var (r.head.act x)
 | app t1 t2 => app (t1.rmap r) (t2.rmap r)
 | λ[A] t => λ[A] t.rmap $ r.lift [1]
 
@@ -62,7 +62,7 @@ instance instRenMapAll_Term : RenMapAll [Term] := .cons .nil
 theorem Term.rmap_fix {r : RenVec [Term]} {t : Term} : rmap r t = t⟨r,⟩ := by simp [RenMap.rmap]
 
 @[simp]
-theorem Term.rmap_var {x} {r : RenVec [Term]} : (#x)⟨r,⟩ = .var (r.1.act x) := by
+theorem Term.rmap_var {x} {r : RenVec [Term]} : (#x)⟨r,⟩ = .var (r.head.act x) := by
   simp only [RenMap.rmap]; rw [rmap]
 
 @[simp]
@@ -86,7 +86,7 @@ instance : RenMapCompose Term [Term] where
 
 @[simp]
 def Term.smap (σ : SubstVec [Term]) : Term -> Term
-| var x => σ.1.act x
+| var x => σ.head.act x
 | app t1 t2 => app (t1.smap σ) (t2.smap σ)
 | λ[A] t => λ[A] t.smap $ σ.lift [1]
 
@@ -100,7 +100,7 @@ instance instSubstMapAll_Ty : SubstMapAll [Term] := .cons .nil
 theorem Term.smap_fix {σ : SubstVec [Term]} {t : Term} : smap σ t = t[σ,] := by simp [SubstMap.smap]
 
 @[simp]
-theorem Term.smap_var {x} {σ : SubstVec [Term]} : (#x)[σ,] = from_action (σ.1.act x) := by
+theorem Term.smap_var {x} {σ : SubstVec [Term]} : (#x)[σ,] = from_action (σ.head.act x) := by
   simp only [SubstMap.smap]; rw [smap]
 
 @[simp]
@@ -129,25 +129,7 @@ instance : SubstMapRenComposeRight Term [Term] where
   apply_ren_compose_right := by sorry -- subst_solve_compose
 
 instance : SubstMapCompose Term [Term] where
-  apply_compose := by
-    intro s σ τ
-    let T := Subst.typeof s
-    induction s generalizing σ τ
-    case var =>
-      simp [*]
-      sorry
-    case app => simp [*]
-    case lam =>
-      simp [*]
-    -- rcases σ with ⟨σ1, σ2, σ3, σ4, σ5, σ6, σ7, σ8⟩
-    -- rcases τ with ⟨τ1, τ2, τ3, τ4, τ5, τ6, τ7, τ8⟩
-    -- simp [Subst.rewrite_lift_compose (T := T), *]
-    -- simp [Subst.lift_compose_ren_right (T := T), *]
-    -- simp [Subst.rewrite_lift_compose_ren_left (T := T), *]
-    -- solve | congr
-    -- solve | congr 1
-    -- solve | congr 2
-    -- solve | grind
+  apply_compose := by subst_solve_compose
 
 
 end STLC

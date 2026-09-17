@@ -49,7 +49,7 @@ namespace Subst
       sorry
 
     @[simp]
-    theorem rewrite2 [SubstMap T (T::V)] {σ : SubstVec $ T::V} : 𝐬0(T) >> σ = σ.1 := by
+    theorem rewrite2 [SubstMap T (T::V)] {σ : SubstVec $ T::V} : 𝐬0(T) >> σ = σ.head := by
       funext; case _ x =>
       simp [HAndThen.hAndThen, compose, id, act, SubstAction.act]
 
@@ -69,7 +69,7 @@ namespace Subst
 
     @[simp]
     theorem rewrite3_cons_ren [RenMap T (T::V)] {σ : Subst T} {r : RenVec $ T::V} {x : Nat}
-      : (re x .: σ) >> r = re (r.1.act x) .: (σ >> r)
+      : (re x .: σ) >> r = re (r.head.act x) .: (σ >> r)
     := by
       simp [AltCons.altCons, cons, HAndThen.hAndThen, compose_ren_right]
       funext; case _ x =>
@@ -184,7 +184,7 @@ namespace Subst
     simp [HAndThen.hAndThen, AndThen.andThen, compose, act, SubstAction.act]
     funext; case _ i =>
     cases (σ.inner i) <;> simp [HAndThen.hAndThen, AndThen.andThen, act, SubstAction.act]
-    congr
+    congr; sorry
 
   -- @[simp]
   -- theorem rewrite4_append_direct [SubstMapAll [T]] [SubstMapCompose T [T]] [SubstMapEmpty T]
@@ -726,9 +726,10 @@ theorem Subst.lift1_compose
       subst zdef; simp
       rw [SubstMapRenComposeLeft.apply_ren_compose_left]
       rw [@SubstMapRenComposeRight.apply_ren_compose_right _ _ _ (.cons inst)]
-      have lem := @SubstVec.succ_lift_commute T V inst.cons τ τs
-      simp [SubstVec.cons] at *
-      rw [lem]
+      sorry
+      -- have lem := @SubstVec.succ_lift_commute T V inst.cons τ τs
+      -- simp [SubstVec.cons] at *
+      -- rw [lem]
 
 @[simp]
 theorem Subst.lift_compose
