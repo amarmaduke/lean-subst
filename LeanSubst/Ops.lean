@@ -7,319 +7,67 @@ universe u1 u2 u3
 variable {S : Type u1} {T T1 T2 : Type u2} {U : Type u3}
 variable {V : List (Type u2)}
 
-def RenVec.head : RenVec (T::V) -> Ren T
-| cons r _ => r
-
-def RenVec.tail : RenVec (T::V) -> RenVec V
-| cons _ r => r
-
-@[simp]
-theorem RenVec.head_cons {r : Ren T} {rs : RenVec V} : (r .: rs).head = r := sorry
-
-@[simp]
-theorem RenVec.tail_cons {r : Ren T} {rs : RenVec V} : (r .: rs).tail = rs := sorry
-
-def RenVec.get : {V : List (Type u2)} -> RenVec V -> (i : Nat) -> (h : i < V.length := by grind) -> Ren V[i]
-| _, nil, _, h => nomatch h
-| .cons _ _, cons r rs, 0, _ => r
-| .cons _ _, cons r rs, i + 1, _ => rs.get i
-
-def SubstVec.head : SubstVec (T::V) -> Subst T
-| cons σ _ => σ
-
-def SubstVec.tail : SubstVec (T::V) -> SubstVec V
-| cons _ σ => σ
-
-@[simp]
-theorem SubstVec.head_cons {σ : Subst T} {σs : SubstVec V} : (σ .: σs).head = σ := sorry
-
-@[simp]
-theorem SubstVec.tail_cons {σ : Subst T} {σs : SubstVec V} : (σ .: σs).tail = σs := sorry
-
-
 ----------------------------------------------------------------------------------------------------
----- RenVec & SubstVec; Map & GetElem
+---- RenVec & SubstVec
 ----------------------------------------------------------------------------------------------------
--- @[simp]
--- theorem RenVec.normalize_unit : RenUnit.unit = RenVec.nil := by rfl
 
--- @[simp]
--- theorem SubstVec.normalize_unit : SubstUnit.unit = SubstVec.nil := by rfl
 
--- inductive Subst.TupleMap (F : Type u2 -> Type u2) : List (Type u2) -> Type _ where
--- | nil : Subst.TupleMap F []
--- | cons {T Ts} : F T -> Subst.TupleMap F Ts -> Subst.TupleMap F (T::Ts)
-
--- syntax (name := «term𝐭[_,]») "𝐭[" withoutPosition(term,*,?) "]" : term
--- open Lean in
--- macro_rules
--- | `(𝐭[ $elems,* ]) => do
---   let rec expand_tuple_lit (i : Nat) (skip : Bool) (result : TSyntax `term) : MacroM Syntax := do
---     match i, skip with
---     | 0,     _     => pure result
---     | i + 1, true  => expand_tuple_lit i false result
---     | i + 1, false =>
---       expand_tuple_lit i true (<- ``(Subst.TupleMap.cons $(⟨elems.elemsAndSeps[i]!⟩) $result))
---   let size := elems.elemsAndSeps.size
---   expand_tuple_lit size (size % 2 == 0) (<- ``(Subst.TupleMap.nil))
-
--- @[simp]
--- def RenVec.map
---   : {V : List (Type u2)} -> Subst.TupleMap (λ T => Ren T -> Ren T) V -> RenVec V -> RenVec V
--- | [], .nil, r => r
--- | .cons _ _, .cons f fs, (r, rs) => (f r, rs.map fs)
-
--- @[simp]
--- def SubstVec.map
---   : {V : List (Type u2)} -> Subst.TupleMap (λ T => Subst T -> Subst T) V -> SubstVec V -> SubstVec V
--- | [], .nil, r => r
--- | .cons _ _, .cons f fs, (σ, σs) => (f σ, σs.map fs)
-
--- @[simp]
--- def RenVec.get
---   : {V : List (Type u2)} -> (A : Type u2) -> (n : Nat) ->
---     (h : V[n]? = some A := by grind) ->
---     RenVec V -> Ren A
--- | .cons _ _, _, 0, h, (σ, _) => σ |> cast (by grind)
--- | .cons _ _, A, n + 1, _, (_, σs) => σs.get A n
-
--- @[simp]
--- theorem RenVec.get1_0 {r : RenVec [T1]} : r.get 0 = r.head := sorry
-
--- @[simp]
--- def SubstVec.get
---   : {V : List (Type u2)} -> (A : Type u2) -> (n : Nat) ->
---     (h : V[n]? = some A := by grind) ->
---     SubstVec V -> Subst A
--- | .cons _ _, _, 0, h, (σ, _) => σ |> cast (by grind)
--- | .cons _ _, A, n + 1, _, (_, σs) => σs.get A n
-
--- @[simp]
--- def SubstVec.drop : {V : List (Type u2)} -> (n : Nat) -> SubstVec V -> SubstVec (V.drop' n)
--- | [], n, x => x |> cast (by simp)
--- | .cons _ _, 0, x => x |> cast (by simp)
--- | .cons _ _, n + 1, (_, σs) => σs.drop n
-
--- @[simp]
--- theorem SubstVec.drop_0 {σ : SubstVec V} : σ.drop 0 = σ := sorry
-
--- @[simp]
--- theorem SubstVec.get1_0 {r : SubstVec [T1]} : r.get 0 = r.head := sorry
 ----------------------------------------------------------------------------------------------------
 ---- RenMapAll & SubstMapAll
 ----------------------------------------------------------------------------------------------------
-@[reducible, simp]
-instance [i : RenMapAll (T::V)] : RenMap T (T::V) where
-  rmap :=
-    match i with
-    | @RenMapAll.cons _ _ i _ => i.rmap
 
-set_option synthInstance.checkSynthOrder false in
-@[reducible, simp]
-instance [i : RenMapAll (T::V)] : RenMapAll V :=
-  match i with
-  | @RenMapAll.cons _ _ _ i => i
-
--- instance [i1 : RenMap T1 [T1]] [i2 : RenMap T2 [T2]] : RenMapAll [T1, T2] where
---   rmap := by
---     intro i; cases i using Fin.cases with
---     | zero => exact i1
---     | succ i =>
---       cases i using Fin.cases with
---       | zero => exact i2
---       | succ i => apply Fin.elim0 i
-
-@[reducible, simp]
-instance [i : SubstMapAll (T::V)] : SubstMap T (T::V) where
-  smap :=
-    match i with
-    | @SubstMapAll.cons _ _ i _ => i.smap
-
-set_option synthInstance.checkSynthOrder false in
-@[reducible, simp]
-instance [i : SubstMapAll (T::V)] : SubstMapAll V :=
-  match i with
-  | @SubstMapAll.cons _ _ _ i => i
-
--- instance : RenMap T [] where
---   rmap _ := id
-
--- instance : RenSuffix T [] := ⟨⟩
-
--- @[simp]
--- theorem rmap_empty_vec {t : T} {r : RenVec []} : t⟨r,⟩ = t := by simp [RenMap.rmap]
-
--- instance : RenMapAll [] := .nil
-
--- instance : SubstMap T [] where
---   smap _ := id
-
--- instance : SubstSuffix T [] := ⟨⟩
-
--- @[simp]
--- theorem smap_empty_vec {t : T} {σ : SubstVec []} : t[σ,] = t := by simp [SubstMap.smap]
-
--- instance : SubstMapAll [] := .nil
-
--- instance [i : SubstMap T [T]] : SubstMapAll [T] where
---   smap := λ 0 => i
-
--- instance [i1 : SubstMap T1 [T1]] [i2 : SubstMap T2 [T2]] : SubstMapAll [T1, T2] where
---   smap := by
---     intro i; cases i using Fin.cases with
---     | zero => exact i1
---     | succ i =>
---       cases i using Fin.cases with
---       | zero => exact i2
---       | succ i => apply Fin.elim0 i
-----------------------------------------------------------------------------------------------------
----- Var
-----------------------------------------------------------------------------------------------------
--- @[simp]
--- def Var.rmap1 [RenMap S [S]] (r : Ren S) (x : Var S) : Var S := r.act x
-
--- instance (priority := high) [RenMap S [S]] : RenMap (Var S) [S] where
---   rmap := Var.rmap1
-
--- @[simp]
--- def Var.rmap0 [RenMap S V] (_ : V) (x : Var S) : Var S := x
-
--- instance (priority := low) [RenMap S V] : RenMap (Var S) V where
---   rmap := Var.rmap0
-
--- @[simp]
--- def Var.smap [i : SubstMap S V] (σ : V) (x : Var S) : Action S :=
---   match i.self with
---   | some ⟨k, e⟩ => (Tuple.get σ k |> cast e).act x
---   | none => re x
-
--- @[simp]
--- def Var.smap1 [SubstMap S [S]] (σ : Subst S) (x : Var S) : Action S := smap (σ::#⟨⟩) x
 ----------------------------------------------------------------------------------------------------
 ---- Action
 ----------------------------------------------------------------------------------------------------
-@[simp]
-theorem Subst.act_inner {f : Nat -> Action T} {x} : Subst.act { inner := f } x = f x := by
-  simp [act, SubstAction.act]
 
-@[simp]
-def Action.rmap1 [RenMap T (T::V)] (r : RenVec (T::V)) : Action T -> Action T
-| re x => re $ r.head.act x
-| su t => su t⟨r,⟩
-
-instance [RenMap T (T::V)] : RenMap (Action T) (T::V) where
-  rmap v := Action.rmap1 v
-
-@[simp]
-theorem Action.rmap1_re [RenMap T (T::V)] {r : RenVec (T::V)} {x : Var T}
-  : (@re T x)⟨r,⟩ = re (r.head.act x)
-:= by simp [RenMap.rmap]
-
-@[simp]
-theorem Action.rmap1_su [RenMap T (T::V)] {r : RenVec (T::V)} {t : T} : (su t)⟨r,⟩ = su t⟨r,⟩ := by
-  simp [RenMap.rmap]
-
-@[simp]
-def Action.rmap0 [RenMap S V] (r : RenVec V) : Action S -> Action S
-| re x => re x
-| su t => su t⟨r,⟩
-
-instance [RenMap S V] [RenSuffix S V] : RenMap (Action S) V where
-  rmap := Action.rmap0
-
-@[simp]
-theorem Action.rmap0_re [RenMap S V] [RenSuffix S V] {r : RenVec V} {x : Var S}
-  : (@re S x)⟨r,⟩ = re x
-:= by simp [RenMap.rmap]
-
-@[simp]
-theorem Action.rmap0_su [RenMap S V] [RenSuffix S V] {r : RenVec V} {t : S}
-  : (su t)⟨r,⟩ = su t⟨r,⟩
-:= by simp [RenMap.rmap]
-
-@[simp]
-def Action.smap1 [SubstMap T (T::V)] (σ : SubstVec (T::V)) : Action T -> Action T
-| re x => σ.head.act x
-| su t => su t[σ,]
-
-instance [SubstMap T (T::V)] : SubstMap (Action T) (T::V) where
-  smap v := Action.smap1 v
-
-@[simp]
-theorem Action.smap1_re [SubstMap T (T::V)] {σ : SubstVec (T::V)} {x : Nat}
-  : (@re T x)[σ,] = σ.head.act x
-:= by simp [SubstMap.smap, Subst.act, SubstAction.act]
-
-@[simp]
-theorem Action.smap1_su [SubstMap T (T::V)] {σ : SubstVec (T::V)} {t : T}
-  : (su t)[σ,] = su t[σ,]
-:= by simp [SubstMap.smap]
-
-@[simp]
-def Action.smap0 [SubstMap S V] (σ : SubstVec V) : Action S -> Action S
-| re x => re x
-| su t => su t[σ,]
-
-instance [SubstMap S V] [SubstSuffix S V] : SubstMap (Action S) V where
-  smap := Action.smap0
-
-@[simp]
-theorem Action.smap0_re [SubstMap S V] [SubstSuffix S V] {σ : SubstVec V} {x : Var S}
-  : (@re S x)[σ,] = re x
-:= by simp [SubstMap.smap]
-
-@[simp]
-theorem Action.smap0_su [SubstMap S V] [SubstSuffix S V] {σ : SubstVec V} {t : S}
-  : (su t)[σ,] = su t[σ,]
-:= by simp [SubstMap.smap]
 ----------------------------------------------------------------------------------------------------
 ---- Subst
 ----------------------------------------------------------------------------------------------------
-def Subst.rmap0 [RenMap T (T::V)] (r : RenVec (T::V)) (σ : Subst T) : Subst T :=
-  ⟨λ n => (σ.act n)⟨r,⟩⟩
+-- def Subst.rmap0 [RenMap T (T::V)] (r : RenVec (T::V)) (σ : Subst T) : Subst T :=
+--   ⟨λ n => (σ.act n)⟨r,⟩⟩
 
-instance [RenMap T (T::V)] : RenMap (Subst T) (T::V) where
-  rmap := Subst.rmap0
+-- instance [RenMap T (T::V)] : RenMap (Subst T) (T::V) where
+--   rmap := Subst.rmap0
 
-@[simp]
-theorem Subst.rmap0_simp [RenMap T (T::V)] {r : RenVec (T::V)} {σ : Subst T} {n : Nat}
-  : (σ.act n)⟨r,⟩ = σ⟨r,⟩.act n
-:= by simp [RenMap.rmap, rmap0]
+-- @[simp]
+-- theorem Subst.rmap0_simp [RenMap T (T::V)] {r : RenVec (T::V)} {σ : Subst T} {n : Nat}
+--   : (σ.act n)⟨r,⟩ = σ⟨r,⟩.act n
+-- := by simp [RenMap.rmap, rmap0]
 
-def Subst.rmap1 [RenMap S V] [RenSuffix S V] (r : RenVec V) (σ : Subst S) : Subst S :=
-  ⟨λ n => (σ.act n)⟨r,⟩⟩
+-- def Subst.rmap1 [RenMap S V] [RenSuffix S V] (r : RenVec V) (σ : Subst S) : Subst S :=
+--   ⟨λ n => (σ.act n)⟨r,⟩⟩
 
-instance [RenMap S V] [RenSuffix S V] : RenMap (Subst S) V where
-  rmap := Subst.rmap1
+-- instance [RenMap S V] [RenSuffix S V] : RenMap (Subst S) V where
+--   rmap := Subst.rmap1
 
-@[simp]
-theorem Subst.rmap1_simp [RenMap S V] [RenSuffix S V] {r : RenVec V} {σ : Subst S} {n : Nat}
-  : (σ.act n)⟨r,⟩ = σ⟨r,⟩.act n
-:= by simp [RenMap.rmap, rmap1]
+-- @[simp]
+-- theorem Subst.rmap1_simp [RenMap S V] [RenSuffix S V] {r : RenVec V} {σ : Subst S} {n : Nat}
+--   : (σ.act n)⟨r,⟩ = σ⟨r,⟩.act n
+-- := by simp [RenMap.rmap, rmap1]
 
-def Subst.smap0 [SubstMap T (T::V)] (τ : SubstVec (T::V)) (σ : Subst T) : Subst T :=
-  ⟨λ n => (σ.act n)[τ,]⟩
+-- def Subst.smap0 [SubstMap T (T::V)] (τ : SubstVec (T::V)) (σ : Subst T) : Subst T :=
+--   ⟨λ n => (σ.act n)[τ,]⟩
 
-instance [SubstMap T (T::V)] : SubstMap (Subst T) (T::V) where
-  smap := Subst.smap0
+-- instance [SubstMap T (T::V)] : SubstMap (Subst T) (T::V) where
+--   smap := Subst.smap0
 
-@[simp]
-theorem Subst.smap0_simp [SubstMap T (T::V)] {τ : SubstVec (T::V)} {σ : Subst T} {n : Nat}
-  : (σ.act n)[τ,] = σ[τ,].act n
-:= by simp [SubstMap.smap, smap0]
+-- @[simp]
+-- theorem Subst.smap0_simp [SubstMap T (T::V)] {τ : SubstVec (T::V)} {σ : Subst T} {n : Nat}
+--   : (σ.act n)[τ,] = σ[τ,].act n
+-- := by simp [SubstMap.smap, smap0]
 
-def Subst.smap1 [SubstMap S V] [SubstSuffix S V] (τ : SubstVec V) (σ : Subst S) : Subst S :=
-  ⟨λ n => (σ.act n)[τ,]⟩
+-- def Subst.smap1 [SubstMap S V] [SubstSuffix S V] (τ : SubstVec V) (σ : Subst S) : Subst S :=
+--   ⟨λ n => (σ.act n)[τ,]⟩
 
-instance [SubstMap S V] [SubstSuffix S V] : SubstMap (Subst S) V where
-  smap := Subst.smap1
+-- instance [SubstMap S V] [SubstSuffix S V] : SubstMap (Subst S) V where
+--   smap := Subst.smap1
 
-@[simp]
-theorem Subst.smap1_simp
-  [SubstMap S V] [SubstSuffix S V]
-  {τ : SubstVec V} {σ : Subst S} {n : Nat}
-  : (σ.act n)[τ,] = σ[τ,].act n
-:= by simp [SubstMap.smap, smap1]
+-- @[simp]
+-- theorem Subst.smap1_simp
+--   [SubstMap S V] [SubstSuffix S V]
+--   {τ : SubstVec V} {σ : Subst S} {n : Nat}
+--   : (σ.act n)[τ,] = σ[τ,].act n
+-- := by simp [SubstMap.smap, smap1]
 ----------------------------------------------------------------------------------------------------
 ---- Identity
 ----------------------------------------------------------------------------------------------------
@@ -347,34 +95,6 @@ def SubstVec.id : (V : List (Type u2)) -> SubstVec V
 | [] => .nil
 | .cons x xs => .id x .: id xs
 ----------------------------------------------------------------------------------------------------
----- Successor
-----------------------------------------------------------------------------------------------------
-def Ren.succ T : Ren T := ⟨(· + 1)⟩
-notation "𝐫1" => Ren.succ _
-notation "𝐫1(" T ")" => Ren.succ T
-
-@[simp]
-theorem Ren.succ_action {x} : 𝐫1(T).act x = x + 1 := by simp [succ]
-
-def Subst.succ T : Subst T := ⟨λ x => re $ x + 1⟩
-notation "𝐬1" => Subst.succ _
-notation "𝐬1(" T ")" => Subst.succ T
-
-@[simp]
-theorem Subst.succ_action {x} : 𝐬1(T).act x = re (x + 1) := by simp [succ, act, SubstAction.act]
-----------------------------------------------------------------------------------------------------
----- Predecessor
-----------------------------------------------------------------------------------------------------
-def Ren.pred T : Ren T := ⟨(· - 1)⟩
-
-@[simp]
-theorem Ren.pred_action {x} : (pred T).act x = x - 1 := by simp [pred]
-
-def Subst.pred T : Subst T := ⟨λ x => re $ x - 1⟩
-
-@[simp]
-theorem Subst.pred_action {x} : (pred T).act x = re (x - 1) := by simp [pred, act, SubstAction.act]
-----------------------------------------------------------------------------------------------------
 ---- Addition
 ----------------------------------------------------------------------------------------------------
 def Ren.add T (k : Nat) : Ren T := ⟨(· + k)⟩
@@ -385,9 +105,6 @@ theorem Ren.add_action {k x} : (add T k).act x = x + k := by simp [Ren.add]
 @[simp]
 theorem Ren.add_zero : add T 0 = 𝐫0 := by simp [Ren.add, Ren.id]
 
-@[simp]
-theorem Ren.add_one : add T 1 = 𝐫1 := by simp [Ren.add, Ren.succ]
-
 def Subst.add T (k : Nat) : Subst T := ⟨λ x => re $ x + k⟩
 
 @[simp]
@@ -395,9 +112,6 @@ theorem Subst.add_action {k x} : (add T k).act x = re (x + k) := by simp [add, a
 
 @[simp]
 theorem Subst.add_zero : add T 0 = 𝐬0 := by simp [add, id]
-
-@[simp]
-theorem Subst.add_one : add T 1 = 𝐬1 := by simp [add, succ]
 ----------------------------------------------------------------------------------------------------
 ---- Subtraction
 ----------------------------------------------------------------------------------------------------
@@ -409,9 +123,6 @@ theorem Ren.sub_action {k x} : (sub T k).act x = x - k := by simp [sub]
 @[simp]
 theorem Ren.sub_zero : sub T 0 = 𝐫0 := by simp [sub, id]
 
-@[simp]
-theorem Ren.sub_one : sub T 1 = pred _ := by simp [sub, pred]
-
 def Subst.sub T (k : Nat) : Subst T := ⟨λ x => re $ x - k⟩
 
 @[simp]
@@ -420,10 +131,6 @@ theorem Subst.sub_action {k x} : (@sub T k).act x = re (x - k) := by
 
 @[simp]
 theorem Subst.sub_zero : sub T 0 = 𝐬0 := by simp [sub, id]
-
-@[simp]
-theorem Subst.sub_one : sub T 1 = pred _ := by simp [sub, pred]
-
 ----------------------------------------------------------------------------------------------------
 ---- Cons
 ----------------------------------------------------------------------------------------------------
@@ -445,7 +152,7 @@ theorem Ren.cons_action {a i : Nat} {r : Ren T} : (a.:r).act (i + 1) = r.act i :
 
 @[simp]
 theorem Ren.cons_add {T n} : n .: add T (n + 1) = add T n := by
-  induction n <;> simp [id, succ, AltCons.altCons, cons, *]
+  induction n <;> simp [id, AltCons.altCons, cons, *]
   case zero => grind
   case succ n ih =>
     simp [add] at *; grind
@@ -465,6 +172,13 @@ theorem Subst.cons_action0 {a} {σ : Subst T} : (a.:σ).act 0 = a := by
 @[simp]
 theorem Subst.cons_action {a i} {σ : Subst T} : (a.:σ).act (i + 1) = σ.act i := by
   simp [AltCons.altCons, cons, act, SubstAction.act]
+
+@[simp]
+theorem Subst.cons_add {T n} : re n .: add T (n + 1) = add T n := by
+  induction n <;> simp [id, AltCons.altCons, cons, *]
+  case zero => grind
+  case succ n ih =>
+    simp [add] at *; grind
 ----------------------------------------------------------------------------------------------------
 ---- Append
 ----------------------------------------------------------------------------------------------------
@@ -580,21 +294,16 @@ instance : AndThen (RenVec V) where
   andThen r f := RenVec.compose r (f ())
 
 @[simp]
-theorem RenVec.compose_proj1 {σ τ : RenVec (T::V)} : (σ >> τ).head = σ.head >> τ.head := by
+theorem RenVec.compose_head {σ τ : RenVec (T::V)} : (σ >> τ).head = σ.head >> τ.head := by
   rcases σ with ⟨σ, σ'⟩
   rcases τ with ⟨τ, τ'⟩
   simp [HAndThen.hAndThen, AndThen.andThen, compose]
 
 @[simp]
-theorem RenVec.compose_proj2 {σ τ : RenVec (T::V)} : (σ >> τ).tail = σ.tail >> τ.tail := by
+theorem RenVec.compose_tail {σ τ : RenVec (T::V)} : (σ >> τ).tail = σ.tail >> τ.tail := by
   rcases σ with ⟨σ, σ'⟩
   rcases τ with ⟨τ, τ'⟩
   simp [HAndThen.hAndThen, AndThen.andThen, compose]
-
--- @[simp]
--- theorem RenVec.compose_get [RenMapAll V] {σ τ : RenVec V} {i} {h}
---   : (σ >> τ).get T i h = σ.get T i h >> τ.get T i h
--- := sorry
 
 @[simp]
 theorem Ren.compose_action {r1 r2 : Ren T} {x} : (r1 >> r2).act x = r2.act (r1.act x) := by
@@ -613,20 +322,12 @@ theorem Ren.compose_assoc {r1 r2 r3 : Ren T} : (r1 >> r2) >> r3 = r1 >> r2 >> r3
   simp [HAndThen.hAndThen, AndThen.andThen, compose]
 
 @[simp]
-theorem Ren.compose_pred_succ : 𝐫1 >> pred T = id T := by
-  simp [HAndThen.hAndThen, AndThen.andThen, succ, pred, id, compose]
-
-@[simp]
 theorem Ren.compose_sub_add {k} : add T k >> sub T k = id T := by
   simp [HAndThen.hAndThen, AndThen.andThen, sub, add, id, compose]
 
-@[grind =]
-theorem Ren.compose_add_succ_right {k} : add T (k + 1) = add T k >> 𝐫1 := by
-  simp [HAndThen.hAndThen, AndThen.andThen, add, succ, compose]; grind
-
-@[grind =]
-theorem Ren.compose_add_succ_left {k} : add T (k + 1) = 𝐫1 >> add T k := by
-  simp [HAndThen.hAndThen, AndThen.andThen, add, succ, compose]; grind
+@[simp]
+theorem Ren.compose_add_add {n m} : add T n >> add T m = add T (n + m) := by
+  simp [HAndThen.hAndThen, AndThen.andThen, add, compose]; grind
 
 def Subst.compose [SubstMap T (T::V)] : Subst T -> SubstVec (T::V) -> Subst T
 | σ, τ => .mk fun n => (σ.act n)[τ,]
@@ -642,6 +343,22 @@ def SubstVec.compose
 
 instance [SubstMapAll V] : AndThen (SubstVec V) where
   andThen σ f := SubstVec.compose σ (f ())
+
+@[simp]
+theorem SubstVec.compose_head [SubstMapAll (T::V)] {σ τ : SubstVec (T::V)}
+  : (σ >> τ).head = σ.head >> τ
+:= by
+  rcases σ with ⟨σ, σ'⟩
+  rcases τ with ⟨τ, τ'⟩
+  simp [HAndThen.hAndThen, AndThen.andThen, Subst.compose, compose]
+
+@[simp]
+theorem SubstVec.compose_tail [SubstMapAll (T::V)] {σ τ : SubstVec (T::V)}
+  : (σ >> τ).tail = σ.tail >> τ.tail
+:= by
+  rcases σ with ⟨σ, σ'⟩
+  rcases τ with ⟨τ, τ'⟩
+  simp [HAndThen.hAndThen, AndThen.andThen, Subst.compose, compose]
 
 -- @[simp]
 -- theorem SubstVec.compose_cons [SubstMapAll (T::V)] {σ τ : Subst T} {σs τs : SubstVec V} :
