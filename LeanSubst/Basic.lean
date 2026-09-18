@@ -423,11 +423,8 @@ def RenVec.lift : {V : List (Type u2)} -> RenVec V -> List Nat -> RenVec V
 | _::_, cons t ts, [] => t .: ts
 | _::_, cons t ts, k::ks => t.lift k .: ts.lift ks
 
-def Subst.lift' (V : List (Type u2)) [RenMap T (T::V)] (σ : Subst T) (k : Nat := 1) : Subst T :=
+def Subst.lift (V : List (Type u2)) [RenMap T (T::V)] (σ : Subst T) (k : Nat := 1) : Subst T :=
   (0...k) ++ σ >> (.add T k .: RenVec.id V)
-
-def Subst.lift (V : List (Type u2)) [RenMap T (T::V)] (σ : Subst T) (k : Nat := 1) : Subst T := .mk λ n =>
-  if n < k then re n else (σ.act (n - k))⟨.add T k .: .id V,⟩
 
 @[simp]
 def SubstVec.lift : {V : List (Type u2)} -> [RenMapAll V] -> List Nat -> SubstVec V ->  SubstVec V
@@ -444,7 +441,7 @@ instance : SubstAction T (List Nat) (List (Action T)) where
 
 def Ren.to (r : Ren T) : Subst T := ⟨λ x => re (r.act x)⟩
 
-def RenVec.to : {V : List (Type u2)} -> (r : RenVec V) -> SubstVec V
+def RenVec.to : {V : List (Type u2)} -> RenVec V -> SubstVec V
 | [], _ => .nil
 | .cons _ _, cons r rs => r.to .: rs.to
 

@@ -71,33 +71,20 @@ variable {V : List (Type u2)}
 ----------------------------------------------------------------------------------------------------
 ---- Identity
 ----------------------------------------------------------------------------------------------------
-def Ren.id T : Ren T := ⟨λ x => x⟩
-notation "𝐫0" => Ren.id _
-notation "𝐫0(" T ")" => Ren.id T
 
 @[simp]
 theorem Ren.id_action {x} : 𝐫0(T).act x = x := by simp [id]
 
-@[reducible, simp]
-def RenVec.id : (V : List (Type u2)) -> RenVec V
-| [] => .nil
-| .cons x xs => .id x .: id xs
 
-def Subst.id T : Subst T := ⟨λ x => re x⟩
-notation "𝐬0" => Subst.id _
-notation "𝐬0(" T ")" => Subst.id T
+
 
 @[simp]
 theorem Subst.id_action {x} : 𝐬0(T).act x = re x := by simp [id, act, SubstAction.act]
 
-@[reducible, simp]
-def SubstVec.id : (V : List (Type u2)) -> SubstVec V
-| [] => .nil
-| .cons x xs => .id x .: id xs
+
 ----------------------------------------------------------------------------------------------------
 ---- Addition
 ----------------------------------------------------------------------------------------------------
-def Ren.add T (k : Nat) : Ren T := ⟨(· + k)⟩
 
 @[simp]
 theorem Ren.add_action {k x} : (add T k).act x = x + k := by simp [Ren.add]
@@ -105,7 +92,6 @@ theorem Ren.add_action {k x} : (add T k).act x = x + k := by simp [Ren.add]
 @[simp]
 theorem Ren.add_zero : add T 0 = 𝐫0 := by simp [Ren.add, Ren.id]
 
-def Subst.add T (k : Nat) : Subst T := ⟨λ x => re $ x + k⟩
 
 @[simp]
 theorem Subst.add_action {k x} : (add T k).act x = re (x + k) := by simp [add, act, SubstAction.act]
@@ -115,7 +101,6 @@ theorem Subst.add_zero : add T 0 = 𝐬0 := by simp [add, id]
 ----------------------------------------------------------------------------------------------------
 ---- Subtraction
 ----------------------------------------------------------------------------------------------------
-def Ren.sub T (k : Nat) : Ren T := ⟨(· - k)⟩
 
 @[simp]
 theorem Ren.sub_action {k x} : (sub T k).act x = x - k := by simp [sub]
@@ -123,7 +108,6 @@ theorem Ren.sub_action {k x} : (sub T k).act x = x - k := by simp [sub]
 @[simp]
 theorem Ren.sub_zero : sub T 0 = 𝐫0 := by simp [sub, id]
 
-def Subst.sub T (k : Nat) : Subst T := ⟨λ x => re $ x - k⟩
 
 @[simp]
 theorem Subst.sub_action {k x} : (@sub T k).act x = re (x - k) := by
@@ -134,13 +118,7 @@ theorem Subst.sub_zero : sub T 0 = 𝐬0 := by simp [sub, id]
 ----------------------------------------------------------------------------------------------------
 ---- Cons
 ----------------------------------------------------------------------------------------------------
-def Ren.cons (a : Nat) (r : Ren T) : Ren T := .mk λ n =>
-  match n with
-  | 0 => a
-  | n + 1 => r.act n
 
-instance : AltCons Nat (Ren T) where
-  altCons := Ren.cons
 
 @[simp]
 theorem Ren.cons_action0 {a} {r : Ren T} : (a.:r).act 0 = a := by
@@ -157,13 +135,6 @@ theorem Ren.cons_add {T n} : n .: add T (n + 1) = add T n := by
   case succ n ih =>
     simp [add] at *; grind
 
-def Subst.cons (a : Action T) (σ : Subst T) : Subst T := .mk λ n =>
-  match n with
-  | 0 => a
-  | n + 1 => σ.act n
-
-instance : AltCons (Action T) (Subst T) where
-  altCons := Subst.cons
 
 @[simp]
 theorem Subst.cons_action0 {a} {σ : Subst T} : (a.:σ).act 0 = a := by
@@ -182,12 +153,7 @@ theorem Subst.cons_add {T n} : re n .: add T (n + 1) = add T n := by
 ----------------------------------------------------------------------------------------------------
 ---- Append
 ----------------------------------------------------------------------------------------------------
-def Ren.append : List Nat -> Ren T -> Ren T
-| .nil, r => r
-| .cons hd tl, r => hd.:append tl r
 
-instance : HAppend (List Nat) (Ren T) (Ren T) where
-  hAppend := Ren.append
 
 @[simp]
 theorem Ren.append_nil {r : Ren T} : ([] : List Nat) ++ r = r := by
@@ -214,12 +180,7 @@ theorem Ren.append_action_ge {r : Ren T} {i}
   | 0 => by simp at h
   | i + 1 => @append_action_ge r i tl (by grind) |> cast (by simp)
 
-def Subst.append : List (Action T) -> Subst T -> Subst T
-| .nil, r => r
-| .cons hd tl, r => hd.:append tl r
 
-instance : HAppend (List $ Action T) (Subst T) (Subst T) where
-  hAppend := Subst.append
 
 @[simp]
 theorem Subst.append_nil {σ : Subst T} : ([] : List $ Action T) ++ σ = σ := by
@@ -246,12 +207,7 @@ theorem Subst.append_action_ge {σ : Subst T} {i}
   | 0 => by simp at h
   | i + 1 => @append_action_ge σ i tl (by grind) |> cast (by simp)
 
-def Subst.append_ren : List Nat -> Subst T -> Subst T
-| .nil, r => r
-| .cons hd tl, r => re hd.:append_ren tl r
 
-instance : HAppend (List Nat) (Subst T) (Subst T) where
-  hAppend := Subst.append_ren
 
 @[simp]
 theorem Subst.append_ren_nil {σ : Subst T} : ([] : List $ Nat) ++ σ = σ := by
@@ -280,18 +236,7 @@ theorem Subst.append_ren_action_ge {σ : Subst T} {i}
 ----------------------------------------------------------------------------------------------------
 ---- Composition
 ----------------------------------------------------------------------------------------------------
-def Ren.compose : Ren T -> Ren T -> Ren T
-| r1, r2 => .mk λ n => r2.act (r1.act n)
 
-instance : AndThen (Ren T) where
-  andThen r f := Ren.compose r (f ())
-
-def RenVec.compose : {V : List (Type u2)} -> RenVec V -> RenVec V -> RenVec V
-| _, nil, _ => nil
-| .cons _ _, cons v1 v1s, cons v2 v2s => (v1 >> v2) .: compose v1s v2s
-
-instance : AndThen (RenVec V) where
-  andThen r f := RenVec.compose r (f ())
 
 @[simp]
 theorem RenVec.compose_head {σ τ : RenVec (T::V)} : (σ >> τ).head = σ.head >> τ.head := by
@@ -329,20 +274,7 @@ theorem Ren.compose_sub_add {k} : add T k >> sub T k = id T := by
 theorem Ren.compose_add_add {n m} : add T n >> add T m = add T (n + m) := by
   simp [HAndThen.hAndThen, AndThen.andThen, add, compose]; grind
 
-def Subst.compose [SubstMap T (T::V)] : Subst T -> SubstVec (T::V) -> Subst T
-| σ, τ => .mk fun n => (σ.act n)[τ,]
 
-instance [SubstMap T (T::V)] : HAndThen (Subst T) (SubstVec (T::V)) (Subst T) where
-  hAndThen σ f := Subst.compose σ (f ())
-
-def SubstVec.compose
-  : {V : List (Type u2)} -> [SubstMapAll V] ->
-    SubstVec V -> SubstVec V -> SubstVec V
-| [], _, _, _ => .nil
-| .cons _ _, _, cons v1 v1s, v@(cons _ v2s) => (v1 >> v) .: compose v1s v2s
-
-instance [SubstMapAll V] : AndThen (SubstVec V) where
-  andThen σ f := SubstVec.compose σ (f ())
 
 @[simp]
 theorem SubstVec.compose_head [SubstMapAll (T::V)] {σ τ : SubstVec (T::V)}
@@ -392,38 +324,14 @@ theorem Subst.compose_action [SubstMap T (T::V)] {σ : Subst T} {τ : SubstVec $
 -- theorem Subst.compose_add_succ_left [SubstMap T [T]] {k} : add T (k + 1) = succ T >> add T k := by
 --   simp [HAndThen.hAndThen, AndThen.andThen, add, succ, compose, act, SubstAction.act]; grind
 
-def Subst.compose_ren_left : Ren T -> Subst T -> Subst T
-| r, τ => .mk λ n => τ.act (r.act n)
 
-instance : HAndThen (Ren T) (Subst T) (Subst T) where
-  hAndThen r f := Subst.compose_ren_left r (f ())
-
-def SubstVec.compose_ren_left
-  : {V : List (Type u2)} -> RenVec V -> SubstVec V -> SubstVec V
-| [],  _, _ => .nil
-| .cons _ _, .cons v1 v1s, cons v2 v2s => (v1 >> v2) .: compose_ren_left v1s v2s
-
-instance : HAndThen (RenVec V) (SubstVec V) (SubstVec V) where
-  hAndThen r f := SubstVec.compose_ren_left r (f ())
 
 @[simp]
 theorem Subst.compose_ren_left_action {r : Ren T} {τ : Subst T} {x}
   : (r >> τ).act x = τ.act (r.act x)
 := by simp [HAndThen.hAndThen, compose_ren_left, act, SubstAction.act]
 
-def Subst.compose_ren_right [RenMap T (T::V)] : Subst T -> RenVec (T::V) -> Subst T
-| σ, r => .mk λ n => (σ.act n)⟨r,⟩
 
-instance [RenMap T (T::V)] : HAndThen (Subst T) (RenVec (T::V)) (Subst T) where
-  hAndThen σ f := Subst.compose_ren_right σ (f ())
-
-def SubstVec.compose_ren_right
-  : {V : List (Type u2)} -> [RenMapAll V] -> SubstVec V -> RenVec V -> SubstVec V
-| [], _, _, _ => .nil
-| .cons _ _, _, cons v1 v1s, v@(.cons _ v2s) => (v1 >> v) .: compose_ren_right v1s v2s
-
-instance [RenMapAll V] : HAndThen (SubstVec V) (RenVec V) (SubstVec V) where
-  hAndThen σ f := SubstVec.compose_ren_right σ (f ())
 
 @[simp]
 theorem Subst.compose_ren_right_action [RenMap T (T::V)] {σ : Subst T} {r : RenVec $ T::V} {x : Nat}
@@ -529,14 +437,6 @@ theorem SubstVec.compose_proj2 [SubstMapAll (T::V)] {σ τ : SubstVec (T::V)}
 ----------------------------------------------------------------------------------------------------
 ---- Lift
 ----------------------------------------------------------------------------------------------------
-def Ren.lift (r : Ren T) (k : Nat := 1) : Ren T := .mk λ n =>
-  if n < k then n else r.act (n - k) + k
-
-@[simp]
-def RenVec.lift : {V : List (Type u2)} -> RenVec V -> List Nat -> RenVec V
-| [], _, _ => .nil
-| .cons _ _, cons t ts, [] => t .: ts
-| .cons _ _, cons t ts, (.cons k ks) => t.lift k .: ts.lift ks
 
 @[simp, grind <-]
 theorem Ren.lift_action_lt {r : Ren T} {k i} (h : i < k) : (lift r k).act i = i := by
@@ -634,14 +534,7 @@ theorem RenVec.lift_proj1 {r : RenVec (T::V)} {n k} : (r.lift (n::k)).head = r.h
 theorem RenVec.lift_proj2 {r : RenVec (T::V)} {n k} : (r.lift (n::k)).tail = r.tail.lift k := by
   rcases r with ⟨r, r'⟩; simp
 
-def Subst.lift (V : List (Type u2)) [RenMap T (T::V)] (σ : Subst T) (k : Nat := 1) : Subst T := .mk λ n =>
-  if n < k then re n else (σ.act (n - k))⟨.add T k .: .id V,⟩
 
-@[simp]
-def SubstVec.lift : {V : List (Type u2)} -> [RenMapAll V] -> List Nat -> SubstVec V ->  SubstVec V
-| [], _, _, _ => .nil
-| .cons _ _, _, [], cons t ts => t .: ts
-| .cons _ Vs, _, .cons k ks, cons t ts => t.lift Vs k .: ts.lift ks
 
 -- @[simp, grind <-]
 -- theorem Subst.lift_action_lt [RenMap T [T]] {σ : Subst T} {k i} (h : i < k)
@@ -663,12 +556,7 @@ def SubstVec.lift : {V : List (Type u2)} -> [RenMapAll V] -> List Nat -> SubstVe
 ----------------------------------------------------------------------------------------------------
 ---- Action on variable list
 ----------------------------------------------------------------------------------------------------
-def Subst.act_list (σ : Subst T) : (ℓ : List Nat) -> List (Action T)
-| [] => []
-| .cons x xs => σ.act x :: act_list σ xs
 
-instance : SubstAction T (List Nat) (List (Action T)) where
-  act := Subst.act_list
 
 @[simp]
 theorem Subst.act_list_nil {σ : Subst T} : σ.act ([] : List Nat) = [] := by
@@ -685,7 +573,6 @@ theorem Subst.act_list_append {σ : Subst T} {x y : List Nat}
 ----------------------------------------------------------------------------------------------------
 ---- Promotion
 ----------------------------------------------------------------------------------------------------
-def Ren.to (r : Ren T) : Subst T := ⟨λ x => re (r.act x)⟩
 
 @[simp]
 theorem Ren.to_act {r : Ren T} {x} : (@to T r).act x = re (r.act x) := by simp [to, Subst.act, SubstAction.act]
@@ -727,9 +614,7 @@ theorem Ren.to_sub {k} : (sub T k).to = .sub T k := by simp [to, sub, Subst.sub]
 --   cases r; case _ f =>
 --   simp [Ren.to]
 
-def RenVec.to : {V : List (Type u2)} -> (r : RenVec V) -> SubstVec V
-| [], _ => .nil
-| .cons _ _, cons r rs => r.to .: rs.to
+
 
 -- @[simp]
 -- theorem RenVec.to_lift
@@ -743,11 +628,7 @@ def RenVec.to : {V : List (Type u2)} -> (r : RenVec V) -> SubstVec V
 ----------------------------------------------------------------------------------------------------
 ---- Range
 ----------------------------------------------------------------------------------------------------
-def Ren.range : Nat -> Nat -> List Nat
-| _, 0 => []
-| s, e + 1 => if s ≤ e then (range s e).concat e else []
 
-infix:90 ".." => Ren.range
 
 @[simp]
 theorem Ren.range_same {n} : n..n = [] := by cases n <;> simp [range]
