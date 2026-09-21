@@ -1,9 +1,4 @@
 
--- import Lean.Elab.Term
--- import Lean.Elab.SyntheticMVars
-
--- import LeanSubst.Glue
-
 namespace LeanSubst
 
 universe u u1 u2 u3
@@ -291,12 +286,12 @@ theorem Action.smap0_su [SubstMap S V] [SubstSuffix S V] {σ : SubstVec V} {t : 
 := by simp [SubstMap.smap]
 
 def Ren.id T : Ren T := ⟨λ x => x⟩
-notation "𝐫0" => Ren.id _
+notation "r+0" => Ren.id _
 notation "𝐫0(" T ")" => Ren.id T
 
 @[reducible, simp]
 def RenVec.id : (V : List (Type u2)) -> RenVec V
-| [] => .nil
+| [] => nil
 | .cons x xs => .id x .: id xs
 
 def Subst.id T : Subst T := ⟨λ x => re x⟩
@@ -305,7 +300,7 @@ notation "𝐬0(" T ")" => Subst.id T
 
 @[reducible, simp]
 def SubstVec.id : (V : List (Type u2)) -> SubstVec V
-| [] => .nil
+| [] => nil
 | .cons x xs => .id x .: id xs
 
 def Ren.add T (k : Nat) : Ren T := ⟨(· + k)⟩
@@ -316,18 +311,18 @@ def Ren.sub T (k : Nat) : Ren T := ⟨(· - k)⟩
 
 def Subst.sub T (k : Nat) : Subst T := ⟨λ x => re $ x - k⟩
 
-def Ren.cons (a : Nat) (r : Ren T) : Ren T := .mk λ n =>
-  match n with
+def Ren.cons (a : Nat) (r : Ren T) : Ren T :=
+  ⟨fun n => match n with
   | 0 => a
-  | n + 1 => r.act n
+  | n + 1 => r.act n⟩
 
 instance : AltCons Nat (Ren T) where
   altCons := Ren.cons
 
-def Subst.cons (a : Action T) (σ : Subst T) : Subst T := .mk λ n =>
-  match n with
+def Subst.cons (a : Action T) (σ : Subst T) : Subst T :=
+  ⟨fun n => match n with
   | 0 => a
-  | n + 1 => σ.act n
+  | n + 1 => σ.act n⟩
 
 instance : AltCons (Action T) (Subst T) where
   altCons := Subst.cons
@@ -444,5 +439,68 @@ def Ren.to (r : Ren T) : Subst T := ⟨λ x => re (r.act x)⟩
 def RenVec.to : {V : List (Type u2)} -> RenVec V -> SubstVec V
 | [], _ => .nil
 | .cons _ _, cons r rs => r.to .: rs.to
+
+class RenMapId (S : Type u1) (V : List (Type u2)) [RenMap S V] where
+  id_law {s : S} : s⟨.id V,⟩ = s
+
+@[simp]
+theorem Ren.id_law [RenMap S V] [RenMapId S V] {s : S} : s⟨.id V,⟩ = s := RenMapId.id_law
+
+class RenMapCompose (S : Type u1) (V : List (Type u2)) [RenMap S V] where
+  compose_law {s : S} {r1 r2 : RenVec V} : s⟨r1,⟩⟨r2,⟩ = s⟨r1 >> r2,⟩
+
+@[simp]
+theorem Ren.compose_law [RenMap S V] [RenMapCompose S V] {s : S} {r1 r2 : RenVec V}
+  : s⟨r1,⟩⟨r2,⟩ = s⟨r1 >> r2,⟩
+:= RenMapCompose.compose_law
+
+class SubstMapStable (S : Type u1) (V : List $ Type u2) [RenMap S V] [SubstMap S V] where
+  stable (r : RenVec V) (σ : SubstVec V) : r.to = σ -> rmap (S := S) r = smap σ
+
+@[grind <-]
+theorem Subst.stable
+  [RenMap S V] [SubstMap S V] [SubstMapStable S V]
+  {r : RenVec V} {σ : SubstVec V} (h : r.to = σ)
+  : rmap (S := S) r = smap σ
+:= SubstMapStable.stable _ _ h
+
+class SubstMapId (S : Type u1) (V : List $ Type u2) [SubstMap S V] where
+  id_law {s : S} : s[.id V,] = s
+
+@[simp]
+theorem Subst.id_law [SubstMap S V] [SubstMapId S V] {s : S} : s[.id V,] = s :=
+  SubstMapId.id_law
+
+class SubstMapRenComposeLeft (S : Type u1) (V : List $ Type u2) [RenMap S V] [SubstMap S V] where
+  compose_left_law {s : S} {r : RenVec V} {τ : SubstVec V} : s⟨r,⟩[τ,] = s[r >> τ,]
+
+@[simp]
+theorem Subst.compose_left_law
+  [RenMap S V] [SubstMap S V] [SubstMapRenComposeLeft S V]
+  {s : S} {r : RenVec V} {τ : SubstVec V}
+  : s⟨r,⟩[τ,] = s[r >> τ,]
+:= SubstMapRenComposeLeft.compose_left_law
+
+class SubstMapRenComposeRight (S : Type u1) (V : List $ Type u2)
+  [RenMap S V] [RenMapAll V] [SubstMap S V]
+where
+  compose_right_law {s : S} {r : RenVec V} {σ : SubstVec V} : s[σ,]⟨r,⟩ = s[σ >> r,]
+
+@[simp]
+theorem Subst.compose_right_law
+  [RenMap S V] [RenMapAll V] [SubstMap S V] [SubstMapRenComposeRight S V]
+  {s : S} {σ : SubstVec V} {r : RenVec V}
+  : s[σ,]⟨r,⟩ = s[σ >> r,]
+:= SubstMapRenComposeRight.compose_right_law
+
+class SubstMapCompose (S : Type u1) (V : List $ Type u2) [SubstMap S V] [SubstMapAll V] where
+  compose_law {s : S} {σ τ : SubstVec V} : s[σ,][τ,] = s[σ >> τ,]
+
+@[simp]
+theorem Subst.compose_law
+  [SubstMap S V] [SubstMapAll V] [SubstMapCompose S V]
+  {s : S} {σ τ : SubstVec V}
+  : s[σ,][τ,] = s[σ >> τ,]
+:= SubstMapCompose.compose_law
 
 end LeanSubst
