@@ -1,5 +1,6 @@
 module
 
+public import LeanSubst.Basic
 import all LeanSubst.Basic
 
 namespace LeanSubst
@@ -13,6 +14,15 @@ theorem Ren.id_action {x} : 𝐫0(T).act x = x := by simp [id]
 
 @[simp]
 theorem Subst.id_action {x} : 𝐬0(T).act x = re x := by simp [id, act, SubstAction.act]
+
+@[simp]
+theorem RenVec.id_head : (id $ T::V).head = .id T := by simp [id]
+
+@[simp]
+theorem SubstVec.id_head : (id $ T::V).head = .id T := by simp [id]
+
+@[simp]
+theorem SubstVec.id_tail : (id $ T::V).tail = id V := by simp [id]
 
 @[simp]
 theorem Ren.add_action {k x} : (add T k).act x = x + k := by simp [Ren.add]
@@ -145,6 +155,24 @@ theorem Subst.append_list_action_ge {σ : Subst T} {i}
   | i + 1 => @append_list_action_ge σ i tl (by grind) |> cast (by simp)
 
 @[simp]
+theorem Ren.cons_add_is_id {k} : k .: add _ (k + 1) = id T := sorry
+
+@[simp]
+theorem Subst.cons_add_is_id {k} : re k .: add _ (k + 1) = id T := sorry
+
+@[simp]
+theorem Ren.append_range_add_is_add_min : ∀ {s e}, (s...e) ++ add T e = add T (min s e) := sorry
+
+@[simp]
+theorem Subst.append_range_add_is_add_min : ∀ {s e}, (s...e) ++ add T e = add T (min s e) := sorry
+
+public instance [RenMap T (T::V)] [RenMapId T (T::V)] : RenMapId (Action T) (T::V) where
+  id_law := by intro s; cases s <;> simp
+
+public instance [RenMap S V] [RenSuffix S V] [RenMapId S V] : RenMapId (Action S) V where
+  id_law := by intro s; cases s <;> simp
+
+@[simp]
 theorem Ren.compose_action {r1 r2 : Ren T} {x} : (r1 >> r2).act x = r2.act (r1.act x) := by
   simp [HAndThen.hAndThen, AndThen.andThen, compose]
 
@@ -154,28 +182,105 @@ theorem Subst.compose_action [SubstMap T (T::V)] {σ : Subst T} {τ : SubstVec $
 := by simp [HAndThen.hAndThen, compose, act, SubstAction.act]
 
 @[simp]
-theorem Ren.compose_id_left {r : Ren T} : 𝐫0 >> r = r := by
-  simp [HAndThen.hAndThen, AndThen.andThen, compose, id]
-
-@[simp]
-theorem Ren.compose_id_right {r : Ren T} : r >> 𝐫0 = r := by
-  simp [HAndThen.hAndThen, AndThen.andThen, compose, id]
-
-@[simp]
-theorem Ren.compose_assoc {r1 r2 r3 : Ren T} : (r1 >> r2) >> r3 = r1 >> r2 >> r3 := by
-  simp [HAndThen.hAndThen, AndThen.andThen, compose]
-
-@[simp]
 theorem Ren.compose_sub_add {k} : add T k >> sub T k = id T := by
   simp [HAndThen.hAndThen, AndThen.andThen, sub, add, id, compose]
+
+@[simp]
+theorem Subst.compose_left_sub_add {k} : Ren.add T k >> sub T k = id T := by
+  simp [HAndThen.hAndThen, sub, id, compose_left]
+
+@[simp]
+theorem Subst.compose_right_sub_add [RenMap T (T::V)] {r : RenVec V} {k}
+  : add T k >> (.sub T k .: r) = id T
+:= by simp [HAndThen.hAndThen, add, id, compose_right]
+
+@[simp]
+theorem Subst.compose_sub_add [SubstMap T (T::V)] {σ : SubstVec V} {k}
+  : add T k >> (sub T k .: σ) = id T
+:= by simp [HAndThen.hAndThen, sub, add, id, compose]
 
 @[simp]
 theorem Ren.compose_add_add {n m} : add T n >> add T m = add T (n + m) := by
   simp [HAndThen.hAndThen, AndThen.andThen, add, compose]; grind
 
 @[simp]
+theorem Subst.compose_left_add_add {n m} : Ren.add T n >> add T m = add T (n + m) := by
+  simp [HAndThen.hAndThen, add, compose_left]; grind
+
+@[simp]
+theorem Subst.compose_right_add_add [RenMap T (T::V)] {r : RenVec V} {n m}
+  : add T n >> (.add T m .: r) = add T (n + m)
+:= by simp [HAndThen.hAndThen, add, compose_right]; grind
+
+@[simp]
+theorem Subst.compose_add_add [SubstMap T (T::V)] {σ : SubstVec V} {n m}
+  : add T n >> (add T m .: σ) = add T (n + m)
+:= by simp [HAndThen.hAndThen, add, compose]; grind
+
+@[simp]
 theorem Ren.compose_sub_sub {n m} : sub T n >> sub T m = sub T (n + m) := by
   simp [HAndThen.hAndThen, AndThen.andThen, sub, compose]; grind
+
+@[simp]
+theorem Subst.compose_left_sub_sub {n m} : Ren.sub T n >> sub T m = sub T (n + m) := by
+  simp [HAndThen.hAndThen, sub, compose_left]; grind
+
+@[simp]
+theorem Subst.compose_right_sub_sub [RenMap T (T::V)] {r : RenVec V} {n m}
+  : sub T n >> (.sub T m .: r) = sub T (n + m)
+:= by simp [HAndThen.hAndThen, sub, compose_right]; grind
+
+@[simp]
+theorem Subst.compose_sub_sub [SubstMap T (T::V)] {σ : SubstVec V} {n m}
+  : sub T n >> (sub T m .: σ) = sub T (n + m)
+:= by simp [HAndThen.hAndThen, sub, compose]; grind
+
+@[simp]
+theorem Ren.compose_id_left {r : Ren T} : 𝐫0 >> r = r := by
+  simp [HAndThen.hAndThen, AndThen.andThen, compose, id]
+
+@[simp]
+theorem Subst.compose_left_id_left {σ : Subst T} : 𝐫0(T) >> σ = σ := by
+  simp [HAndThen.hAndThen, compose_left]; congr
+
+@[simp]
+theorem Subst.compose_right_id_left [RenMap T (T::V)] {r : RenVec (T::V)}
+  : 𝐬0(T) >> r = r.head.to
+:= by simp [HAndThen.hAndThen, compose_right]; congr
+
+@[simp]
+theorem Subst.compose_id_left [SubstMap T (T::V)] {σ : SubstVec (T::V)}
+  : 𝐬0(T) >> σ = σ.head
+:= by simp [HAndThen.hAndThen, compose]; congr
+
+@[simp]
+theorem Ren.compose_id_right {r : Ren T} : r >> 𝐫0 = r := by
+  simp [HAndThen.hAndThen, AndThen.andThen, compose, id]
+
+@[simp]
+theorem Subst.compose_left_id_right {r : Ren T} : r >> 𝐬0(T) = r.to := by
+  simp [HAndThen.hAndThen, compose_left]; congr
+
+@[simp]
+theorem Subst.compose_right_id_right [RenMap T (T::V)] [RenMapId T (T::V)] {σ : Subst T} {r : RenVec V}
+  : σ >> RenVec.id (T::V) = σ
+:= by
+  have lem := λ s => Ren.id_law (S := Action T) (V := T::V) (s := s)
+  simp at lem
+  simp [HAndThen.hAndThen, compose_right]; congr
+  funext; rw [lem]
+
+@[simp]
+theorem Subst.compose_id_right [SubstMap T (T::V)] {σ : SubstVec (T::V)}
+  : 𝐬0(T) >> σ = σ.head
+:= by simp [HAndThen.hAndThen, compose]; congr
+
+
+@[simp]
+theorem Ren.compose_assoc {r1 r2 r3 : Ren T} : (r1 >> r2) >> r3 = r1 >> r2 >> r3 := by
+  simp [HAndThen.hAndThen, AndThen.andThen, compose]
+
+
 
 @[simp]
 theorem RenVec.compose_head {σ τ : RenVec (T::V)} : (σ >> τ).head = σ.head >> τ.head := by

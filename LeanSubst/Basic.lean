@@ -289,7 +289,6 @@ public def Ren.id T : Ren T := ⟨λ x => x⟩
 notation "𝐫0" => Ren.id _
 notation "𝐫0(" T ")" => Ren.id T
 
-@[expose, reducible, simp]
 public def RenVec.id : (V : List (Type u2)) -> RenVec V
 | [] => nil
 | .cons x xs => .id x .: id xs
@@ -298,7 +297,6 @@ public def Subst.id T : Subst T := ⟨λ x => re x⟩
 notation "𝐬0" => Subst.id _
 notation "𝐬0(" T ")" => Subst.id T
 
-@[expose, reducible, simp]
 public def SubstVec.id : (V : List (Type u2)) -> SubstVec V
 | [] => nil
 | .cons x xs => .id x .: id xs
@@ -367,33 +365,33 @@ public def RenVec.compose : {V : List (Type u2)} -> RenVec V -> RenVec V -> RenV
 public instance : AndThen (RenVec V) where
   andThen r f := RenVec.compose r (f ())
 
-public def Subst.compose_ren_left : Ren T -> Subst T -> Subst T
+public def Subst.compose_left : Ren T -> Subst T -> Subst T
 | r, τ => ⟨fun n => τ.act (r.act n)⟩
 
 public instance : HAndThen (Ren T) (Subst T) (Subst T) where
-  hAndThen r f := Subst.compose_ren_left r (f ())
+  hAndThen r f := Subst.compose_left r (f ())
 
-public def SubstVec.compose_ren_left
+public def SubstVec.compose_left
   : {V : List (Type u2)} -> RenVec V -> SubstVec V -> SubstVec V
 | [],  _, _ => .nil
-| .cons _ _, .cons v1 v1s, cons v2 v2s => (v1 >> v2) .: compose_ren_left v1s v2s
+| .cons _ _, .cons v1 v1s, cons v2 v2s => (v1 >> v2) .: compose_left v1s v2s
 
 public instance : HAndThen (RenVec V) (SubstVec V) (SubstVec V) where
-  hAndThen r f := SubstVec.compose_ren_left r (f ())
+  hAndThen r f := SubstVec.compose_left r (f ())
 
-public def Subst.compose_ren_right [RenMap T (T::V)] : Subst T -> RenVec (T::V) -> Subst T
+public def Subst.compose_right [RenMap T (T::V)] : Subst T -> RenVec (T::V) -> Subst T
 | σ, r => ⟨fun n => (σ.act n)⟨r,⟩⟩
 
 public instance [RenMap T (T::V)] : HAndThen (Subst T) (RenVec (T::V)) (Subst T) where
-  hAndThen σ f := Subst.compose_ren_right σ (f ())
+  hAndThen σ f := Subst.compose_right σ (f ())
 
-public def SubstVec.compose_ren_right
+public def SubstVec.compose_right
   : {V : List (Type u2)} -> [RenMapAll V] -> SubstVec V -> RenVec V -> SubstVec V
 | [], _, _, _ => .nil
-| .cons _ _, _, cons v1 v1s, v@(.cons _ v2s) => (v1 >> v) .: compose_ren_right v1s v2s
+| .cons _ _, _, cons v1 v1s, v@(.cons _ v2s) => (v1 >> v) .: compose_right v1s v2s
 
 public instance [RenMapAll V] : HAndThen (SubstVec V) (RenVec V) (SubstVec V) where
-  hAndThen σ f := SubstVec.compose_ren_right σ (f ())
+  hAndThen σ f := SubstVec.compose_right σ (f ())
 
 public def Subst.compose [SubstMap T (T::V)] : Subst T -> SubstVec (T::V) -> Subst T
 | σ, τ => ⟨fun n => (σ.act n)[τ,]⟩
