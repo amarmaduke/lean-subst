@@ -190,38 +190,6 @@ theorem Subst.compose_ren_right_append [RenMap T [T]] [SubstMap T [T]] {ℓ : Li
   induction ℓ generalizing σ r <;> simp
   case _ hd tl ih => rw [<-ih]
 
-@[simp]
-theorem Subst.compose_ren_right_assoc
-  [RenMap S [S]] [SubstMap S [S]] [SubstMapRenComposeLeft S [S]]
-  {σ τ : Subst S} {r : Ren S}
-  : (σ >> r) >> τ = σ >> r >> τ
-:= by
-  simp [HAndThen.hAndThen, AndThen.andThen, compose, compose_ren_left, compose_ren_right]
-  funext; case _ i =>
-  generalize zdef : σ.act i = z
-  cases z
-  case re i =>
-    simp [SubstVec.compose_ren_left]
-    simp [HAndThen.hAndThen, compose_ren_left]
-  case su t =>
-    simp [SubstVec.compose_ren_left]
-    simp [HAndThen.hAndThen, compose_ren_left]
-
-@[simp]
-theorem Subst.compose_ren_right_assoc2
-  [RenMapAll [S]] [SubstMap S [S]] [RenMapVecDef S S []] [RenMapEmpty S] [SubstMapRenComposeRight S [S]]
-  {σ τ : Subst S} {r : Ren S}
-  : (σ >> τ) >> r = σ >> τ >> r
-:= by
-  simp [HAndThen.hAndThen, AndThen.andThen, compose, compose_ren_right]; funext; case _ i =>
-  generalize zdef : σ.act i = z
-  cases z
-  case re =>
-    simp [SubstVec.compose_ren_right]
-    simp [HAndThen.hAndThen, compose_ren_right]
-  case su =>
-    simp [SubstVec.compose_ren_right]
-    simp [HAndThen.hAndThen, compose_ren_right]
 
 -- like rewrite_lift_succ but no [RenMapId S [S]]
 -- theorem Subst.lift_of_succ [RenMap S [S]] [RenMapCompose S [S]] {k} {σ : Subst S} : σ.lift (k + 1) = (σ.lift k).lift := by
@@ -250,12 +218,6 @@ theorem Subst.compose_ren_right_assoc2
 --   sorry
   --induction a generalizing σ <;> grind [lift_of_succ_rev]
 
--- @[simp]
--- theorem Subst.ren_to_hcompose [SubstMap S V] {r : Ren S} {σ : Subst T} : r.to ◾ σ = r.to := by simp [hcompose, Ren.to]
-
--- @[simp]
--- theorem Subst.ren_to_hcompose_ren [RenMap S T] {r : Ren S} {k : Ren T} : r.to ◾ k = r.to := by simp [hcompose_ren, Ren.to]
-
 @[simp]
 theorem Subst.to_append {ℓ : List Nat} {r : Ren T} : (ℓ ++ r).to = ℓ ++ r.to := by
   induction ℓ <;> simp_all [HAppend.hAppend, Ren.append, append_ren]
@@ -267,13 +229,6 @@ theorem Subst.ren_rewrite1 [RenMap T [T]] {r : Ren T} : id T >> r = r.to := by
 @[simp, grind =]
 theorem Subst.ren_rewrite1_left {r : Ren T} : r >> id T = r.to := by
   simp [Ren.to, HAndThen.hAndThen, compose_ren_left]
-
--- Not used but maybe useful
--- theorem Subst.rmap_of_succ_smap
---   [RenMap T [T]] [RenMapId T [T]]
---   [SubstMap T [T]] [SubstMapCompose T [T]] [SubstMapRenComposeLeft T [T]]
---   {x : Action T} {τ : Subst T} {t : T}
---   : t⟨Ren.succ T⟩[x :: τ] = t[τ] := by simp [compose_ren_left_tuple]
 
 @[simp]
 theorem Subst.compose_ren_right_from_to
