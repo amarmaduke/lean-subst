@@ -88,21 +88,13 @@ public inductive Action (T : Type u2) where
 export Action (re su)
 
 public structure Subst (T : Type u2) where
-  inner : Nat -> Action T
+  act : Nat -> Action T
 
 public inductive SubstVec : List (Type u2) -> Type (u2 + 1)
 | nil : SubstVec []
 | cons {T V : _} : Subst T -> SubstVec V -> SubstVec (T::V)
 
 infixr:67 (name := SubstVec.cons_notation) " .: " => SubstVec.cons
-
-public class SubstAction (T : Type u1) (A : Type u2) (U : outParam (Type u3)) where
-  act (σ : Subst T) : A -> U
-
-public def Subst.act [SubstAction S T U] (σ : Subst S) : T -> U := SubstAction.act σ
-
-public instance : SubstAction T Nat (Action T) where
-  act := Subst.inner
 
 public class SubstSuffix (S : Type u1) (V : List (Type u2)) where
 
@@ -211,10 +203,6 @@ public theorem SubstVec.head_cons {σ : Subst T} {σs : SubstVec V} : (σ .: σs
 public theorem SubstVec.tail_cons {σ : Subst T} {σs : SubstVec V} : (σ .: σs).tail = σs := by simp [tail]
 
 @[simp]
-public theorem Subst.act_inner {f : Nat -> Action T} {x} : Subst.act { inner := f } x = f x := by
-  simp [act, SubstAction.act]
-
-@[simp]
 public def Action.rmap1 [RenMap T (T::V)] (r : RenVec (T::V)) : Action T -> Action T
 | re x => re $ r.head.act x
 | su t => su t⟨r,⟩
@@ -260,7 +248,7 @@ public instance [SubstMap T (T::V)] : SubstMap (Action T) (T::V) where
 @[simp]
 public theorem Action.smap1_re [SubstMap T (T::V)] {σ : SubstVec (T::V)} {x : Nat}
   : (@re T x)[σ,] = σ.head.act x
-:= by simp [SubstMap.smap, Subst.act, SubstAction.act]
+:= by simp [SubstMap.smap]
 
 @[simp]
 public theorem Action.smap1_su [SubstMap T (T::V)] {σ : SubstVec (T::V)} {t : T}
@@ -424,13 +412,6 @@ public def SubstVec.lift : {V : List (Type u2)} -> [RenMapAll V] -> List Nat -> 
 | [], _, _, _ => .nil
 | .cons _ _, _, [], cons t ts => t .: ts
 | .cons _ Vs, _, .cons k ks, cons t ts => t.lift Vs k .: ts.lift ks
-
-public def Subst.act_list (σ : Subst T) : (ℓ : List Nat) -> List (Action T)
-| [] => []
-| .cons x xs => σ.act x :: act_list σ xs
-
-public instance : SubstAction T (List Nat) (List (Action T)) where
-  act := Subst.act_list
 
 public def Ren.to (r : Ren T) : Subst T := ⟨λ x => re (r.act x)⟩
 
