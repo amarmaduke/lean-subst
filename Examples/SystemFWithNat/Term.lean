@@ -1,6 +1,6 @@
 
 import LeanSubst
-import LeanSubst.Automation.Basic
+-- import LeanSubst.Automation.Basic
 
 open LeanSubst
 
@@ -241,7 +241,7 @@ theorem Ty.from_action_id {n} : from_action (𝐬0.act n) = var n := by
   simp [from_action]
 
 @[simp]
-theorem Ty.from_action_succ {n} : from_action (𝐬1.act n) = var (n + 1) := by
+theorem Ty.from_action_add {k} {n} : from_action ((Subst.add Ty k).act n) = var (n + k) := by
   simp [from_action]
 
 @[simp]
@@ -291,10 +291,13 @@ theorem Ty.from_action_rmap {t : Action Ty} {r : RenVec [Ty]}
 := by cases t <;> simp
 
 instance : RenMapId Ty [Ty] where
-  apply_id := by subst_solve_id
+  id_law := by
+    intro s; induction s <;> simp [*]
+    sorry
 
 instance : RenMapCompose Ty [Ty] where
-  apply_compose := by subst_solve_compose
+  compose_law := by
+    sorry
 
 @[simp]
 def Ty.smap (σ : SubstVec [Ty]) : Ty -> Ty

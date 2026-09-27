@@ -367,9 +367,6 @@ instance [RenMap S V] [SubstMap S V] [SubstMapStable S V] : SubstMapStable (List
     induction l <;> simp [*]
     rw [Subst.stable h]
 
-instance [RenMap S V] : RenMap (Std.Roc S) V where
-  rmap := sorry
-
 @[simp]
 theorem Ren.compose_sub_add {k} : add T k >> sub T k = id T := by
   simp [HAndThen.hAndThen, AndThen.andThen, sub, add, id, compose]
