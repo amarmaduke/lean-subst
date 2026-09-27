@@ -611,6 +611,20 @@ theorem Subst.compose_assoc [SubstMapAll (T::V)] [SubstMapCompose T (T::V)]
 := by simp [HAndThen.hAndThen, AndThen.andThen, compose]
 
 @[simp]
+theorem Ren.lift_id : ∀ {k}, (id T).lift k = id T
+| 0 => sorry
+| k + 1 => sorry
+
+@[simp]
+theorem RenVec.lift_id {k} : (id V).lift k = id V := sorry
+
+@[simp]
+theorem Subst.lift_id [RenMap T (T::V)] : (id T).lift V = id T := sorry
+
+@[simp]
+theorem SubstVec.lift_id [RenMapAll V] {k} : (id V).lift k = id V := sorry
+
+@[simp]
 theorem Ren.lift_compose {r1 r2 : Ren T} {k} : (r1 >> r2).lift k = r1.lift k >> r2.lift k := sorry
 
 @[simp]

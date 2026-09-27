@@ -26,7 +26,6 @@ macro "subst_solve_stable" : tactic => `(tactic| {
 
 macro "subst_solve_compose" : tactic => `(tactic| {
   intro s σ τ
-  let T := Subst.typeof s
   induction s generalizing σ τ
   all_goals try solve | simp [*]
   all_goals try solve |

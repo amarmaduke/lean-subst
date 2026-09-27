@@ -291,13 +291,10 @@ theorem Ty.from_action_rmap {t : Action Ty} {r : RenVec [Ty]}
 := by cases t <;> simp
 
 instance : RenMapId Ty [Ty] where
-  id_law := by
-    intro s; induction s <;> simp [*]
-    sorry
+  id_law := by subst_solve_id
 
 instance : RenMapCompose Ty [Ty] where
-  compose_law := by
-    sorry
+  compose_law := by subst_solve_compose
 
 @[simp]
 def Ty.smap (σ : SubstVec [Ty]) : Ty -> Ty
@@ -337,19 +334,19 @@ theorem Ty.from_action_smap {t : Action Ty} {σ : SubstVec [Ty]}
 := by cases t <;> simp
 
 instance : SubstMapId Ty [Ty] where
-  apply_id := by subst_solve_id
+  id_law := by subst_solve_id
 
 instance : SubstMapStable Ty [Ty] where
-  apply_stable := by sorry --subst_solve_stable
+  stable := by sorry --subst_solve_stable
 
 instance : SubstMapRenComposeLeft Ty [Ty] where
-  apply_ren_compose_left := by sorry --subst_solve_compose
+  compose_left_law := by subst_solve_compose
 
 instance : SubstMapRenComposeRight Ty [Ty] where
-  apply_ren_compose_right := by sorry --subst_solve_compose
+  compose_right_law := by subst_solve_compose
 
 instance : SubstMapCompose Ty [Ty] where
-  apply_compose := by subst_solve_compose
+  compose_law := by sorry
 
 ----------------------------------------------------------------------------------------------------
 -- Term Renaming & Substitution
@@ -365,7 +362,7 @@ theorem Term.from_action_id {n} : from_action (𝐬0.act n) = var n := by
   simp [from_action]
 
 @[simp, grind =]
-theorem Term.from_action_succ {n} : from_action (𝐬1.act n) = var (n + 1) := by
+theorem Term.from_action_succ {k n} : from_action ((Subst.add Term k).act n) = var (n + k) := by
   simp [from_action]
 
 @[simp, grind =]
@@ -437,10 +434,10 @@ theorem Term.from_action_rmap {t : Action Term} {r : RenVec [Term, Ty]}
 instance instRenMapAll_Term_Ty : RenMapAll [Term, Ty] := .cons instRenMapAll_Ty
 
 instance : RenMapId Term [Term, Ty] where
-  apply_id := by subst_solve_id
+  id_law := by sorry
 
 instance : RenMapCompose Term [Term, Ty] where
-  apply_compose := by
+  compose_law := by
     intro s r1 r2
     induction s generalizing r1 r2
     all_goals simp [*]; try rfl
@@ -508,23 +505,19 @@ theorem Term.from_action_smap {t : Action Term} {σ : SubstVec [Term, Ty]}
 instance instSubstMapAll_Term_Ty : SubstMapAll [Term, Ty] := .cons instSubstMapAll_Ty
 
 instance : SubstMapId Term [Term, Ty] where
-  apply_id := by
-    intro s
-    induction s
-    all_goals simp [*]
-    sorry --subst_solve_id
+  id_law := by sorry
 
 instance : SubstMapStable Term [Term, Ty] where
-  apply_stable := by sorry --subst_solve_stable
+  stable := by sorry --subst_solve_stable
 
 instance : SubstMapRenComposeLeft Term [Term, Ty] where
-  apply_ren_compose_left := by sorry --subst_solve_compose
+  compose_left_law := sorry
 
 instance : SubstMapRenComposeRight Term [Term, Ty] where
-  apply_ren_compose_right := by sorry --subst_solve_compose
+  compose_right_law := sorry
 
 instance : SubstMapCompose Term [Term, Ty] where
-  apply_compose := by
+  compose_law := by
     intro s σ τ
     induction s generalizing σ τ
     all_goals simp [*]
