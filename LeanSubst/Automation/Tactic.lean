@@ -1,4 +1,11 @@
 
+macro "lsimp " t:term : term => `(by
+  solve
+    | simp; exact $t
+    | have lem := $t; simp at lem; simp; exact lem
+    | exact ($t |> cast (by simp))
+)
+
 macro "subst_solve_id" : tactic => `(tactic| {
   intro s; induction s
   all_goals

@@ -59,36 +59,34 @@ structure KindingRen (r : Ren Ty) (Δ Δ' : List Unit) where
 
 theorem KindingRen.succ {A X} : KindingRen (.add Ty 1) X (A::X) := ⟨λ h => h⟩
 
--- theorem KindingRen.lift {Δ Δ' : List Unit} (r : Ren Ty) (h : KindingRen r Δ Δ')
---   : KindingRen r.lift (.unit::Δ) (.unit::Δ')
--- := ⟨λ {x} _ j =>
---     match x with
---     | 0 => j |> cast (by simp)
---     | _ + 1 => h.act j⟩
+theorem KindingRen.lift {Δ Δ' : List Unit} (r : Ren Ty) (h : KindingRen r Δ Δ')
+  : KindingRen r.lift (.unit::Δ) (.unit::Δ')
+:= ⟨λ {x} _ j =>
+    match x with
+    | 0 => lsimp j
+    | _ + 1 => lsimp h.act j⟩
 
--- theorem Kinding.rename {Δ Δ' A} {r : Ren Ty} (m : KindingRen r Δ Δ') : Δ ⊢ A type -> Δ' ⊢ A⟨r⟩ type
--- | var j => var (m.act j)
--- | nat => nat
--- | arrow j1 j2 => arrow (j1.rename m) (j2.rename m)
--- | all j => all (j.rename $ m.lift)
+theorem Kinding.rename {Δ Δ' A} {r : Ren Ty} (m : KindingRen r Δ Δ') : Δ ⊢ A type -> Δ' ⊢ A⟨r⟩ type
+| var j => var (m.act j)
+| nat => nat
+| arrow j1 j2 => arrow (j1.rename m) (j2.rename m)
+| all j => all (j.rename $ m.lift)
 
--- structure KindingSubst (σ : Subst Ty) (Δ Δ' : List Unit) where
---   act : ∀ {x : Nat} {T}, Δ[x]? = some T -> Δ' ⊢ σ.act x type
+structure KindingSubst (σ : Subst Ty) (Δ Δ' : List Unit) where
+  act : ∀ {x : Nat} {T}, Δ[x]? = some T -> Δ' ⊢ σ.act x type
 
--- theorem KindingSubst.lift {Δ Δ' : List Unit} {σ : Subst Ty} (m : KindingSubst σ Δ Δ')
---   : KindingSubst (σ.lift []) (.unit::Δ) (.unit::Δ')
--- := ⟨λ {x} _ j =>
---     match x with
---     | 0 => .var j
---     | _ + 1 =>
---       have lem := (m.act j).rename (Δ' := .unit::Δ') KindingRen.succ
---       by simp at lem; exact lem⟩
+theorem KindingSubst.lift {Δ Δ' : List Unit} {σ : Subst Ty} (m : KindingSubst σ Δ Δ')
+  : KindingSubst (σ.lift []) (.unit::Δ) (.unit::Δ')
+:= ⟨λ {x} _ j =>
+    match x with
+    | 0 => lsimp .var j
+    | _ + 1 => lsimp (m.act j).rename (Δ' := .unit::Δ') KindingRen.succ⟩
 
--- theorem Kinding.subst {Δ Δ' A} {σ : Subst Ty} (m : KindingSubst σ Δ Δ') : Δ ⊢ A type -> Δ' ⊢ A[σ] type
--- | var j => m.act j
--- | nat => nat
--- | arrow j1 j2 => arrow (j1.subst m) (j2.subst m)
--- | all j => all (j.subst $ m.lift)
+theorem Kinding.subst {Δ Δ' A} {σ : Subst Ty} (m : KindingSubst σ Δ Δ') : Δ ⊢ A type -> Δ' ⊢ A[σ] type
+| var j => m.act j
+| nat => nat
+| arrow j1 j2 => arrow (j1.subst m) (j2.subst m)
+| all j => all (j.subst $ m.lift)
 
 -- structure TypingRen (r : RenVec [Term, Ty]) (Δ Δ' : List Unit) (Γ Γ' : List Ty) where
 --   act : (∀ {x T}, Δ[x]? = some T -> Δ'[r.2.1.act x]? = some T)

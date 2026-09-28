@@ -420,7 +420,7 @@ def SubstVec.compose
 instance [SubstMapAll V] : AndThen (SubstVec V) where
   andThen σ f := SubstVec.compose σ (f ())
 
-def Ren.lift (r : Ren T) (k : Nat := 1) : Ren T := (0...k) ++ r >> add T k
+def Ren.lift (r : Ren T) (k : Nat := 1) : Ren T := (0...k) ++ (r >> add T k)
 
 @[simp]
 def RenVec.lift : {V : List (Type u2)} -> RenVec V -> List Nat -> RenVec V
@@ -429,7 +429,7 @@ def RenVec.lift : {V : List (Type u2)} -> RenVec V -> List Nat -> RenVec V
 | _::_, cons t ts, k::ks => t.lift k .: ts.lift ks
 
 def Subst.lift (V : List (Type u2)) [RenMap T (T::V)] (σ : Subst T) (k : Nat := 1) : Subst T :=
-  (0...k) ++ σ >> (.add T k .: RenVec.id V)
+  (0...k) ++ (σ >> .add T k .: RenVec.id V)
 
 @[simp]
 def SubstVec.lift : {V : List (Type u2)} -> [RenMapAll V] -> List Nat -> SubstVec V ->  SubstVec V
