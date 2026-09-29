@@ -18,20 +18,6 @@ variable {V : List (Type u2)}
 
 namespace Subst
 
-  section
-
-    -- @[simp, grind =]
-    -- theorem rewrite5 [SubstMap T [T]] {σ : Subst T} : σ.act 0 :: (𝐬1 >> σ) = σ := by
-    --   simp [cons, HAndThen.hAndThen, AndThen.andThen, compose]; congr
-    --   funext; case _ x =>
-    --   cases x <;> simp [act, SubstAction.act]
-
-    -- @[simp]
-    -- theorem rewrite5_ren [SubstMap T [T]] {σ : Subst T} : σ.act 0 :: (Ren.succ T >> σ) = σ := by
-    --   simp [Subst.cons]; congr
-    --   funext; case _ x =>
-    --   cases x <;> simp [act, SubstAction.act]
-  end
 
   @[simp, grind =]
   theorem rewrite_lift_zero [RenMap T (T::V)] [RenMapId T (T::V)] {σ : Subst T}

@@ -1,6 +1,5 @@
 
 import LeanSubst
-import LeanSubst.Automation.Basic
 open LeanSubst
 
 namespace STLC

@@ -294,7 +294,19 @@ instance : RenMapId Ty [Ty] where
   id_law := by subst_solve_id
 
 instance : RenMapCompose Ty [Ty] where
-  compose_law := by subst_solve_compose
+  compose_law := by
+    intro s r1 r2
+    induction s generalizing r1 r2
+    all_goals simp [*]
+    case _ ih =>
+    cases r1; case _ r1 r1s =>
+    cases r1s
+    cases r2; case _ r2 r2s =>
+    cases r2s
+    simp [RenVec.lift]; congr
+    simp [Ren.lift]
+    congr
+    sorry
 
 @[simp]
 def Ty.smap (σ : SubstVec [Ty]) : Ty -> Ty
