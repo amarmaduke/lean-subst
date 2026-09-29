@@ -340,10 +340,10 @@ instance : SubstMapStable Ty [Ty] where
   stable := by sorry --subst_solve_stable
 
 instance : SubstMapRenComposeLeft Ty [Ty] where
-  compose_left_law := by subst_solve_compose
+  compose_left_law := by sorry
 
 instance : SubstMapRenComposeRight Ty [Ty] where
-  compose_right_law := by subst_solve_compose
+  compose_right_law := by sorry
 
 instance : SubstMapCompose Ty [Ty] where
   compose_law := by sorry
