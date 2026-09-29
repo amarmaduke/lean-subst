@@ -535,6 +535,61 @@ theorem SubstVec.compose_cons
 | cons r2 r2s => by simp [HAndThen.hAndThen, AndThen.andThen, compose]
 
 @[simp]
+theorem Ren.compose_append {r1 r2 : Ren T} : ∀ {l}, (l ++ r1) >> r2 = r2.actl l ++ (r1 >> r2)
+| [] => by simp
+| _::_ => by simp [compose_append]
+
+@[simp]
+theorem Subst.compose_left_append {r : Ren T} {τ : Subst T}
+  : ∀ {l}, (l ++ r) >> τ = τ.actl l ++ (r >> τ)
+| [] => by simp
+| _::_ => by simp [compose_left_append]
+
+@[simp]
+theorem Subst.compose_right_append_list [RenMap T (T::V)] {σ : Subst T} {r : RenVec (T::V)}
+  : ∀ {l}, (l ++ σ) >> r = r.head.actl l ++ (σ >> r)
+| [] => by simp
+| _::_ => by simp [compose_right_append_list]
+
+@[simp]
+theorem Subst.compose_right_append [RenMap T (T::V)] {σ : Subst T} {r : RenVec (T::V)}
+  : ∀ {l : List (Action T)}, (l ++ σ) >> r = l⟨r,⟩ ++ (σ >> r)
+| [] => by simp
+| _::_ => by simp [compose_right_append]
+
+@[simp]
+theorem Subst.compose_append_list [SubstMap T (T::V)] {σ : Subst T} {τ : SubstVec (T::V)}
+  : ∀ {l}, (l ++ σ) >> τ = τ.head.actl l ++ (σ >> τ)
+| [] => by simp
+| _::_ => by simp [compose_append_list]
+
+@[simp]
+theorem Subst.compose_append [SubstMap T (T::V)] {σ : Subst T} {τ : SubstVec (T::V)}
+  : ∀ {l : List (Action T)}, (l ++ σ) >> τ = l[τ,] ++ (σ >> τ)
+| [] => by simp
+| _::_ => by simp [compose_append]
+
+@[simp]
+theorem Ren.compose_append_range {r1 r2 : Ren T} {s e}
+  : ((s...e) ++ r1) >> r2 = r1.actr s e ++ (r1 >> r2)
+:= by sorry
+
+@[simp]
+theorem Subst.compose_left_append_range {r : Ren T} {τ : Subst T} {s e}
+  : ((s...e) ++ r) >> τ = τ.actr s e ++ (r >> τ)
+:= by sorry
+
+@[simp]
+theorem Subst.compose_right_append_range [RenMap T (T::V)] {σ : Subst T} {r : RenVec (T::V)} {s e}
+  : ((s...e) ++ σ) >> r = r.head.actr s e ++ (σ >> r)
+:= by sorry
+
+@[simp]
+theorem Subst.compose_append_range [SubstMap T (T::V)] {σ : Subst T} {τ : SubstVec (T::V)} {s e}
+  : ((s...e) ++ σ) >> τ = τ.head.actr s e ++ (σ >> τ)
+:= by sorry
+
+@[simp]
 theorem Ren.compose_id_left {r : Ren T} : 𝐫0 >> r = r := by
   simp [HAndThen.hAndThen, AndThen.andThen, compose, id]
 
@@ -654,6 +709,123 @@ theorem Subst.compose_assoc [SubstMapAll (T::V)] [SubstMapCompose T (T::V)]
   : (s1 >> s2) >> s3 = s1 >> s2 >> s3
 := by simp [HAndThen.hAndThen, AndThen.andThen, compose]
 
+@[simp]
+theorem Ren.compose_add_cons {r : Ren T} {n k} : (add T (n + 1)) >> (k .: r) = add T n >> r := by
+  simp [HAndThen.hAndThen, AndThen.andThen, compose]
+  funext; case _ i =>
+  rw [<-Nat.add_assoc]; simp
+
+@[simp]
+theorem Subst.compose_left_add_cons {σ : Subst T} {n k}
+  : (Ren.add T (n + 1)) >> (k .: σ) = Ren.add T n >> σ
+:= by
+  simp [HAndThen.hAndThen, compose_left]
+  funext; case _ i =>
+  rw [<-Nat.add_assoc]; simp
+
+@[simp]
+theorem Subst.compose_right_add_cons [RenMap T (T::V)] {r : Ren T} {rs : RenVec V} {n k}
+  : (add T (n + 1)) >> (k .: r) .: rs = add T n >> r .: rs
+:= by
+  simp [HAndThen.hAndThen, compose_right]
+  funext; case _ i =>
+  rw [<-Nat.add_assoc]; simp
+
+@[simp]
+theorem Subst.compose_add_cons [SubstMap T (T::V)] {σ : Subst T} {σs : SubstVec V} {n k}
+  : (add T (n + 1)) >> (k .: σ) .: σs = add T n >> σ .: σs
+:= by
+  simp [HAndThen.hAndThen, compose]
+  funext; case _ i =>
+  rw [<-Nat.add_assoc]; simp
+
+@[simp]
+theorem Ren.compose_add_append {r : Ren T}
+  : ∀ {n} {l : List Nat}, n ≥ l.length -> (add T n) >> (l ++ r) = add T (n - l.length) >> r
+| _, [], _ => by simp
+| n + 1, x::xs, h =>
+  have h : n ≥ xs.length := by grind
+  by simp [compose_add_append h]
+
+@[simp]
+theorem Subst.compose_left_add_append_list {σ : Subst T}
+  : ∀ {n} {l : List Nat}, n ≥ l.length -> (Ren.add T n) >> (l ++ σ) = Ren.add T (n - l.length) >> σ
+| _, [], _ => by simp
+| n + 1, x::xs, h =>
+  have h : n ≥ xs.length := by grind
+  by simp [compose_left_add_append_list h]
+
+@[simp]
+theorem Subst.compose_left_add_append {σ : Subst T}
+  : ∀ {n} {l : List (Action T)}, n ≥ l.length ->
+    (Ren.add T n) >> (l ++ σ) = Ren.add T (n - l.length) >> σ
+| _, [], _ => by simp
+| n + 1, x::xs, h =>
+  have h : n ≥ xs.length := by grind
+  by simp [compose_left_add_append h]
+
+@[simp]
+theorem Subst.compose_right_add_append [RenMap T (T::V)] {r :Ren T} {rs :RenVec V}
+  : ∀ {n} {l : List Nat}, n ≥ l.length ->
+    (add T n) >> (l ++ r) .: rs = add T (n - l.length) >> r .: rs
+| _, [], _ => by simp
+| n + 1, x::xs, h =>
+  have h : n ≥ xs.length := by grind
+  by simp [compose_right_add_append h]
+
+@[simp]
+theorem Subst.compose_add_append_list [SubstMap T (T::V)] {σ : Subst T} {σs : SubstVec V}
+  : ∀ {n} {l : List Nat}, n ≥ l.length ->
+    (add T n) >> (l ++ σ) .: σs = add T (n - l.length) >> σ .: σs
+| _, [], _ => by simp
+| n + 1, x::xs, h =>
+  have h : n ≥ xs.length := by grind
+  by simp [compose_add_append_list h]
+
+@[simp]
+theorem Subst.compose_add_append [SubstMap T (T::V)] {σ : Subst T} {σs : SubstVec V}
+  : ∀ {n} {l : List (Action T)}, n ≥ l.length ->
+    (add T n) >> (l ++ σ) .: σs = add T (n - l.length) >> σ .: σs
+| _, [], _ => by simp
+| n + 1, x::xs, h =>
+  have h : n ≥ xs.length := by grind
+  by simp [compose_add_append h]
+
+@[simp]
+theorem Ren.compose_add_append_range {r : Ren T} {n s e : Nat} (h : n ≥ (e - s))
+  : (add T n) >> ((s...e) ++ r) = add T (n - (e - s)) >> r
+:= by
+  have lem := @compose_add_append _ r n (s...e).toList (by simp; grind)
+  simp [HAppend.hAppend]; simp [HAppend.hAppend] at lem
+  rw [lem]
+
+-- todo: rest of ranges of above
+
+@[simp]
+theorem Ren.to_id : (id T).to = .id T := by simp [to, Subst.id]
+
+@[simp]
+theorem Ren.to_add {k} : (add T k).to = .add T k := by simp [to, Subst.add]
+
+@[simp]
+theorem Ren.to_sub {k} : (sub T k).to = .sub T k := by simp [to, Subst.sub]
+
+@[simp]
+theorem Ren.to_cons {n} {r : Ren T} : (n .: r).to = re n .: r.to := by
+  simp [to]; congr; funext; case _ x =>
+  cases x <;> simp
+
+@[simp]
+theorem Ren.to_append {l : List Nat} {r : Ren T} : (l ++ r).to = l ++ r.to := by
+  simp [to]; congr; funext; case _ x =>
+  sorry
+
+@[simp]
+theorem Ren.to_compose {r1 r2 : Ren T} : (r1 >> r2).to = r1 >> r2.to := sorry
+
+-- @[simp]
+-- theorem Ren.to_lift {k} {r : Ren T} : (r.lift k).to = r.to.lift V k := sorry
+
 @[simp, grind =]
 theorem Ren.lift_act_lt {r : Ren T} {k i} (h : i < k)
   : (r.lift k).act i = i
@@ -675,18 +847,22 @@ theorem Subst.lift_act_ge [RenMap T (T::V)] {σ : Subst T} {k i} {h : i ≥ k}
 := by simp [lift]; rw [Subst.append_range_act_ge h]; simp
 
 @[simp]
-theorem Ren.lift_id : ∀ {k}, (id T).lift k = id T
-| 0 => sorry
-| k + 1 => sorry
+theorem Ren.lift_id : ∀ {k}, (id T).lift k = id T := by simp [lift]
 
 @[simp]
-theorem RenVec.lift_id {k} : (id V).lift k = id V := sorry
+theorem RenVec.lift_id : ∀ {V k}, (id V).lift k = id V
+| [], _ => by simp [lift, id]
+| _::_, [] => by simp [id, lift]
+| _::_, _::_ => by simp [id, lift, lift_id]
 
 @[simp]
-theorem Subst.lift_id [RenMap T (T::V)] : (id T).lift V = id T := sorry
+theorem Subst.lift_id [RenMap T (T::V)] {k} : (id T).lift V k = id T := by simp [lift]
 
 @[simp]
-theorem SubstVec.lift_id [RenMapAll V] {k} : (id V).lift k = id V := sorry
+theorem SubstVec.lift_id : ∀ {V k} [RenMapAll V], (id V).lift k = id V
+| [], _, _ => by simp [lift, id]
+| _::_, [], _ => by simp [id, lift]
+| V::Vs, k::ks, @RenMapAll.cons _ _ i _ => by simp [id, lift, lift_id]
 
 @[simp]
 theorem Ren.lift_compose {r1 r2 : Ren T} {k} : (r1 >> r2).lift k = r1.lift k >> r2.lift k := sorry
@@ -699,20 +875,20 @@ theorem Subst.lift_compose_left [RenMap T (T::V)] {r : Ren T} {τ : Subst T} {k 
   : (r >> τ).lift V k = r.lift k >> τ.lift V k
 := sorry
 
-@[simp]
-theorem SubstVec.lift_compose_left [RenMapAll V] {r : RenVec V} {τ : SubstVec V} {k}
-  : (r >> τ).lift k = r.lift k >> τ.lift k
-:= sorry
+-- @[simp]
+-- theorem SubstVec.lift_compose_left [RenMapAll V] {r : RenVec V} {τ : SubstVec V} {k}
+--   : (r >> τ).lift k = r.lift k >> τ.lift k
+-- := sorry
 
 @[simp]
 theorem Subst.lift_compose_right [RenMap T (T::V)] {σ : Subst T} {r : RenVec (T::V)} {k : Nat}
   : (σ >> r).lift V k = σ.lift V k >> r.lift [k]
 := sorry
 
-@[simp]
-theorem SubstVec.lift_compose_right [RenMapAll V] {σ : SubstVec V} {r : RenVec V} {k}
-  : (σ >> r).lift k = σ.lift k >> r.lift k
-:= sorry
+-- @[simp]
+-- theorem SubstVec.lift_compose_right [RenMapAll V] {σ : SubstVec V} {r : RenVec V} {k}
+--   : (σ >> r).lift k = σ.lift k >> r.lift k
+-- := sorry
 
 -- ((0...1) ++ (σ >> τ .: τs)) >> (Ren.add T 1 .: RenVec.id V)
 -- (re 0 .: (σ >> τ .: τs)) >> (Ren.add T 1 .: RenVec.id V)

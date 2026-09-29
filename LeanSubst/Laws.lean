@@ -20,48 +20,6 @@ namespace Subst
 
   section
 
-    open SubstMap
-
-    @[simp, grind =]
-    theorem I_lift [RenMap T (T::V)] {k} : 𝐬0.lift V k = id T := by
-      funext; case _ x =>
-      cases x; all_goals (simp [lift, id, act, SubstAction.act])
-      sorry
-
-
-    -- @[simp]
-    -- theorem rewrite3_append [SubstMap T [T]] {σ τ : Subst T} {ℓ : List (Action T)}
-    --   : (ℓ ++ σ) >> τ = ℓ[τ] ++ (σ >> τ)
-    -- := by
-    --   induction ℓ generalizing σ τ <;> simp
-    --   case _ hd tl ih =>
-    --   cases hd <;> simp [*]
-
-    -- @[simp]
-    -- theorem rewrite3_append_act [SubstMap T [T]] {σ τ : Subst T} {ℓ : List Nat}
-    --   : (ℓ ++ σ) >> τ = τ.act ℓ ++ (σ >> τ)
-    -- := by induction ℓ generalizing σ τ <;> simp [*]
-
-    -- @[simp]
-    -- theorem rewrite3_append_ren [RenMap T [T]] [SubstMap T [T]] {σ : Subst T} {r : Ren T} {ℓ : List Nat}
-    --   : (ℓ ++ σ) >> r = ℓ⟨r⟩ ++ (σ >> r)
-    -- := by
-    --   induction ℓ generalizing σ r <;> simp
-    --   case _ hd tl ih =>
-    --   cases hd <;> simp [*]
-
-    -- @[simp]
-    -- theorem rewrite4_cons [SubstMap T (T::V)] {s} {σ : Subst T} : 𝐬1 >> (s .: σ) = σ := by
-    --   simp [Subst.cons]
-    --   funext; case _ x =>
-    --   cases x; all_goals (simp [HAndThen.hAndThen, AndThen.andThen, compose, succ, act, SubstAction.act])
-
-    -- @[simp]
-    -- theorem rewrite4_cons_ren [SubstMap T [T]]  {s} {σ : Subst T} : Ren.succ T >> (s :: σ) = σ := by
-    --   simp [Subst.cons]
-    --   funext; case _ x =>
-    --   cases x; all_goals (simp [HAndThen.hAndThen, compose_ren_left, act, SubstAction.act])
-
     -- @[simp, grind =]
     -- theorem rewrite5 [SubstMap T [T]] {σ : Subst T} : σ.act 0 :: (𝐬1 >> σ) = σ := by
     --   simp [cons, HAndThen.hAndThen, AndThen.andThen, compose]; congr
@@ -74,14 +32,6 @@ namespace Subst
     --   funext; case _ x =>
     --   cases x <;> simp [act, SubstAction.act]
   end
-
-  @[grind =]
-  theorem rewrite_lift [RenMap T (T::V)] {σ : Subst T}
-    : σ.lift V = re 0 .: (σ >> (𝐫1(T) .: RenVec.id V))
-  := by
-    simp [AltCons.altCons, cons, lift]
-    funext; case _ x =>
-    cases x <;> simp [RenVec.cons]
 
   @[simp, grind =]
   theorem rewrite_lift_zero [RenMap T (T::V)] [RenMapId T (T::V)] {σ : Subst T}
@@ -98,22 +48,6 @@ namespace Subst
     : σ.lift V (k + 1) = (σ.lift V k).lift V
   := by
     sorry
-
-  @[simp]
-  theorem rewrite4_append_direct [SubstMapAll [T]] [SubstMapCompose T [T]] [SubstMapEmpty T]
-    {ℓ : List $ Action T} {σ : Subst T}
-    : (add T ℓ.length) >> (ℓ ++ σ) = σ
-  := by
-    induction ℓ generalizing σ <;> simp
-    case _ hd tl ih =>
-    rw [compose_add_succ_right]
-    simp [*]
-
-  @[simp]
-  theorem rewrite4_append_indirect [SubstMapAll [T]] [SubstMapCompose T [T]] [SubstMapEmpty T]
-    {k} {ℓ : List $ Action T} {σ : Subst T} (h : k = ℓ.length)
-    : (add T k) >> (ℓ ++ σ) = σ
-  := by subst h; simp
 
   @[grind =]
   theorem subst_append_assoc {xs ys : List $ Action T} {σ : Subst T}
@@ -153,20 +87,6 @@ namespace Subst
     : (s..e)⟨Ren.succ T⟩ ++ σ = s.succ..e.succ ++ σ
   := by
     sorry
-
-
-  -- @[grind =]
-  -- theorem rewrite_lift_k
-  --   [RenMap T (T::V)] [RenMapId T (T::V)] [RenMapCompose T (T::V)]
-  --   [SubstMapAll (T::V)] [SubstMapId T (T::V)] [SubstMapCompose T (T::V)]
-  --   {k} {σ : Subst T}
-  --   : σ.lift V k = 0..k ++ (σ >> RenVec.add V k)
-  -- := by
-  --   induction k generalizing σ <;> simp
-  --   case _ k ih =>
-  --     rw [rewrite_lift_succ, ih]
-  --     simp [rewrite_lift]
-  --     congr 2
 
 end Subst
 
