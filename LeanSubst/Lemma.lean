@@ -338,12 +338,9 @@ theorem SubstVec.compose_left_head {r : RenVec (T::V)} {τ : SubstVec (T::V)}
   simp [HAndThen.hAndThen, compose_left]
 
 @[simp]
-theorem SubstVec.compose_right_head [RenMapAll (T::V)] {σ : SubstVec (T::V)} {r : RenVec (T::V)}
-  : (σ >> r).head = σ.head >> r
-:= by
-  rcases σ with ⟨σ, σ'⟩
-  rcases r with ⟨r, r'⟩
-  simp [HAndThen.hAndThen, compose_right]
+theorem SubstVec.compose_right_head :
+  ∀ [RenMapAll (T::V)] {σ : SubstVec (T::V)} {r : RenVec (T::V)}, (σ >> r).head = σ.head >> r
+| RenMapAll.cons _, cons σ σs, .cons r rs => by simp [HAndThen.hAndThen, compose_right]
 
 @[simp]
 theorem SubstVec.compose_head [SubstMapAll (T::V)] {σ τ : SubstVec (T::V)}
@@ -368,12 +365,10 @@ theorem SubstVec.compose_left_tail {r : RenVec (T::V)} {τ : SubstVec (T::V)}
   simp [HAndThen.hAndThen, compose_left]
 
 @[simp]
-theorem SubstVec.compose_right_tail [RenMapAll (T::V)] {σ : SubstVec (T::V)} {r : RenVec (T::V)}
-  : (σ >> r).tail = σ.tail >> r.tail
-:= by
-  rcases σ with ⟨σ, σ'⟩
-  rcases r with ⟨r, r'⟩
-  simp [HAndThen.hAndThen, compose_right]
+theorem SubstVec.compose_right_tail :
+  ∀ [i : RenMapAll (T::V)] {σ : SubstVec (T::V)} {r : RenVec (T::V)},
+    (σ >> r).tail = σ.tail >> r.tail
+| RenMapAll.cons _, cons σ σs, .cons r rs => by simp [HAndThen.hAndThen, compose_right]
 
 @[simp]
 theorem SubstVec.compose_tail [SubstMapAll (T::V)] {σ τ : SubstVec (T::V)}
@@ -615,10 +610,10 @@ theorem SubstVec.compose_left_cons {r1 : Ren T} {r1s : RenVec V} : ∀ {σ2s : S
 | cons σ2 σ2s => by simp [HAndThen.hAndThen, compose_left]
 
 @[simp]
-theorem SubstVec.compose_right_cons
-  [RenMapAll (T::V)] {σ1 : Subst T} {σ1s : SubstVec V} : ∀ {r2s : RenVec (T::V)},
+theorem SubstVec.compose_right_cons :
+  ∀ [i : RenMapAll (T::V)] {σ1 : Subst T} {σ1s : SubstVec V} {r2s : RenVec (T::V)},
   (σ1 .: σ1s) >> r2s = (σ1 >> r2s) .: (σ1s >> r2s.tail)
-| .cons r2 r2s => by simp [HAndThen.hAndThen, compose_right]
+| RenMapAll.cons _, σ1, σ1s, .cons r2 r2s => by simp [HAndThen.hAndThen, compose_right]
 
 @[simp]
 theorem SubstVec.compose_cons
@@ -726,7 +721,7 @@ theorem SubstVec.compose_left_id_left : ∀ {V} {σ : SubstVec V}, RenVec.id V >
 @[simp]
 theorem SubstVec.compose_right_id_left  : ∀ {V} [RenMapAll V] {r : RenVec V}, id V >> r = r.to
 | [], _, .nil => by simp [RenVec.to]
-| _::Vs, _, .cons r rs =>
+| _::Vs, RenMapAll.cons _, .cons r rs =>
   have ih := compose_right_id_left (V := Vs) (r := rs)
   by simp [id, ih, RenVec.to]
 
@@ -760,10 +755,13 @@ theorem Subst.compose_id_right [SubstMap T (T::V)] [SubstMapId T (T::V)] {σ : S
   : σ >> SubstVec.id (T::V) = σ
 := by simp [HAndThen.hAndThen, compose]
 
--- @[simp]
--- theorem SubstVec.compose_id_right : ∀ {V} [SubstMapAll V] {σ : SubstVec V}, σ >> id V = σ
--- | [], _, nil => by simp
--- | _::_, _, cons σ σs => by simp; sorry
+@[simp]
+theorem SubstVec.compose_right_id_right : ∀ {V} [RenMapAll V] [RenMapLaws V] {σ : SubstVec V},
+  σ >> RenVec.id V = σ
+| [], _, _, .nil => by simp
+| _::_, _, _, .cons σ σs =>
+  have ih := @compose_right_id_right _ _ _ σs
+  by simp [RenVec.id, ih]; rw [<-RenVec.id]; simp
 
 @[simp]
 theorem Ren.compose_assoc {r1 r2 r3 : Ren T} : (r1 >> r2) >> r3 = r1 >> r2 >> r3 := by
@@ -1064,7 +1062,7 @@ theorem RenVec.lift_empty : ∀ {V} {r : RenVec V}, r.lift [] = r
 
 @[simp]
 theorem SubstVec.lift_empty : ∀ {V} [RenMapAll V] {σ : SubstVec V}, σ.lift [] = σ
-| [], _, nil => by simp
+| [], .nil, nil => by simp
 | _::_, _, cons r rs => by simp [lift]
 
 @[simp]
@@ -1129,15 +1127,14 @@ theorem Subst.lift_compose_right [RenMapAll (T::V)] [RenMapComp T (T::V)]
 --   simp [lift, SubstVec.lift]
 --   sorry
 
-theorem Subst.lift_compose [RenMapAll (T::V)] [SubstMapAll (T::V)]
-  [SubstMapRenCompLeft T (T::V)] [SubstMapRenComposeRight T (T::V)]
+theorem Subst.lift_compose [RenMapAll (T::V)] [RenMapLaws (T::V)] [SubstMapAll (T::V)]
+  [SubstMapRenCompLeft T (T::V)] [SubstMapRenCompRight T (T::V)]
   {σ : Subst T} {τ : SubstVec (T::V)}
   : ∀ {k}, (σ >> τ).lift V k = σ.lift V k >> τ.lift [k]
 := by
   intro k
   cases τ; case _ τ τs =>
   simp [lift, SubstVec.lift]
-  sorry
 
 -- @[simp]
 -- theorem SubstVec.lift_compose

@@ -162,6 +162,9 @@ instance [i : RenMapAll (T::V)] : RenMap T (T::V) where
     match i with
     | @RenMapAll.cons _ _ i _ => i.rmap
 
+-- abbrev RenMapAll.tail : RenMapAll (T::V) -> RenMapAll V
+-- | cons i => i
+
 set_option synthInstance.checkSynthOrder false in
 @[reducible, simp]
 instance [i : RenMapAll (T::V)] : RenMapAll V :=
@@ -506,37 +509,71 @@ theorem Subst.compose_law
   : s[σ,][τ,] = s[σ >> τ,]
 := SubstMapComp.compose_law
 
-class inductive RenMapLaws : List (Type u2) -> Sort _ where
-| nil : RenMapLaws []
-| cons {V Vs} [RenMap V (V::Vs)] [RenMapId V (V::Vs)] [RenMapComp V (V::Vs)]
-  : RenMapLaws Vs -> RenMapLaws (V::Vs)
+def RenMapLaws_rec : ∀ V, RenMapAll V -> Prop
+| [], _ => True
+| V::Vs, RenMapAll.cons i => RenMapId V (V::Vs) ∧ RenMapComp V (V::Vs) ∧ RenMapLaws_rec Vs i
 
-@[reducible]
-def RenMapLaws.rmap : RenMapLaws (T::V) -> RenMap T (T::V)
-| @cons _ _ i _ _ _ => i
+class RenMapLaws (V : List (Type u2)) [i : RenMapAll V] where
+  laws : RenMapLaws_rec V i
 
-@[reducible, simp]
-instance [i : RenMapLaws (T::V)] : RenMap T (T::V) := i.rmap
+theorem RenMapLaws.id_law : ∀ [RenMapAll (T::V)] [RenMapLaws (T::V)], RenMapId T (T::V)
+| RenMapAll.cons _, i => by
+  cases i; case _ laws =>
+  simp [RenMapLaws_rec] at laws
+  apply laws.1
 
-theorem RenMapLaws.id_law : (_ : RenMapLaws (T::V)) -> RenMapId T (T::V)
-| @cons _ _ _i1 i2 _ _ => i2
-instance [i : RenMapLaws (T::V)] : RenMapId T (T::V)  := i.id_law
+instance [RenMapAll (T::V)] [RenMapLaws (T::V)] : RenMapId T (T::V) := RenMapLaws.id_law
 
-theorem RenMapLaws.compose_law : (_ : RenMapLaws (T::V)) -> RenMapComp T (T::V)
-| @cons _ _ _i1 _ i2 _ => i2
-instance [i : RenMapLaws (T::V)] : RenMapComp T (T::V) := i.compose_law
+theorem RenMapLaws.comp_law : ∀ [RenMapAll (T::V)] [RenMapLaws (T::V)], RenMapComp T (T::V)
+| RenMapAll.cons _, i => by
+  cases i; case _ laws =>
+  simp [RenMapLaws_rec] at laws
+  apply laws.2.1
 
-@[reducible, simp]
-def RenMapLaws.all : ∀ {V}, RenMapLaws V -> RenMapAll V
-| [], nil => .nil
-| _::_, cons i => .cons i.all
-instance [i : RenMapLaws V] : RenMapAll V := i.all
+instance [RenMapAll (T::V)] [RenMapLaws (T::V)] : RenMapId T (T::V) := RenMapLaws.id_law
 
-set_option synthInstance.checkSynthOrder false in
-@[reducible, simp]
-instance [i : RenMapLaws (T::V)] : RenMapLaws V :=
-  match i with
-  | @RenMapLaws.cons _ _ _ _ _ i => i
+theorem RenMapLaws.tail : ∀ [RenMapAll (T::V)] [RenMapLaws (T::V)], RenMapLaws V
+| RenMapAll.cons _, i => by
+  cases i; case _ laws =>
+  simp [RenMapLaws_rec] at laws
+  constructor; simp
+  apply laws.2.2
+
+instance [RenMapAll (T::V)] [RenMapLaws (T::V)] : RenMapLaws V := RenMapLaws.tail
+
+-- theorem test [RenMapAll V] [RenMapLaws2 V] : True := sorry
+
+-- class inductive RenMapLaws : List (Type u2) -> Sort _ where
+-- | nil : RenMapLaws []
+-- | cons {V Vs} [RenMap V (V::Vs)] [RenMapId V (V::Vs)] [RenMapComp V (V::Vs)]
+--   : RenMapLaws Vs -> RenMapLaws (V::Vs)
+
+-- @[reducible]
+-- def RenMapLaws.rmap : RenMapLaws (T::V) -> RenMap T (T::V)
+-- | @cons _ _ i _ _ _ => i
+
+-- @[reducible, simp]
+-- instance [i : RenMapLaws (T::V)] : RenMap T (T::V) := i.rmap
+
+-- theorem RenMapLaws.id_law : (_ : RenMapLaws (T::V)) -> RenMapId T (T::V)
+-- | @cons _ _ _i1 i2 _ _ => i2
+-- instance [i : RenMapLaws (T::V)] : RenMapId T (T::V)  := i.id_law
+
+-- theorem RenMapLaws.compose_law : (_ : RenMapLaws (T::V)) -> RenMapComp T (T::V)
+-- | @cons _ _ _i1 _ i2 _ => i2
+-- instance [i : RenMapLaws (T::V)] : RenMapComp T (T::V) := i.compose_law
+
+-- @[reducible, simp]
+-- def RenMapLaws.all : ∀ {V}, RenMapLaws V -> RenMapAll V
+-- | [], nil => .nil
+-- | _::_, cons i => .cons i.all
+-- instance [i : RenMapLaws V] : RenMapAll V := i.all
+
+-- set_option synthInstance.checkSynthOrder false in
+-- @[reducible, simp]
+-- instance [i : RenMapLaws (T::V)] : RenMapLaws V :=
+--   match i with
+--   | @RenMapLaws.cons _ _ _ _ _ i => i
 
 end
 
