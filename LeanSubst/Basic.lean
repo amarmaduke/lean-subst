@@ -449,13 +449,13 @@ class RenMapId (S : Type u1) (V : List (Type u2)) [RenMap S V] where
 @[simp]
 theorem Ren.id_law [RenMap S V] [RenMapId S V] {s : S} : s⟨.id V,⟩ = s := RenMapId.id_law
 
-class RenMapCompose (S : Type u1) (V : List (Type u2)) [RenMap S V] where
+class RenMapComp (S : Type u1) (V : List (Type u2)) [RenMap S V] where
   compose_law {s : S} {r1 r2 : RenVec V} : s⟨r1,⟩⟨r2,⟩ = s⟨r1 >> r2,⟩
 
 @[simp]
-theorem Ren.compose_law [RenMap S V] [RenMapCompose S V] {s : S} {r1 r2 : RenVec V}
+theorem Ren.compose_law [RenMap S V] [RenMapComp S V] {s : S} {r1 r2 : RenVec V}
   : s⟨r1,⟩⟨r2,⟩ = s⟨r1 >> r2,⟩
-:= RenMapCompose.compose_law
+:= RenMapComp.compose_law
 
 class SubstMapStable (S : Type u1) (V : List $ Type u2) [RenMap S V] [SubstMap S V] where
   stable (r : RenVec V) (σ : SubstVec V) : r.to = σ -> rmap (S := S) r = smap σ
@@ -474,37 +474,69 @@ class SubstMapId (S : Type u1) (V : List $ Type u2) [SubstMap S V] where
 theorem Subst.id_law [SubstMap S V] [SubstMapId S V] {s : S} : s[.id V,] = s :=
   SubstMapId.id_law
 
-class SubstMapRenComposeLeft (S : Type u1) (V : List $ Type u2) [RenMap S V] [SubstMap S V] where
+class SubstMapRenCompLeft (S : Type u1) (V : List $ Type u2) [RenMap S V] [SubstMap S V] where
   compose_left_law {s : S} {r : RenVec V} {τ : SubstVec V} : s⟨r,⟩[τ,] = s[r >> τ,]
 
 @[simp]
 theorem Subst.compose_left_law
-  [RenMap S V] [SubstMap S V] [SubstMapRenComposeLeft S V]
+  [RenMap S V] [SubstMap S V] [SubstMapRenCompLeft S V]
   {s : S} {r : RenVec V} {τ : SubstVec V}
   : s⟨r,⟩[τ,] = s[r >> τ,]
-:= SubstMapRenComposeLeft.compose_left_law
+:= SubstMapRenCompLeft.compose_left_law
 
-class SubstMapRenComposeRight (S : Type u1) (V : List $ Type u2)
+class SubstMapRenCompRight (S : Type u1) (V : List $ Type u2)
   [RenMap S V] [RenMapAll V] [SubstMap S V]
 where
   compose_right_law {s : S} {r : RenVec V} {σ : SubstVec V} : s[σ,]⟨r,⟩ = s[σ >> r,]
 
 @[simp]
 theorem Subst.compose_right_law
-  [RenMap S V] [RenMapAll V] [SubstMap S V] [SubstMapRenComposeRight S V]
+  [RenMap S V] [RenMapAll V] [SubstMap S V] [SubstMapRenCompRight S V]
   {s : S} {σ : SubstVec V} {r : RenVec V}
   : s[σ,]⟨r,⟩ = s[σ >> r,]
-:= SubstMapRenComposeRight.compose_right_law
+:= SubstMapRenCompRight.compose_right_law
 
-class SubstMapCompose (S : Type u1) (V : List $ Type u2) [SubstMap S V] [SubstMapAll V] where
+class SubstMapComp (S : Type u1) (V : List $ Type u2) [SubstMap S V] [SubstMapAll V] where
   compose_law {s : S} {σ τ : SubstVec V} : s[σ,][τ,] = s[σ >> τ,]
 
 @[simp]
 theorem Subst.compose_law
-  [SubstMap S V] [SubstMapAll V] [SubstMapCompose S V]
+  [SubstMap S V] [SubstMapAll V] [SubstMapComp S V]
   {s : S} {σ τ : SubstVec V}
   : s[σ,][τ,] = s[σ >> τ,]
-:= SubstMapCompose.compose_law
+:= SubstMapComp.compose_law
+
+class inductive RenMapLaws : List (Type u2) -> Sort _ where
+| nil : RenMapLaws []
+| cons {V Vs} [RenMap V (V::Vs)] [RenMapId V (V::Vs)] [RenMapComp V (V::Vs)]
+  : RenMapLaws Vs -> RenMapLaws (V::Vs)
+
+@[reducible]
+def RenMapLaws.rmap : RenMapLaws (T::V) -> RenMap T (T::V)
+| @cons _ _ i _ _ _ => i
+
+@[reducible, simp]
+instance [i : RenMapLaws (T::V)] : RenMap T (T::V) := i.rmap
+
+theorem RenMapLaws.id_law : (_ : RenMapLaws (T::V)) -> RenMapId T (T::V)
+| @cons _ _ _i1 i2 _ _ => i2
+instance [i : RenMapLaws (T::V)] : RenMapId T (T::V)  := i.id_law
+
+theorem RenMapLaws.compose_law : (_ : RenMapLaws (T::V)) -> RenMapComp T (T::V)
+| @cons _ _ _i1 _ i2 _ => i2
+instance [i : RenMapLaws (T::V)] : RenMapComp T (T::V) := i.compose_law
+
+@[reducible, simp]
+def RenMapLaws.all : ∀ {V}, RenMapLaws V -> RenMapAll V
+| [], nil => .nil
+| _::_, cons i => .cons i.all
+instance [i : RenMapLaws V] : RenMapAll V := i.all
+
+set_option synthInstance.checkSynthOrder false in
+@[reducible, simp]
+instance [i : RenMapLaws (T::V)] : RenMapLaws V :=
+  match i with
+  | @RenMapLaws.cons _ _ _ _ _ i => i
 
 end
 

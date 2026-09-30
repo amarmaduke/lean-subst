@@ -293,7 +293,7 @@ theorem Ty.from_action_rmap {t : Action Ty} {r : RenVec [Ty]}
 instance : RenMapId Ty [Ty] where
   id_law := by subst_solve_id
 
-instance : RenMapCompose Ty [Ty] where
+instance : RenMapComp Ty [Ty] where
   compose_law := by
     intro s r1 r2
     induction s generalizing r1 r2
@@ -351,13 +351,13 @@ instance : SubstMapId Ty [Ty] where
 instance : SubstMapStable Ty [Ty] where
   stable := by sorry --subst_solve_stable
 
-instance : SubstMapRenComposeLeft Ty [Ty] where
+instance : SubstMapRenCompLeft Ty [Ty] where
   compose_left_law := by sorry
 
-instance : SubstMapRenComposeRight Ty [Ty] where
+instance : SubstMapRenCompRight Ty [Ty] where
   compose_right_law := by sorry
 
-instance : SubstMapCompose Ty [Ty] where
+instance : SubstMapComp Ty [Ty] where
   compose_law := by sorry
 
 ----------------------------------------------------------------------------------------------------
@@ -448,7 +448,7 @@ instance instRenMapAll_Term_Ty : RenMapAll [Term, Ty] := .cons instRenMapAll_Ty
 instance : RenMapId Term [Term, Ty] where
   id_law := by sorry
 
-instance : RenMapCompose Term [Term, Ty] where
+instance : RenMapComp Term [Term, Ty] where
   compose_law := by
     intro s r1 r2
     induction s generalizing r1 r2
@@ -522,13 +522,13 @@ instance : SubstMapId Term [Term, Ty] where
 instance : SubstMapStable Term [Term, Ty] where
   stable := by sorry --subst_solve_stable
 
-instance : SubstMapRenComposeLeft Term [Term, Ty] where
+instance : SubstMapRenCompLeft Term [Term, Ty] where
   compose_left_law := sorry
 
-instance : SubstMapRenComposeRight Term [Term, Ty] where
+instance : SubstMapRenCompRight Term [Term, Ty] where
   compose_right_law := sorry
 
-instance : SubstMapCompose Term [Term, Ty] where
+instance : SubstMapComp Term [Term, Ty] where
   compose_law := by
     intro s σ τ
     induction s generalizing σ τ

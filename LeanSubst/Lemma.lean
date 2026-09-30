@@ -389,10 +389,10 @@ instance [RenMap T (T::V)] [RenMapId T (T::V)] : RenMapId (Action T) (T::V) wher
 instance [RenMap S V] [RenSuffix S V] [RenMapId S V] : RenMapId (Action S) V where
   id_law := by intro s; cases s <;> simp
 
-instance [RenMap T (T::V)] [RenMapCompose T (T::V)] : RenMapCompose (Action T) (T::V) where
+instance [RenMap T (T::V)] [RenMapComp T (T::V)] : RenMapComp (Action T) (T::V) where
   compose_law := by intro s r1 r2; cases s <;> simp
 
-instance [RenMap S V] [RenSuffix S V] [RenMapCompose S V] : RenMapCompose (Action S) V where
+instance [RenMap S V] [RenSuffix S V] [RenMapComp S V] : RenMapComp (Action S) V where
   compose_law := by intro s; cases s <;> simp
 
 instance [SubstMap T (T::V)] [SubstMapId T (T::V)] : SubstMapId (Action T) (T::V) where
@@ -402,36 +402,36 @@ instance [SubstMap S V] [SubstSuffix S V] [SubstMapId S V] : SubstMapId (Action 
   id_law := by intro s; cases s <;> simp
 
 instance
-  [RenMap T (T::V)] [SubstMap T (T::V)] [SubstMapRenComposeLeft T (T::V)]
-  : SubstMapRenComposeLeft (Action T) (T::V)
+  [RenMap T (T::V)] [SubstMap T (T::V)] [SubstMapRenCompLeft T (T::V)]
+  : SubstMapRenCompLeft (Action T) (T::V)
 where
   compose_left_law := by intro s r τ; cases s <;> simp
 
 instance
-  [RenMap S V] [RenSuffix S V] [SubstMap S V] [SubstSuffix S V] [SubstMapRenComposeLeft S V]
-  : SubstMapRenComposeLeft (Action S) V
+  [RenMap S V] [RenSuffix S V] [SubstMap S V] [SubstSuffix S V] [SubstMapRenCompLeft S V]
+  : SubstMapRenCompLeft (Action S) V
 where
   compose_left_law := by intro s; cases s <;> simp
 
 instance
-  [RenMapAll (T::V)] [SubstMap T (T::V)] [SubstMapRenComposeRight T (T::V)]
-  : SubstMapRenComposeRight (Action T) (T::V)
+  [RenMapAll (T::V)] [SubstMap T (T::V)] [SubstMapRenCompRight T (T::V)]
+  : SubstMapRenCompRight (Action T) (T::V)
 where
   compose_right_law := by intro s r τ; cases s <;> simp
 
 instance
   [RenMap S V] [RenMapAll V] [RenSuffix S V]
-  [SubstMap S V] [SubstSuffix S V] [SubstMapRenComposeRight S V]
-  : SubstMapRenComposeRight (Action S) V
+  [SubstMap S V] [SubstSuffix S V] [SubstMapRenCompRight S V]
+  : SubstMapRenCompRight (Action S) V
 where
   compose_right_law := by intro s; cases s <;> simp
 
-instance [SubstMapAll (T::V)] [SubstMapCompose T (T::V)] : SubstMapCompose (Action T) (T::V)
+instance [SubstMapAll (T::V)] [SubstMapComp T (T::V)] : SubstMapComp (Action T) (T::V)
 where
   compose_law := by intro s r τ; cases s <;> simp
 
-instance [SubstMap S V] [SubstMapAll V] [SubstSuffix S V] [SubstMapCompose S V]
-  : SubstMapCompose (Action S) V
+instance [SubstMap S V] [SubstMapAll V] [SubstSuffix S V] [SubstMapComp S V]
+  : SubstMapComp (Action S) V
 where
   compose_law := by intro s; cases s <;> simp
 
@@ -458,7 +458,7 @@ theorem List.rmap_cons [RenMap S V] {r : RenVec V} {x} {xs : List S}
 instance [RenMap S V] [RenMapId S V] : RenMapId (List S) V where
   id_law := by intro s; induction s <;> simp [*]
 
-instance [RenMap S V] [RenMapCompose S V] : RenMapCompose (List S) V where
+instance [RenMap S V] [RenMapComp S V] : RenMapComp (List S) V where
   compose_law := by intro s; induction s <;> simp [*]
 
 def List.smap [SubstMap S V] (σ : SubstVec V) : List S -> List S
@@ -484,17 +484,17 @@ theorem List.smap_cons [SubstMap S V] {σ : SubstVec V} {x} {xs : List S}
 instance [SubstMap S V] [SubstMapId S V] : SubstMapId (List S) V where
   id_law := by intro s; induction s <;> simp [*]
 
-instance [RenMap S V] [SubstMap S V] [SubstMapRenComposeLeft S V]
-  : SubstMapRenComposeLeft (List S) V
+instance [RenMap S V] [SubstMap S V] [SubstMapRenCompLeft S V]
+  : SubstMapRenCompLeft (List S) V
 where
   compose_left_law := by intro s; induction s <;> simp [*]
 
-instance [RenMap S V] [RenMapAll V] [SubstMap S V] [SubstMapRenComposeRight S V]
-  : SubstMapRenComposeRight (List S) V
+instance [RenMap S V] [RenMapAll V] [SubstMap S V] [SubstMapRenCompRight S V]
+  : SubstMapRenCompRight (List S) V
 where
   compose_right_law := by intro s; induction s <;> simp [*]
 
-instance [SubstMap S V] [SubstMapAll V] [SubstMapCompose S V] : SubstMapCompose (List S) V where
+instance [SubstMap S V] [SubstMapAll V] [SubstMapComp S V] : SubstMapComp (List S) V where
   compose_law := by intro s; induction s <;> simp [*]
 
 instance [RenMap S V] [SubstMap S V] [SubstMapStable S V] : SubstMapStable (List S) V where
@@ -788,27 +788,27 @@ theorem Subst.compose_assoc_rss [SubstMapAll (T::V)]
 := by simp [HAndThen.hAndThen, compose_left, compose]
 
 @[simp]
-theorem Subst.compose_assoc_srr [RenMapAll (T::V)] [RenMapCompose T (T::V)]
+theorem Subst.compose_assoc_srr [RenMapAll (T::V)] [RenMapComp T (T::V)]
   {s1 : Subst T} {r2 : RenVec (T::V)} {r3 : RenVec (T::V)}
   : (s1 >> r2) >> r3 = s1 >> r2 >> r3
 := by simp [HAndThen.hAndThen, AndThen.andThen, compose_right]
 
 @[simp]
 theorem Subst.compose_assoc_srs
-  [RenMapAll (T::V)] [SubstMapAll (T::V)] [SubstMapRenComposeLeft T (T::V)]
+  [RenMapAll (T::V)] [SubstMapAll (T::V)] [SubstMapRenCompLeft T (T::V)]
   {s1 : Subst T} {r2 : RenVec (T::V)} {s3 : SubstVec (T::V)}
   : (s1 >> r2) >> s3 = s1 >> r2 >> s3
 := by simp [HAndThen.hAndThen, compose_right, compose]
 
 @[simp]
 theorem Subst.compose_assoc_ssr
-  [RenMapAll (T::V)] [SubstMapAll (T::V)] [SubstMapRenComposeRight T (T::V)]
+  [RenMapAll (T::V)] [SubstMapAll (T::V)] [SubstMapRenCompRight T (T::V)]
   {s1 : Subst T} {s2 : SubstVec (T::V)} {r3 : RenVec (T::V)}
   : (s1 >> s2) >> r3 = s1 >> s2 >> r3
 := by simp [HAndThen.hAndThen, compose_right, compose]
 
 @[simp]
-theorem Subst.compose_assoc [SubstMapAll (T::V)] [SubstMapCompose T (T::V)]
+theorem Subst.compose_assoc [SubstMapAll (T::V)] [SubstMapComp T (T::V)]
   {s1 : Subst T} {s2 : SubstVec (T::V)} {s3 : SubstVec (T::V)}
   : (s1 >> s2) >> s3 = s1 >> s2 >> s3
 := by simp [HAndThen.hAndThen, AndThen.andThen, compose]
@@ -1098,7 +1098,7 @@ theorem Subst.lift_compose_left [RenMapAll (T::V)] {r : Ren T} {τ : Subst T} {k
 --   : (r >> τ).lift k = r.lift k >> τ.lift k
 -- := sorry
 
-theorem Subst.lift_compose_right [RenMapAll (T::V)] [RenMapCompose T (T::V)]
+theorem Subst.lift_compose_right [RenMapAll (T::V)] [RenMapComp T (T::V)]
   {σ : Subst T} {r : RenVec (T::V)} {k : Nat}
   : (σ >> r).lift V k = σ.lift V k >> r.lift [k]
 := by
@@ -1130,7 +1130,7 @@ theorem Subst.lift_compose_right [RenMapAll (T::V)] [RenMapCompose T (T::V)]
 --   sorry
 
 theorem Subst.lift_compose [RenMapAll (T::V)] [SubstMapAll (T::V)]
-  [SubstMapRenComposeLeft T (T::V)] [SubstMapRenComposeRight T (T::V)]
+  [SubstMapRenCompLeft T (T::V)] [SubstMapRenComposeRight T (T::V)]
   {σ : Subst T} {τ : SubstVec (T::V)}
   : ∀ {k}, (σ >> τ).lift V k = σ.lift V k >> τ.lift [k]
 := by
