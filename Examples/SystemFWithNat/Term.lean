@@ -304,7 +304,6 @@ instance : RenMapComp Ty [Ty] where
     cases r2; case _ r2 r2s =>
     cases r2s
     simp [RenVec.lift]; congr
-    simp [Ren.lift]
     congr
     sorry
 
@@ -453,6 +452,7 @@ instance : RenMapComp Term [Term, Ty] where
     intro s r1 r2
     induction s generalizing r1 r2
     all_goals simp [*]; try rfl
+    all_goals sorry
 
 @[simp]
 def Term.smap (σ : SubstVec [Term, Ty]) : Term -> Term
@@ -544,7 +544,8 @@ instance : SubstMapComp Term [Term, Ty] where
       cases τ; case _ τ1 τs =>
       cases τs; case _ τ2 τs =>
       cases τs
-      simp
+      simp [SubstVec.lift]; congr; funext; case _ u =>
+
       sorry
     case nrec =>
       sorry

@@ -138,19 +138,6 @@ theorem Subst.compose_ren_left_cons_lift_direct
 --   sorry
   --induction a generalizing σ <;> grind [lift_of_succ_rev]
 
-@[simp]
-theorem Subst.compose_ren_right_from_to
-  [SubstMap T [T]] [RenMap T [T]] [SubstMapStable T [T]]
-  {σ : Subst T} {r : Ren T} :
-  σ >> r.to = σ >> r
-:= by
-  simp [HAndThen.hAndThen, AndThen.andThen, compose, compose_ren_right]
-  funext; case _ i =>
-  simp [Subst.act, SubstAction.act]
-  cases σ; case _ f =>
-  simp [SubstMap.smap, RenMap.rmap, smap0, rmap0]
-  cases (f i) <;> simp
-  rw [SubstMapStable.apply_stable]; simp [RenVec.to]
 
 @[simp]
 theorem Subst.compose_compose_left_succ

@@ -8,6 +8,8 @@ universe u u1 u2 u3
 variable {S : Type u1} {T : Type u2} {U : Type u3}
 variable {V : List (Type u2)}
 
+
+
 class AltCons (S : outParam $ Type u1) (T : Type u2) where
   altCons : S -> T -> T
 
@@ -278,27 +280,13 @@ theorem Action.smap0_su [SubstMap S V] [SubstSuffix S V] {σ : SubstVec V} {t : 
   : (su t)[σ,] = su t[σ,]
 := by simp [SubstMap.smap]
 
-@[simp]
-def Ren.actl (r : Ren T) : List Nat -> List Nat
-| [] => []
-| x::xs => r.act x :: r.actl xs
+def Ren.actl (r : Ren T) (l : List Nat) : List Nat := l.map r.act
 
-@[simp]
-def Subst.actl (σ : Subst T) : List Nat -> List (Action T)
-| [] => []
-| x::xs => σ.act x :: σ.actl xs
+def Subst.actl (σ : Subst T) (l : List Nat) : List (Action T) := l.map σ.act
 
-def Ren.actr (r : Ren T) (s e : Nat) : List Nat := by_len s (e - s)
-where
-  by_len : Nat -> Nat -> List Nat
-  | _, 0 => []
-  | x, n + 1 => r.act x :: by_len (x + 1) n
+def Ren.actr (r : Ren T) (s e : Nat) : List Nat := List.map r.act $ List.range' s (e - s)
 
-def Subst.actr (σ : Subst T) (s e : Nat) : List (Action T) := by_len s (e - s)
-where
-  by_len : Nat -> Nat -> List (Action T)
-  | _, 0 => []
-  | x, n + 1 => σ.act x :: by_len (x + 1) n
+def Subst.actr (σ : Subst T) (s e : Nat) : List (Action T) := List.map σ.act $ List.range' s (e - s)
 
 def Ren.id T : Ren T := ⟨λ x => x⟩
 notation "𝐫0" => Ren.id _
@@ -348,7 +336,7 @@ instance : HAppend (List Nat) (Ren T) (Ren T) where
   hAppend := Ren.append
 
 instance : HAppend (Std.Rco Nat) (Ren T) (Ren T) where
-  hAppend a := Ren.append a.toList
+  hAppend a := Ren.append (List.range' a.lower a.upper)
 
 def Subst.append : List (Action T) -> Subst T -> Subst T
 | .nil, r => r
@@ -365,7 +353,7 @@ instance : HAppend (List Nat) (Subst T) (Subst T) where
   hAppend := Subst.append_ren
 
 instance : HAppend (Std.Rco Nat) (Subst T) (Subst T) where
-  hAppend a := Subst.append_ren a.toList
+  hAppend a := Subst.append_ren (List.range' a.lower a.upper)
 
 def Ren.compose : Ren T -> Ren T -> Ren T
 | r1, r2 => ⟨fun n => r2.act (r1.act n)⟩
@@ -423,6 +411,7 @@ def SubstVec.compose
 instance [SubstMapAll V] : AndThen (SubstVec V) where
   andThen σ f := SubstVec.compose σ (f ())
 
+@[simp]
 def Ren.lift (r : Ren T) (k : Nat := 1) : Ren T := (0...k) ++ (r >> add T k)
 
 @[simp]
@@ -431,6 +420,7 @@ def RenVec.lift : {V : List (Type u2)} -> RenVec V -> List Nat -> RenVec V
 | _::_, cons t ts, [] => t .: ts
 | _::_, cons t ts, k::ks => t.lift k .: ts.lift ks
 
+@[simp]
 def Subst.lift (V : List (Type u2)) [RenMap T (T::V)] (σ : Subst T) (k : Nat := 1) : Subst T :=
   (0...k) ++ (σ >> .add T k .: RenVec.id V)
 
