@@ -958,11 +958,24 @@ theorem Subst.compose_add_append_range [SubstMap T (T::V)] {σ : Subst T} {σs :
   rw [lem]
 
 @[simp]
-theorem Ren.cons_add_compose {r : Ren T} : r.act 0 .: (add T 1 >> r) = r := by
+theorem Ren.cons_add_compose {r : Ren T} : r.act 0 .: (add T 1 >> r) =  r := by
   simp [AltCons.altCons, HAndThen.hAndThen, AndThen.andThen, compose, cons]
   cases r; case _ f =>
-  congr; funext; case _ x =>
-  cases x <;> simp
+  congr; funext; case _ i =>
+  cases i <;> simp
+
+-- theorem Ren.cons_suffix_add_compose {r : Ren T} {l : List Nat} {i k}
+--   (h1 : r.act i = r.act (k + 1))
+--   (h2 : l.length = k)
+--   : l ++ r.act i .: (add T 1 >> add T k >> r) = r
+-- := by
+--   induction l generalizing i k r; simp
+--   case _ => sorry
+--   case _ x xs ih =>
+--     cases k; simp at h2; case _ k =>
+--     simp_all
+--     sorry
+
 
 @[simp]
 theorem Subst.cons_add_compose_left {σ : Subst T} : σ.act 0 .: (Ren.add T 1 >> σ) = σ := by
@@ -1031,32 +1044,105 @@ theorem Subst.append_range_actr_lt {σ : Subst T} {k s e} (h : e ≤ k)
 --       rw [@ih r _ _ h2 lem]
 --       sorry
 
+#eval ((Ren.add Nat 2).actl [3, 4, 5, 6])[3]
+#eval (Ren.add Nat 2).act 4
+
+@[simp]
+theorem Ren.append_assoc {r : Ren T} {l1 l2 : List Nat} : (l1 ++ l2) ++ r = l1 ++ (l2 ++ r) := by
+  sorry
+
+theorem Ren.append_add_compose2 {r : Ren T} {l : List Nat} {k}
+  (h1 : ∀ {i} (h : i < l.length), l[i] = i)
+  (h2 : l.length = k)
+  : r.actl l ++ (add T k >> r) = r
+:= by
+  induction l generalizing k r
+  case nil => sorry
+  case cons x xs ih =>
+    cases k; simp_all; case _ k =>
+    simp; rw [<-Ren.compose_add_add, Ren.compose_assoc]
+    simp at h2
+    replace ih := @ih (add T 1 >> r) k (by {
+      intro i h3
+      have lem2 := @h1 i; simp at lem2
+
+      sorry
+     }) h2
+    simp [actl] at *
+    have lem1 : List.map (add T 1 >> r).act xs = List.map r.act xs := sorry
+    have lem2 : x = 0 := sorry
+    rw [lem1] at ih; rw [ih, lem2]; simp
+
 theorem Ren.append_add_compose {r : Ren T} {l : List Nat} {k}
   (h1 : ∀ {i} (h : i < (r.actl l).length), (r.actl l)[i] = r.act i)
   (h2 : l.length = k)
   : r.actl l ++ (add T k >> r) = r
 := by
-  induction l generalizing k r
+  induction l using List.recAppend generalizing k r
   simp_all; subst h2; simp
-  case _ x xs ih =>
+  case _ front back ih =>
   cases k; simp at h2; case _ k =>
-  simp_all
+  simp_all; simp [actl] at *
+  rw [Nat.add_comm, <-Ren.compose_add_add, Ren.compose_assoc]
   sorry
 
-theorem Ren.append_add_compose' {r : Ren T} {s e k}
-  (h1 : ∀ {i} (h : i < (r.actr s e).length), (r.actr s e)[i] = r.act i)
-  (h2 : e - s = k)
-  : r.actr s e ++ (add T k >> r) = r
+theorem Ren.test {r : Ren T} {s n}
+  : List.map r.act (List.range' (s + 1) n) = List.map (add T 1 >> r).act (List.range' s n)
 := by
-  induction k generalizing e s
-  case zero => sorry
-  case succ k ih =>
+  induction n generalizing s r; simp; case _ n ih =>
+  simp [List.range'_succ, *]
 
-    sorry
+def Ren.actr' (r : Ren T) (k : Nat) : Nat -> Nat -> Ren T
+| _, 0 => add T k >> r
+| s, n + 1 => r.act s .: r.actr' k (s + 1) n
+
+theorem Ren.actr'_test2 {r : Ren T} {k s n x}
+  : actr' (add T x >> r) k s n = actr' r (k + x) (s + x) n
+:= sorry
+
+theorem Ren.actr'_test {r : Ren T} {k} : actr' r k 0 k = r := by
+  induction k generalizing r; simp [actr']; case _ k ih =>
+  simp [actr']
+  replace ih := @ih (add T 1 >> r)
+  rw [actr'_test2] at ih; simp at ih
+  rw [ih]; rw [cons_add_compose]
+
+theorem Ren.append_add_compose_range2 {r : Ren T} {s e} (h : s < e)
+  : r.actr s e ++ (add T (e - s) >> r) = add T s >> r
+:= by
+  simp [actr]
+  generalize ndef : e - s = n
+  induction n generalizing s e r
+  case zero =>
+    have lem : s = 0 := by grind
+    subst lem; simp
+  case succ n ih =>
+    cases e; simp at ndef; case _ e =>
+    have lem : e - s = n := by grind
+    cases Nat.decLt s e
+    case _ h1 =>
+      have lem : n = 0 := by grind
+      have lem2 : s = e := by grind
+      subst lem lem2; simp
+      sorry
+    case _ h1 =>
+      simp [List.range'_succ]
+      replace ih := @ih (add T 1 >> r) _ _ h1 lem
+      rw [<-compose_add_add, compose_assoc]
+      have lem2 : List.map r.act (List.range' (s + 1) n) = List.map (add T 1 >> r).act (List.range' s n) := by
+        simp [HAndThen.hAndThen, AndThen.andThen, compose]
+        rw [Ren.test]; simp
+      rw [lem2, ih]
+      rw [<-compose_assoc, compose_add_add, Nat.add_comm]
+      simp [AltCons.altCons, cons, HAndThen.hAndThen, AndThen.andThen, compose]
+      funext; case _ i =>
+      cases i <;> simp; case _ i =>
+      grind
 
 @[simp]
 theorem Ren.append_add_compose_range {r : Ren T} {k} : r.actr 0 k ++ (add T k >> r) = r := by
-  rw [append_add_compose'] <;> simp [actr]
+  have lem := @Ren.append_add_compose _ r (List.range' 0 k) k
+  simp [actr]; simp [actl] at lem; exact lem
 
 @[simp]
 theorem Subst.append_add_compose_left_range {σ : Subst T} {k}
