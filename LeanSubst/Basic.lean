@@ -1,5 +1,14 @@
 module
 
+def List.recAppend.{u, u1} {α : Type u} {motive : List α → Sort u1}
+  (nil : motive [])
+  (scons : (front : List α) → (back : α) → motive front → motive (front ++ [back]))
+  : ∀ t, motive t
+| [] => nil
+| x::xs => (dropLast_concat_getLast (cons_ne_nil x xs)) ▸
+  scons _ _ ((x :: xs).dropLast.recAppend nil scons)
+termination_by t => t.length
+
 namespace LeanSubst
 
 public section
@@ -7,8 +16,6 @@ public section
 universe u u1 u2 u3
 variable {S : Type u1} {T : Type u2} {U : Type u3}
 variable {V : List (Type u2)}
-
-
 
 class AltCons (S : outParam $ Type u1) (T : Type u2) where
   altCons : S -> T -> T
@@ -336,7 +343,7 @@ instance : HAppend (List Nat) (Ren T) (Ren T) where
   hAppend := Ren.append
 
 instance : HAppend (Std.Rco Nat) (Ren T) (Ren T) where
-  hAppend a := Ren.append (List.range' a.lower a.upper)
+  hAppend a := Ren.append (List.range' a.lower a.size)
 
 def Subst.append : List (Action T) -> Subst T -> Subst T
 | .nil, r => r
@@ -353,7 +360,7 @@ instance : HAppend (List Nat) (Subst T) (Subst T) where
   hAppend := Subst.append_ren
 
 instance : HAppend (Std.Rco Nat) (Subst T) (Subst T) where
-  hAppend a := Subst.append_ren (List.range' a.lower a.upper)
+  hAppend a := Subst.append_ren (List.range' a.lower a.size)
 
 def Ren.compose : Ren T -> Ren T -> Ren T
 | r1, r2 => ⟨fun n => r2.act (r1.act n)⟩
