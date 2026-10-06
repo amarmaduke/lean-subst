@@ -418,6 +418,24 @@ def SubstVec.compose
 instance [SubstMapAll V] : AndThen (SubstVec V) where
   andThen σ f := SubstVec.compose σ (f ())
 
+private def Ren.actr_add_fused (r : Ren T) (k : Nat) : Nat -> Nat -> Ren T
+| _, 0 => add T k >> r
+| s, n + 1 => r.act s .: r.actr_add_fused k (s + 1) n
+
+private def Subst.actr_add_fused_left (σ : Subst T) (k : Nat) : Nat -> Nat -> Subst T
+| _, 0 => Ren.add T k >> σ
+| s, n + 1 => σ.act s .: σ.actr_add_fused_left k (s + 1) n
+
+private def Subst.actr_add_fused_right [RenMap T (T::V)] (r : RenVec (T::V)) (k : Nat)
+  : Nat -> Nat -> Subst T
+| _, 0 => add T k >> r
+| s, n + 1 => re (r.head.act s) .: actr_add_fused_right r k (s + 1) n
+
+private def Subst.actr_add_fused [SubstMap T (T::V)] (σ : SubstVec (T::V)) (k : Nat)
+  : Nat -> Nat -> Subst T
+| _, 0 => add T k >> σ
+| s, n + 1 => σ.head.act s .: actr_add_fused σ k (s + 1) n
+
 @[simp]
 def Ren.lift (r : Ren T) (k : Nat := 1) : Ren T := (0...k) ++ (r >> add T k)
 

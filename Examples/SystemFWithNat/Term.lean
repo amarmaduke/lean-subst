@@ -295,17 +295,13 @@ instance : RenMapId Ty [Ty] where
 
 instance : RenMapComp Ty [Ty] where
   compose_law := by
-    intro s r1 r2
-    induction s generalizing r1 r2
-    all_goals simp [*]
-    case _ ih =>
-    cases r1; case _ r1 r1s =>
-    cases r1s
-    cases r2; case _ r2 r2s =>
-    cases r2s
-    simp [RenVec.lift]; congr
-    congr
-    sorry
+    intro s a b
+    induction s generalizing a b
+    all_goals simp [*]; try rfl
+    all_goals
+      iterate 3 (cases a; case' _ a => try simp only)
+      iterate 3 (cases b; case' _ b => try simp only)
+      simp [*]
 
 @[simp]
 def Ty.smap (σ : SubstVec [Ty]) : Ty -> Ty
@@ -351,13 +347,34 @@ instance : SubstMapStable Ty [Ty] where
   stable := by sorry --subst_solve_stable
 
 instance : SubstMapRenCompLeft Ty [Ty] where
-  compose_left_law := by sorry
+  compose_left_law := by
+    intro s a b
+    induction s generalizing a b
+    all_goals simp [*]; try rfl
+    all_goals
+      iterate 3 (cases a; case' _ a => try simp only)
+      iterate 3 (cases b; case' _ b => try simp only)
+      simp [*]
 
 instance : SubstMapRenCompRight Ty [Ty] where
-  compose_right_law := by sorry
+  compose_right_law := by
+    intro s a b
+    induction s generalizing a b
+    all_goals simp [*]; try rfl
+    all_goals
+      iterate 3 (cases a; case' _ a => try simp only)
+      iterate 3 (cases b; case' _ b => try simp only)
+      simp [*]
 
 instance : SubstMapComp Ty [Ty] where
-  compose_law := by sorry
+  compose_law := by
+    intro s a b
+    induction s generalizing a b
+    all_goals simp [*]; try rfl
+    all_goals
+      iterate 3 (cases a; case' _ a => try simp only)
+      iterate 3 (cases b; case' _ b => try simp only)
+      simp [*]
 
 ----------------------------------------------------------------------------------------------------
 -- Term Renaming & Substitution
@@ -452,7 +469,10 @@ instance : RenMapComp Term [Term, Ty] where
     intro s r1 r2
     induction s generalizing r1 r2
     all_goals simp [*]; try rfl
-    all_goals sorry
+    all_goals
+      iterate 3 (cases r1; case' _ r1 => try simp only)
+      iterate 3 (cases r2; case' _ r2 => try simp only)
+      simp [*]
 
 @[simp]
 def Term.smap (σ : SubstVec [Term, Ty]) : Term -> Term
@@ -523,31 +543,33 @@ instance : SubstMapStable Term [Term, Ty] where
   stable := by sorry --subst_solve_stable
 
 instance : SubstMapRenCompLeft Term [Term, Ty] where
-  compose_left_law := sorry
+  compose_left_law := by
+    intro s a b
+    induction s generalizing a b
+    all_goals simp [*]; try rfl
+    all_goals
+      iterate 3 (cases a; case' _ a => try simp only)
+      iterate 3 (cases b; case' _ b => try simp only)
+      simp [*]
 
 instance : SubstMapRenCompRight Term [Term, Ty] where
-  compose_right_law := sorry
+  compose_right_law := by
+    intro s a b
+    induction s generalizing a b
+    all_goals simp [*]; try rfl
+    all_goals
+      iterate 3 (cases a; case' _ a => try simp only)
+      iterate 3 (cases b; case' _ b => try simp only)
+      simp [*]
 
 instance : SubstMapComp Term [Term, Ty] where
   compose_law := by
-    intro s σ τ
-    induction s generalizing σ τ
-    all_goals simp [*]
-    case lam =>
-
-      sorry
-    case tapp => sorry
-    case tlam =>
-      cases σ; case _ σ1 σs =>
-      cases σs; case _ σ2 σs =>
-      cases σs
-      cases τ; case _ τ1 τs =>
-      cases τs; case _ τ2 τs =>
-      cases τs
-      simp [SubstVec.lift]; congr; funext; case _ u =>
-
-      sorry
-    case nrec =>
-      sorry
+    intro s a b
+    induction s generalizing a b
+    all_goals simp [*]; try rfl
+    all_goals
+      iterate 3 (cases a; case' _ a => try simp only)
+      iterate 3 (cases b; case' _ b => try simp only)
+      simp [*]
 
 end SystemFWithNat

@@ -181,6 +181,24 @@ theorem Subst.cons_add {T n} : re n .: add T (n + 1) = add T n := by
     simp [add] at *; grind
 
 @[simp]
+theorem RenVec.cons_id : (Ren.id T .: id V) = id (T::V) := by simp [id]
+
+@[simp]
+theorem SubstVec.cons_id : (Subst.id T .: id V) = id (T::V) := by simp [id]
+
+@[simp]
+theorem RenVec.cons_id_nil : (Ren.id T .: nil) = id [T] := by simp [id]
+
+@[simp]
+theorem SubstVec.cons_id_nil : (Subst.id T .: nil) = id [T] := by simp [id]
+
+@[simp]
+theorem RenVec.cons_head_id_nil {r : Ren T} : r .: id [] = r .: nil := by sorry
+
+@[simp]
+theorem SubstVec.cons_head_id_nil {σ : Subst T} : σ .: id [] = σ .: nil := by sorry
+
+@[simp]
 theorem Ren.append_nil {r : Ren T} : ([] : List Nat) ++ r = r := by
   simp [HAppend.hAppend, append]
 
@@ -336,6 +354,16 @@ theorem Subst.append_range_add : ∀ {s e}, (s...e) ++ add T e = add T (min s e)
   cases i <;> simp <;> grind
 
 @[simp]
+theorem Ren.append_range_to_cons {r : Ren T} {s e} (h : s < e)
+  : (s...e) ++ r = s .: (((s+1)...e) ++ r)
+:= sorry
+
+@[simp]
+theorem Subst.append_range_to_cons {σ : Subst T} {s e} (h : s < e)
+  : (s...e) ++ σ = re s .: (((s+1)...e) ++ σ)
+:= sorry
+
+@[simp]
 theorem Ren.compose_act {r1 r2 : Ren T} {x} : (r1 >> r2).act x = r2.act (r1.act x) := by
   simp [HAndThen.hAndThen, AndThen.andThen, compose]
 
@@ -459,6 +487,17 @@ instance [SubstMap S V] [SubstMapAll V] [SubstSuffix S V] [SubstMapComp S V]
   : SubstMapComp (Action S) V
 where
   compose_law := by intro s; cases s <;> simp
+
+instance [RenMap T (T::V)] [SubstMap T (T::V)] [SubstMapStable T (T::V)]
+  : SubstMapStable (Action T) (T::V)
+where
+  stable := by
+    intro r σ h; subst h
+    cases r; case _ r rs =>
+    funext; case _ a =>
+    cases a <;> simp [RenVec.to, Ren.to]
+    rw [Subst.stable (σ := r.to .: rs.to)]; congr
+    simp [RenVec.to]
 
 def List.rmap [RenMap S V] (r : RenVec V) : List S -> List S
 | [] => []
@@ -604,6 +643,12 @@ theorem Ren.compose_add_add {n m} : add T n >> add T m = add T (n + m) := by
   simp [HAndThen.hAndThen, AndThen.andThen, add, compose]; grind
 
 @[simp]
+theorem RenVec.compose_add_add [RenMap T (T::V)] {r : Ren T} {rs : RenVec V} {n m}
+  : Subst.add T n >> (Ren.add T m >> r) .: rs = Subst.add T (n + m) >> r .: rs
+:= by
+  simp [HAndThen.hAndThen, AndThen.andThen, Ren.compose, Subst.compose_right]; grind
+
+@[simp]
 theorem Subst.compose_left_add_add {n m} : Ren.add T n >> add T m = add T (n + m) := by
   simp [HAndThen.hAndThen, add, compose_left]; grind
 
@@ -616,6 +661,12 @@ theorem Subst.compose_right_add_add [RenMap T (T::V)] {r : RenVec V} {n m}
 theorem Subst.compose_add_add [SubstMap T (T::V)] {σ : SubstVec V} {n m}
   : add T n >> (add T m .: σ) = add T (n + m)
 := by simp [HAndThen.hAndThen, add, compose]; grind
+
+@[simp]
+theorem SubstVec.compose_add_add [SubstMap T (T::V)] {σ : Subst T} {σs : SubstVec V} {n m}
+  : Subst.add T n >> (Ren.add T m >> σ) .: σs = Subst.add T (n + m) >> σ .: σs
+:= by
+  simp [HAndThen.hAndThen, Subst.compose, Subst.compose_left]; grind
 
 @[simp]
 theorem Ren.compose_add_add_ren {r : Ren T} {n m}
@@ -840,7 +891,7 @@ theorem Ren.compose_id_left {r : Ren T} : 𝐫0 >> r = r := by
 @[simp]
 theorem RenVec.compose_id_left : ∀ {V : List (Type u2)} {r : RenVec V}, id V >> r = r
 | [], nil => by simp [id]
-| V::Vs, cons r rs => by simp [id, compose_id_left]
+| V::Vs, cons r rs => by simp [-cons_id, id, compose_id_left]
 
 @[simp]
 theorem Subst.compose_left_id_left {σ : Subst T} : 𝐫0(T) >> σ = σ := by
@@ -861,21 +912,21 @@ theorem SubstVec.compose_left_id_left : ∀ {V} {σ : SubstVec V}, RenVec.id V >
 | [], nil => by simp
 | _::Vs, cons σ σs =>
   have ih := compose_left_id_left (V := Vs) (σ := σs)
-  by simp [RenVec.id, ih]
+  by simp [-RenVec.cons_id, RenVec.id, ih]
 
 @[simp]
 theorem SubstVec.compose_right_id_left  : ∀ {V} [RenMapAll V] {r : RenVec V}, id V >> r = r.to
 | [], _, .nil => by simp [RenVec.to]
 | _::Vs, RenMapAll.cons _, .cons r rs =>
   have ih := compose_right_id_left (V := Vs) (r := rs)
-  by simp [id, ih, RenVec.to]
+  by simp [-cons_id, id, ih, RenVec.to]
 
 @[simp]
 theorem SubstVec.compose_id_left  : ∀ {V} [SubstMapAll V] {σ : SubstVec V}, id V >> σ = σ
 | [], _, nil => by simp
 | _::Vs, _, cons σ σs =>
   have ih := compose_id_left (V := Vs) (σ := σs)
-  by simp [id, ih]
+  by simp [-cons_id, id, ih]
 
 @[simp]
 theorem Ren.compose_id_right {r : Ren T} : r >> 𝐫0 = r := by
@@ -884,7 +935,7 @@ theorem Ren.compose_id_right {r : Ren T} : r >> 𝐫0 = r := by
 @[simp]
 theorem RenVec.compose_id_right : ∀ {V} {r : RenVec V}, r >> id V = r
 | [], nil => by simp
-| _::_, cons r rs => by simp [id, compose_id_right]
+| _::_, cons r rs => by simp [-cons_id, id, compose_id_right]
 
 @[simp]
 theorem Subst.compose_left_id_right {r : Ren T} : r >> 𝐬0(T) = r.to := by
@@ -906,7 +957,7 @@ theorem SubstVec.compose_right_id_right : ∀ {V} [RenMapAll V] [RenMapLaws V] {
 | [], _, _, .nil => by simp
 | _::_, _, _, .cons σ σs =>
   have ih := @compose_right_id_right _ _ _ σs
-  by simp [RenVec.id, ih]; rw [<-RenVec.id]; simp
+  by simp [-RenVec.cons_id, RenVec.id, ih]; simp
 
 @[simp]
 theorem Ren.compose_assoc {r1 r2 r3 : Ren T} : (r1 >> r2) >> r3 = r1 >> r2 >> r3 := by
@@ -1087,6 +1138,14 @@ theorem Subst.cons_add_compose_left {σ : Subst T} : σ.act 0 .: (Ren.add T 1 >>
   cases x <;> simp
 
 @[simp]
+theorem Subst.cons_add_compose_left_to {r : Ren T} : re (r.act 0) .: (Ren.add T 1 >> r.to) = r.to
+:= by
+  simp [AltCons.altCons, HAndThen.hAndThen, compose_left, cons]
+  cases r; case _ f =>
+  congr; funext; case _ x =>
+  cases x <;> simp [Ren.to]
+
+@[simp]
 theorem Subst.cons_add_compose_right [RenMap T (T::V)] {r : Ren T} {rs : RenVec V}
   : re (r.act 0) .: (add T 1 >> r .: rs) = r.to
 := by
@@ -1123,156 +1182,6 @@ theorem Subst.append_range_actr_lt {σ : Subst T} {k s e} (h : e ≤ k)
   simp [actr]; intro i h1 h2
   rw [Subst.append_range_act_lt] <;> simp; grind
 
--- def r := Ren.add Nat 1
--- def s := 1
--- def e := 3
--- #eval (r.actr s e ++ (Ren.add Nat (e - s) >> r)).actr 0 5
--- #eval (r.actr 0 s ++ r).actr 0 5
-
--- @[simp]
--- theorem Ren.append_add_compose_range_blah {r : Ren T} {s e} (h : s < e)
---   : r.actr s e ++ (add T (e - s) >> r) = r.actr 0 s ++ r
--- := by
---   simp [actr]; generalize ndef : e - s = n
---   induction n generalizing s e
---   case zero => sorry
---   case succ n ih =>
---     have lem : e - (s + 1) = n := by grind
---     simp [List.range'_succ]
---     rw [<-Ren.compose_add_add, Ren.compose_assoc]
---     cases Nat.decLt (s + 1) e
---     case _ h2 => sorry
---     case _ h2 =>
---       rw [@ih r _ _ h2 lem]
---       sorry
-
--- #eval ((Ren.add Nat 2).actl [3, 4, 5, 6])[3]
--- #eval (Ren.add Nat 2).act 4
-
--- @[simp]
--- theorem Ren.append_assoc {r : Ren T} {l1 l2 : List Nat} : (l1 ++ l2) ++ r = l1 ++ (l2 ++ r) := by
---   sorry
-
--- theorem Ren.append_add_compose2 {r : Ren T} {l : List Nat} {k}
---   (h1 : ∀ {i} (h : i < l.length), l[i] = i)
---   (h2 : l.length = k)
---   : r.actl l ++ (add T k >> r) = r
--- := by
---   induction l generalizing k r
---   case nil => sorry
---   case cons x xs ih =>
---     cases k; simp_all; case _ k =>
---     simp; rw [<-Ren.compose_add_add, Ren.compose_assoc]
---     simp at h2
---     replace ih := @ih (add T 1 >> r) k (by {
---       intro i h3
---       have lem2 := @h1 i; simp at lem2
-
---       sorry
---      }) h2
---     simp [actl] at *
---     have lem1 : List.map (add T 1 >> r).act xs = List.map r.act xs := sorry
---     have lem2 : x = 0 := sorry
---     rw [lem1] at ih; rw [ih, lem2]; simp
-
--- theorem Ren.append_add_compose {r : Ren T} {l : List Nat} {k}
---   (h1 : ∀ {i} (h : i < (r.actl l).length), (r.actl l)[i] = r.act i)
---   (h2 : l.length = k)
---   : r.actl l ++ (add T k >> r) = r
--- := by
---   induction l using List.recAppend generalizing k r
---   simp_all; subst h2; simp
---   case _ front back ih =>
---   cases k; simp at h2; case _ k =>
---   simp_all; simp [actl] at *
---   rw [Nat.add_comm, <-Ren.compose_add_add, Ren.compose_assoc]
---   sorry
-
--- theorem Ren.test {r : Ren T} {s n}
---   : List.map r.act (List.range' (s + 1) n) = List.map (add T 1 >> r).act (List.range' s n)
--- := by
---   induction n generalizing s r; simp; case _ n ih =>
---   simp [List.range'_succ, *]
-
-def Ren.actr' (r : Ren T) (k : Nat) : Nat -> Nat -> Ren T
-| _, 0 => add T k >> r
-| s, n + 1 => r.act s .: r.actr' k (s + 1) n
-
-theorem Ren.actr'_test2 {r : Ren T} {k s n x}
-  : actr' (add T x >> r) k s n = actr' r (k + x) (s + x) n
-:= by
-  induction n generalizing k s x; simp [actr']; case _ n ih =>
-  simp [actr', *]; congr 2; omega
-
-theorem Ren.actr'_test {r : Ren T} {k} : actr' r k 0 k = r := by
-  induction k generalizing r; simp [actr']; case _ k ih =>
-  simp [actr']
-  replace ih := @ih (add T 1 >> r)
-  rw [actr'_test2] at ih; simp at ih
-  rw [ih]; rw [cons_add_compose]
-
-theorem Ren.actr'_test3 {r : Ren T} {k s n}
-  : actr' r k s n = r.actr s (s + n) ++ (add T k >> r)
-:= by
-  induction n generalizing r k s; simp [actr']; case _ n ih =>
-  simp [actr]
-  simp [actr', actr, List.range'_succ, *]
-
-theorem Ren.append_add_compose_range2 {r : Ren T} {s e} (h : s < e)
-  : r.actr s e ++ (add T (e - s) >> r) = add T s >> r
-:= by
-  simp [actr]
-  generalize ndef : e - s = n
-  induction n generalizing s e r
-  case zero =>
-    have lem : s = 0 := by grind
-    subst lem; simp
-  case succ n ih =>
-    cases e; simp at ndef; case _ e =>
-    have lem : e - s = n := by grind
-    cases Nat.decLt s e
-    case _ h1 =>
-      have lem : n = 0 := by grind
-      have lem2 : s = e := by grind
-      subst lem lem2; simp
-      sorry
-    case _ h1 =>
-      simp [List.range'_succ]
-      replace ih := @ih (add T 1 >> r) _ _ h1 lem
-      rw [<-compose_add_add, compose_assoc]
-      have lem2 : List.map r.act (List.range' (s + 1) n) = List.map (add T 1 >> r).act (List.range' s n) := by
-        simp [HAndThen.hAndThen, AndThen.andThen, compose]
-        rw [Ren.test]; simp
-      rw [lem2, ih]
-      rw [<-compose_assoc, compose_add_add, Nat.add_comm]
-      simp [AltCons.altCons, cons, HAndThen.hAndThen, AndThen.andThen, compose]
-      funext; case _ i =>
-      cases i <;> simp; case _ i =>
-      grind
-
-@[simp]
-theorem Ren.append_add_compose_range {r : Ren T} {k} : r.actr 0 k ++ (add T k >> r) = r := by
-  have lem := @Ren.append_add_compose _ r (List.range' 0 k) k
-  simp [actr]; simp [actl] at lem; exact lem
-
-@[simp]
-theorem Subst.append_add_compose_left_range {σ : Subst T} {k}
-  : σ.actr 0 k ++ (Ren.add T k >> σ) = σ
-:= by
-  sorry
-
-@[simp]
-theorem Subst.append_add_compose_right_range [RenMap T (T::V)] {r : Ren T} {rs : RenVec V} {k}
-  : r.actr 0 k ++ (add T k >> r .: rs) = r.to
-:= by
-  sorry
-
-@[simp]
-theorem Subst.append_add_compose_range [SubstMap T (T::V)] {σ : Subst T} {σs : SubstVec V} {k}
-  : σ.actr 0 k ++ (add T k >> σ .: σs) = σ
-:= by
-  sorry
-
 @[simp]
 theorem Ren.to_id : (id T).to = .id T := by simp [to, Subst.id]
 
@@ -1300,6 +1209,10 @@ theorem Ren.to_compose {r1 r2 : Ren T} : (r1 >> r2).to = r1 >> r2.to := by
   simp [HAndThen.hAndThen, AndThen.andThen, to, compose, Subst.compose_left]
 
 @[simp]
+theorem RenVec.to_cons {r : Ren T} {rs : RenVec V} : (r .: rs).to = r.to .: rs.to := by
+  simp [RenVec.to]
+
+@[simp]
 theorem Subst.to_compose_left
   [RenMap T (T::V)] [SubstMap T (T::V)] {r : Ren T} {σ : SubstVec (T::V)}
   : r.to >> σ = r >> σ.head
@@ -1310,13 +1223,131 @@ theorem Subst.to_compose_left
 
 @[simp]
 theorem Subst.to_compose_right
-  [RenMap T (T::V)] [SubstMap T (T::V)] {σ : Subst T} {r : RenVec (T::V)}
+  [RenMap T (T::V)] [SubstMap T (T::V)] [SubstMapStable T (T::V)] {σ : Subst T} {r : RenVec (T::V)}
   : σ >> r.to = σ >> r
 := by
   simp [HAndThen.hAndThen, compose, compose_right]; funext; case _ x =>
   cases r; case _ r rs =>
-  simp [RenVec.to]
-  sorry
+  simp
+  have lem := @Subst.stable T (T::V) _ _ _ (r .: rs) (r.to .: rs.to) (by simp)
+  rw [Subst.stable (r := r .: rs) (σ := r.to .: rs.to)]; simp
+
+private theorem Ren.actr_add_fused_add {r : Ren T} {k s n x}
+  : actr_add_fused (add T x >> r) k s n = actr_add_fused r (k + x) (s + x) n
+:= by
+  induction n generalizing k s x; simp [actr_add_fused]; case _ n ih =>
+  simp [actr_add_fused, *]; congr 2; omega
+
+private theorem Subst.actr_add_fused_left_add {σ : Subst T} {k s n x}
+  : actr_add_fused_left (Ren.add T x >> σ) k s n = actr_add_fused_left σ (k + x) (s + x) n
+:= by
+  induction n generalizing k s x; simp [actr_add_fused_left]; case _ n ih =>
+  simp [actr_add_fused_left, *]; congr 2; omega
+
+private theorem Subst.actr_add_fused_right_add [RenMap T (T::V)]
+  {r : Ren T} {rs : RenVec V} {k s n x}
+  : actr_add_fused_right ((Ren.add T x >> r) .: rs) k s n
+    = actr_add_fused_right (r.:rs) (k + x) (s + x) n
+:= by
+  induction n generalizing k s x; simp [actr_add_fused_right]; case _ n ih =>
+  simp [actr_add_fused_right, *]; congr 2; omega
+
+private theorem Subst.actr_add_fused_add [SubstMap T (T::V)]
+  {σ : Subst T} {σs : SubstVec V} {k s n x}
+  : actr_add_fused ((Ren.add T x >> σ) .: σs) k s n
+    = actr_add_fused (σ.:σs) (k + x) (s + x) n
+:= by
+  induction n generalizing k s x; simp [actr_add_fused]; case _ n ih =>
+  simp [actr_add_fused, *]; congr 2; omega
+
+private theorem Ren.actr_add_fused_id {r : Ren T} {k}
+  : actr_add_fused r k 0 k = r
+:= by
+  induction k generalizing r; simp [actr_add_fused]; case _ k ih =>
+  simp [actr_add_fused]
+  replace ih := @ih (add T 1 >> r)
+  rw [actr_add_fused_add] at ih; simp at ih
+  rw [ih]; rw [cons_add_compose]
+
+private theorem Subst.actr_add_fused_left_id {σ : Subst T} {k}
+  : actr_add_fused_left σ k 0 k = σ
+:= by
+  induction k generalizing σ; simp [actr_add_fused_left]; case _ k ih =>
+  simp [actr_add_fused_left]
+  replace ih := @ih (Ren.add T 1 >> σ)
+  rw [actr_add_fused_left_add] at ih; simp at ih
+  rw [ih]; rw [cons_add_compose_left]
+
+private theorem Subst.actr_add_fused_right_id [RenMap T (T::V)] {r : Ren T} {rs : RenVec V} {k}
+  : actr_add_fused_right (r.:rs) k 0 k = r.to
+:= by
+  induction k generalizing r; simp [actr_add_fused_right]; case _ k ih =>
+  simp [actr_add_fused_right]
+  replace ih := @ih (Ren.add T 1 >> r)
+  rw [actr_add_fused_right_add] at ih; simp at ih
+  rw [ih]; rw [cons_add_compose_left_to]
+
+private theorem Subst.actr_add_fused_id [SubstMap T (T::V)] {σ : Subst T} {σs : SubstVec V} {k}
+  : actr_add_fused (σ.:σs) k 0 k = σ
+:= by
+  induction k generalizing σ; simp [actr_add_fused]; case _ k ih =>
+  simp [actr_add_fused]
+  replace ih := @ih (Ren.add T 1 >> σ)
+  rw [actr_add_fused_add] at ih; simp at ih
+  rw [ih]; simp
+
+private theorem Ren.actr_add_fused_eq {r : Ren T} {k s n}
+  : actr_add_fused r k s n = r.actr s (s + n) ++ (add T k >> r)
+:= by
+  induction n generalizing r k s; simp [actr_add_fused]; case _ n ih =>
+  simp [actr]
+  simp [actr_add_fused, actr, List.range'_succ, *]
+
+private theorem Subst.actr_add_fused_left_eq {σ : Subst T} {k s n}
+  : actr_add_fused_left σ k s n = σ.actr s (s + n) ++ (Ren.add T k >> σ)
+:= by
+  induction n generalizing σ k s; simp [actr_add_fused_left]; case _ n ih =>
+  simp [actr]
+  simp [actr_add_fused_left, actr, List.range'_succ, *]
+
+private theorem Subst.actr_add_fused_right_eq [RenMap T (T::V)] {r : Ren T} {rs : RenVec V} {k s n}
+  : actr_add_fused_right (r.:rs) k s n = r.actr s (s + n) ++ (add T k >> r .: rs)
+:= by
+  induction n generalizing r k s; simp [actr_add_fused_right]; case _ n ih =>
+  simp [Ren.actr]
+  simp [actr_add_fused_right, Ren.actr, List.range'_succ, *]
+
+private theorem Subst.actr_add_fused_eq [SubstMap T (T::V)] {σ : Subst T} {σs : SubstVec V} {k s n}
+  : actr_add_fused (σ.:σs) k s n = σ.actr s (s + n) ++ (add T k >> σ .: σs)
+:= by
+  induction n generalizing σ k s; simp [actr_add_fused]; case _ n ih =>
+  simp [actr, actr_add_fused, List.range'_succ, *]
+
+@[simp]
+theorem Ren.append_add_compose_range {r : Ren T} {k} : r.actr 0 k ++ (add T k >> r) = r := by
+  have lem := @actr_add_fused_eq _ r k 0 k; simp at lem
+  rw [<-lem, actr_add_fused_id]
+
+@[simp]
+theorem Subst.append_add_compose_left_range {σ : Subst T} {k}
+  : σ.actr 0 k ++ (Ren.add T k >> σ) = σ
+:= by
+  have lem := @actr_add_fused_left_eq _ σ k 0 k; simp at lem
+  rw [<-lem, actr_add_fused_left_id]
+
+@[simp]
+theorem Subst.append_add_compose_right_range [RenMap T (T::V)] {r : Ren T} {rs : RenVec V} {k}
+  : r.actr 0 k ++ (add T k >> r .: rs) = r.to
+:= by
+  have lem := @actr_add_fused_right_eq _ _ _ r rs k 0 k; simp at lem
+  rw [<-lem, actr_add_fused_right_id]
+
+@[simp]
+theorem Subst.append_add_compose_range [SubstMap T (T::V)] {σ : Subst T} {σs : SubstVec V} {k}
+  : σ.actr 0 k ++ (add T k >> σ .: σs) = σ
+:= by
+  have lem := @actr_add_fused_eq _ _ _ σ σs k 0 k; simp at lem
+  rw [<-lem, actr_add_fused_id]
 
 theorem Ren.lift_act_lt {r : Ren T} {k i} (h : i < k)
   : (r.lift k).act i = i
@@ -1340,8 +1371,8 @@ theorem Ren.lift_id : ∀ {k}, (id T).lift k = id T := by simp [lift]
 @[simp high]
 theorem RenVec.lift_id : ∀ {V k}, (id V).lift k = id V
 | [], _ => by simp [lift, id]
-| _::_, [] => by simp [id, lift]
-| _::_, _::_ => by simp [id, lift, lift_id]
+| _::_, [] => by simp [-cons_id, id, lift]
+| _::_, _::_ => by simp [-cons_id, id, lift, lift_id]
 
 @[simp high]
 theorem Subst.lift_id [RenMap T (T::V)] {k} : (id T).lift V k = id T := by simp [lift]
@@ -1349,18 +1380,28 @@ theorem Subst.lift_id [RenMap T (T::V)] {k} : (id T).lift V k = id T := by simp 
 @[simp high]
 theorem SubstVec.lift_id : ∀ {V k} [RenMapAll V], (id V).lift k = id V
 | [], _, _ => by simp [lift, id]
-| _::_, [], _ => by simp [id, lift]
-| V::Vs, k::ks, @RenMapAll.cons _ _ i _ => by simp [id, lift, lift_id]
+| _::_, [], _ => by simp [-cons_id, id, lift]
+| V::Vs, k::ks, @RenMapAll.cons _ _ i _ => by simp [-cons_id, id, lift, lift_id]
 
-@[simp high]
+@[simp]
 theorem RenVec.lift_empty : ∀ {V} {r : RenVec V}, r.lift [] = r
 | [], nil => by simp
 | _::_, cons r rs => by simp [lift]
 
-@[simp high]
+@[simp]
 theorem SubstVec.lift_empty : ∀ {V} [RenMapAll V] {σ : SubstVec V}, σ.lift [] = σ
 | [], .nil, nil => by simp
 | _::_, _, cons r rs => by simp [lift]
+
+@[simp]
+theorem RenVec.lift_cons {r : Ren T} {rs : RenVec V} {x xs}
+  : (r .: rs).lift (x::xs) = r.lift x .: rs.lift xs
+:= sorry
+
+@[simp]
+theorem SubstVec.lift_cons [RenMapAll (T::V)] {σ : Subst T} {σs : SubstVec V} {x xs}
+  : (σ .: σs).lift (x::xs) = σ.lift V x .: σs.lift xs
+:= sorry
 
 end
 
