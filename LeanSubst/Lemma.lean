@@ -547,6 +547,59 @@ theorem Subst.compose_sub_add [SubstMap T (T::V)] {σ : SubstVec V} {k}
 := by simp [HAndThen.hAndThen, sub, add, id, compose]
 
 @[simp]
+theorem Ren.compose_sub_add_ren {r : Ren T} {k} : add T k >> sub T k >> r = r := by
+  simp [HAndThen.hAndThen, AndThen.andThen, sub, add, compose]
+
+@[simp]
+theorem Subst.compose_left_sub_add_ren [RenMap T (T::V)] {r : RenVec (T::V)} {k}
+  : Ren.add T k >> sub T k >> r = r.head.to
+:= by
+  simp [HAndThen.hAndThen, sub, compose_left, compose_right]
+  ext; simp [RenVec.head, Ren.to]
+
+@[simp]
+theorem Subst.compose_right_sub_add_ren [RenMap T (T::V)] {r1 : RenVec V} {r2 : RenVec (T::V)} {k}
+  : add T k >> (.sub T k .: r1) >> r2 = r2.head.to
+:= by
+  cases r2; case _ r2 r2s =>
+  simp [HAndThen.hAndThen, AndThen.andThen, add, compose_right]
+  ext; simp [RenVec.head, Ren.sub, Ren.to, RenVec.compose]
+
+@[simp]
+theorem Subst.compose_sub_add_ren [RenMapAll (T::V)] [SubstMap T (T::V)]
+  {σ : SubstVec V} {r2 : RenVec (T::V)} {k}
+  : add T k >> (sub T k .: σ) >> r2 = r2.head.to
+:= by
+  cases r2; case _ r2 r2s =>
+  simp [HAndThen.hAndThen, sub, add, compose, SubstVec.compose_right, compose_right]
+  ext; simp [Ren.to]
+
+@[simp]
+theorem Ren.compose_sub_add_subst {σ : Subst T} {k} : add T k >> sub T k >> σ = σ := by
+  simp [HAndThen.hAndThen, sub, add, Subst.compose_left]
+
+@[simp]
+theorem Subst.compose_left_sub_add_subst [SubstMap T (T::V)] {σ : SubstVec (T::V)} {k}
+  : Ren.add T k >> sub T k >> σ = σ.head
+:= by simp [HAndThen.hAndThen, sub, compose_left, compose]
+
+@[simp]
+theorem Subst.compose_right_sub_add_subst [SubstMap T (T::V)]
+  {r1 : RenVec V} {σ : SubstVec (T::V)} {k}
+  : add T k >> (.sub T k .: r1) >> σ = σ.head
+:= by
+  cases σ; case _ σ σs =>
+  simp [HAndThen.hAndThen, add, SubstVec.compose_left, compose, compose_left]
+
+@[simp]
+theorem Subst.compose_sub_add_subst [SubstMapAll (T::V)]
+  {σ : SubstVec V} {τ : SubstVec (T::V)} {k}
+  : add T k >> (sub T k .: σ) >> τ = τ.head
+:= by
+  cases τ; case _ τ τs =>
+  simp [HAndThen.hAndThen, AndThen.andThen, sub, add, compose, SubstVec.compose]
+
+@[simp]
 theorem Ren.compose_add_add {n m} : add T n >> add T m = add T (n + m) := by
   simp [HAndThen.hAndThen, AndThen.andThen, add, compose]; grind
 
@@ -565,6 +618,66 @@ theorem Subst.compose_add_add [SubstMap T (T::V)] {σ : SubstVec V} {n m}
 := by simp [HAndThen.hAndThen, add, compose]; grind
 
 @[simp]
+theorem Ren.compose_add_add_ren {r : Ren T} {n m}
+  : add T n >> add T m >> r = add T (n + m) >> r
+:= by simp [HAndThen.hAndThen, AndThen.andThen, add, compose]; grind
+
+@[simp]
+theorem Subst.compose_left_add_add_ren [RenMap T (T::V)] {r : RenVec (T::V)} {n m}
+  : Ren.add T n >> add T m >> r = add T (n + m) >> r
+:= by
+  simp [HAndThen.hAndThen, add, compose_left, compose_right]; grind
+
+@[simp]
+theorem Subst.compose_right_add_add_ren [RenMap T (T::V)] {r1 : RenVec V} {r2 : RenVec (T::V)} {n m}
+  : add T n >> (.add T m .: r1) >> r2 = add T (n + m) >> r2
+:= by
+  cases r2; case _ r2 r2s =>
+  simp [HAndThen.hAndThen, AndThen.andThen, add, compose_right, RenVec.compose, Ren.compose]
+  grind
+
+@[simp]
+theorem Subst.compose_add_add_ren [RenMapAll (T::V)] [SubstMap T (T::V)]
+  {σ : SubstVec V} {r : RenVec (T::V)} {n m}
+  : add T n >> (add T m .: σ) >> r = add T (n + m) >> r
+:= by
+  cases r; case _ r rs =>
+  simp [HAndThen.hAndThen, add, compose, SubstVec.compose_right, compose_right]
+  grind
+
+@[simp]
+theorem Ren.compose_add_add_subst {σ : Subst T} {n m}
+  : add T n >> add T m >> σ = add T (n + m) >> σ
+:= by simp [HAndThen.hAndThen, add, Subst.compose_left]; grind
+
+@[simp]
+theorem Subst.compose_left_add_add_subst [RenMap T (T::V)] [SubstMap T (T::V)]
+  {σ : SubstVec (T::V)} {n m}
+  : Ren.add T n >> add T m >> σ = add T (n + m) >> σ
+:= by
+  cases σ; case _ σ σs =>
+  simp [HAndThen.hAndThen, add, compose_left, compose]
+  grind
+
+@[simp]
+theorem Subst.compose_right_add_add_subst [RenMap T (T::V)] [SubstMap T (T::V)]
+  {r : RenVec V} {σ : SubstVec (T::V)} {n m}
+  : add T n >> (.add T m .: r) >> σ = add T (n + m) >> σ
+:= by
+  cases σ; case _ σ σs =>
+  simp [HAndThen.hAndThen, add, SubstVec.compose_left, compose_left, compose]
+  grind
+
+@[simp]
+theorem Subst.compose_add_add_subst [SubstMapAll (T::V)]
+  {σ : SubstVec V} {τ : SubstVec (T::V)} {n m}
+  : add T n >> (add T m .: σ) >> τ = add T (n + m) >> τ
+:= by
+  cases τ; case _ τ τs =>
+  simp [HAndThen.hAndThen, AndThen.andThen, add, compose, SubstVec.compose]
+  grind
+
+@[simp]
 theorem Ren.compose_sub_sub {n m} : sub T n >> sub T m = sub T (n + m) := by
   simp [HAndThen.hAndThen, AndThen.andThen, sub, compose]; grind
 
@@ -581,6 +694,8 @@ theorem Subst.compose_right_sub_sub [RenMap T (T::V)] {r : RenVec V} {n m}
 theorem Subst.compose_sub_sub [SubstMap T (T::V)] {σ : SubstVec V} {n m}
   : sub T n >> (sub T m .: σ) = sub T (n + m)
 := by simp [HAndThen.hAndThen, sub, compose]; grind
+
+-- TODO: the sub_sub_ren and sub_sub_subst variants
 
 @[simp]
 theorem RenVec.compose_empty : ∀ {r1 r2 : RenVec []}, r1 >> r2 = ·⟨⟩
@@ -964,19 +1079,6 @@ theorem Ren.cons_add_compose {r : Ren T} : r.act 0 .: (add T 1 >> r) =  r := by
   congr; funext; case _ i =>
   cases i <;> simp
 
--- theorem Ren.cons_suffix_add_compose {r : Ren T} {l : List Nat} {i k}
---   (h1 : r.act i = r.act (k + 1))
---   (h2 : l.length = k)
---   : l ++ r.act i .: (add T 1 >> add T k >> r) = r
--- := by
---   induction l generalizing i k r; simp
---   case _ => sorry
---   case _ x xs ih =>
---     cases k; simp at h2; case _ k =>
---     simp_all
---     sorry
-
-
 @[simp]
 theorem Subst.cons_add_compose_left {σ : Subst T} : σ.act 0 .: (Ren.add T 1 >> σ) = σ := by
   simp [AltCons.altCons, HAndThen.hAndThen, compose_left, cons]
@@ -1044,53 +1146,53 @@ theorem Subst.append_range_actr_lt {σ : Subst T} {k s e} (h : e ≤ k)
 --       rw [@ih r _ _ h2 lem]
 --       sorry
 
-#eval ((Ren.add Nat 2).actl [3, 4, 5, 6])[3]
-#eval (Ren.add Nat 2).act 4
+-- #eval ((Ren.add Nat 2).actl [3, 4, 5, 6])[3]
+-- #eval (Ren.add Nat 2).act 4
 
-@[simp]
-theorem Ren.append_assoc {r : Ren T} {l1 l2 : List Nat} : (l1 ++ l2) ++ r = l1 ++ (l2 ++ r) := by
-  sorry
+-- @[simp]
+-- theorem Ren.append_assoc {r : Ren T} {l1 l2 : List Nat} : (l1 ++ l2) ++ r = l1 ++ (l2 ++ r) := by
+--   sorry
 
-theorem Ren.append_add_compose2 {r : Ren T} {l : List Nat} {k}
-  (h1 : ∀ {i} (h : i < l.length), l[i] = i)
-  (h2 : l.length = k)
-  : r.actl l ++ (add T k >> r) = r
-:= by
-  induction l generalizing k r
-  case nil => sorry
-  case cons x xs ih =>
-    cases k; simp_all; case _ k =>
-    simp; rw [<-Ren.compose_add_add, Ren.compose_assoc]
-    simp at h2
-    replace ih := @ih (add T 1 >> r) k (by {
-      intro i h3
-      have lem2 := @h1 i; simp at lem2
+-- theorem Ren.append_add_compose2 {r : Ren T} {l : List Nat} {k}
+--   (h1 : ∀ {i} (h : i < l.length), l[i] = i)
+--   (h2 : l.length = k)
+--   : r.actl l ++ (add T k >> r) = r
+-- := by
+--   induction l generalizing k r
+--   case nil => sorry
+--   case cons x xs ih =>
+--     cases k; simp_all; case _ k =>
+--     simp; rw [<-Ren.compose_add_add, Ren.compose_assoc]
+--     simp at h2
+--     replace ih := @ih (add T 1 >> r) k (by {
+--       intro i h3
+--       have lem2 := @h1 i; simp at lem2
 
-      sorry
-     }) h2
-    simp [actl] at *
-    have lem1 : List.map (add T 1 >> r).act xs = List.map r.act xs := sorry
-    have lem2 : x = 0 := sorry
-    rw [lem1] at ih; rw [ih, lem2]; simp
+--       sorry
+--      }) h2
+--     simp [actl] at *
+--     have lem1 : List.map (add T 1 >> r).act xs = List.map r.act xs := sorry
+--     have lem2 : x = 0 := sorry
+--     rw [lem1] at ih; rw [ih, lem2]; simp
 
-theorem Ren.append_add_compose {r : Ren T} {l : List Nat} {k}
-  (h1 : ∀ {i} (h : i < (r.actl l).length), (r.actl l)[i] = r.act i)
-  (h2 : l.length = k)
-  : r.actl l ++ (add T k >> r) = r
-:= by
-  induction l using List.recAppend generalizing k r
-  simp_all; subst h2; simp
-  case _ front back ih =>
-  cases k; simp at h2; case _ k =>
-  simp_all; simp [actl] at *
-  rw [Nat.add_comm, <-Ren.compose_add_add, Ren.compose_assoc]
-  sorry
+-- theorem Ren.append_add_compose {r : Ren T} {l : List Nat} {k}
+--   (h1 : ∀ {i} (h : i < (r.actl l).length), (r.actl l)[i] = r.act i)
+--   (h2 : l.length = k)
+--   : r.actl l ++ (add T k >> r) = r
+-- := by
+--   induction l using List.recAppend generalizing k r
+--   simp_all; subst h2; simp
+--   case _ front back ih =>
+--   cases k; simp at h2; case _ k =>
+--   simp_all; simp [actl] at *
+--   rw [Nat.add_comm, <-Ren.compose_add_add, Ren.compose_assoc]
+--   sorry
 
-theorem Ren.test {r : Ren T} {s n}
-  : List.map r.act (List.range' (s + 1) n) = List.map (add T 1 >> r).act (List.range' s n)
-:= by
-  induction n generalizing s r; simp; case _ n ih =>
-  simp [List.range'_succ, *]
+-- theorem Ren.test {r : Ren T} {s n}
+--   : List.map r.act (List.range' (s + 1) n) = List.map (add T 1 >> r).act (List.range' s n)
+-- := by
+--   induction n generalizing s r; simp; case _ n ih =>
+--   simp [List.range'_succ, *]
 
 def Ren.actr' (r : Ren T) (k : Nat) : Nat -> Nat -> Ren T
 | _, 0 => add T k >> r
@@ -1098,7 +1200,9 @@ def Ren.actr' (r : Ren T) (k : Nat) : Nat -> Nat -> Ren T
 
 theorem Ren.actr'_test2 {r : Ren T} {k s n x}
   : actr' (add T x >> r) k s n = actr' r (k + x) (s + x) n
-:= sorry
+:= by
+  induction n generalizing k s x; simp [actr']; case _ n ih =>
+  simp [actr', *]; congr 2; omega
 
 theorem Ren.actr'_test {r : Ren T} {k} : actr' r k 0 k = r := by
   induction k generalizing r; simp [actr']; case _ k ih =>
@@ -1106,6 +1210,13 @@ theorem Ren.actr'_test {r : Ren T} {k} : actr' r k 0 k = r := by
   replace ih := @ih (add T 1 >> r)
   rw [actr'_test2] at ih; simp at ih
   rw [ih]; rw [cons_add_compose]
+
+theorem Ren.actr'_test3 {r : Ren T} {k s n}
+  : actr' r k s n = r.actr s (s + n) ++ (add T k >> r)
+:= by
+  induction n generalizing r k s; simp [actr']; case _ n ih =>
+  simp [actr]
+  simp [actr', actr, List.range'_succ, *]
 
 theorem Ren.append_add_compose_range2 {r : Ren T} {s e} (h : s < e)
   : r.actr s e ++ (add T (e - s) >> r) = add T s >> r
