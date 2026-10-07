@@ -480,7 +480,7 @@ def Term.smap (σ : SubstVec [Term, Ty]) : Term -> Term
 | app t1 t2 => app (t1.smap σ) (t2.smap σ)
 | lam A t => lam A[σ.tail.head] (t.smap $ σ.lift [1, 0])
 | tapp t A => tapp (t.smap σ) A[σ.tail.head]
-| tlam t => tlam (t.smap $ σ.lift [0, 1] >> ·⟨.add Term 1, .id Ty⟩)
+| tlam t => tlam (t.smap $ σ.lift [0, 1] >> ·⟨.id Term, .add Ty 1⟩)
 | zero => zero
 | succ t => succ (t.smap σ)
 | nrec z s n => nrec (z.smap σ) (s.smap $ σ.lift [2, 0]) (n.smap σ)
@@ -512,7 +512,7 @@ theorem Term.smap_term_ty_tapp {t1 t2} {σ : SubstVec [Term, Ty]}
 
 @[simp]
 theorem Term.smap_term_ty_tlam {t} {σ : SubstVec [Term, Ty]}
-  : (tlam t)[σ,] = tlam t[σ.lift [0, 1] >> ·⟨.add Term 1, .id Ty⟩,]
+  : (tlam t)[σ,] = tlam t[σ.lift [0, 1] >> ·⟨.id Term, .add Ty 1⟩,]
 := by simp only [SubstMap.smap]; rw [smap]; try simp
 
 @[simp]
@@ -556,6 +556,9 @@ instance : SubstMapRenCompRight Term [Term, Ty] where
   compose_right_law := by
     intro s a b
     induction s generalizing a b
+    case tlam t ih =>
+      simp [*]
+      sorry
     all_goals simp [*]; try rfl
     all_goals
       iterate 3 (cases a; case' _ a => try simp only)
@@ -571,5 +574,6 @@ instance : SubstMapComp Term [Term, Ty] where
       iterate 3 (cases a; case' _ a => try simp only)
       iterate 3 (cases b; case' _ b => try simp only)
       simp [*]
+
 
 end SystemFWithNat
