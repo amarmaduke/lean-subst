@@ -181,6 +181,18 @@ theorem Subst.cons_add {T n} : re n .: add T (n + 1) = add T n := by
     simp [add] at *; grind
 
 @[simp]
+theorem RenVec.head_id : (id (T::V)).head = Ren.id T := by sorry
+
+@[simp]
+theorem SubstVec.head_id : (id (T::V)).head = Subst.id T := by sorry
+
+@[simp]
+theorem RenVec.tail_id : (id (T::V)).tail = id V := by sorry
+
+@[simp]
+theorem SubstVec.tail_id : (id (T::V)).tail = id V := by sorry
+
+@[simp]
 theorem RenVec.cons_id : (Ren.id T .: id V) = id (T::V) := by simp [id]
 
 @[simp]
@@ -1362,7 +1374,7 @@ theorem Ren.lift_act_ge {r : Ren T} {k i} {h : i ≥ k}
 := by simp [lift]; rw [Ren.append_range_act_ge h]; simp
 
 theorem Subst.lift_act_ge [RenMap T (T::V)] {σ : Subst T} {k i} {h : i ≥ k}
-  : (σ.lift V k).act i = (σ.act (i - k))⟨.add T k .: .id V,⟩
+  : (σ.lift V k).act i = (σ.act (i - k))⟨.add (T::V) [k],⟩
 := by simp [lift]; rw [Subst.append_range_act_ge h]; simp
 
 @[simp high]
@@ -1402,6 +1414,10 @@ theorem RenVec.lift_cons {r : Ren T} {rs : RenVec V} {x xs}
 theorem SubstVec.lift_cons [RenMapAll (T::V)] {σ : Subst T} {σs : SubstVec V} {x xs}
   : (σ .: σs).lift (x::xs) = σ.lift V x .: σs.lift xs
 := sorry
+
+@[simp]
+theorem SubstVec.shift_id [RenMapAll V] {xs} : (id V).shift xs = id V := by
+  sorry
 
 end
 

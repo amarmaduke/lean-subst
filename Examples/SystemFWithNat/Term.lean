@@ -294,14 +294,7 @@ instance : RenMapId Ty [Ty] where
   id_law := by subst_solve_id
 
 instance : RenMapComp Ty [Ty] where
-  compose_law := by
-    intro s a b
-    induction s generalizing a b
-    all_goals simp [*]; try rfl
-    all_goals
-      iterate 3 (cases a; case' _ a => try simp only)
-      iterate 3 (cases b; case' _ b => try simp only)
-      simp [*]
+  compose_law := by subst_solve_compose
 
 @[simp]
 def Ty.smap (σ : SubstVec [Ty]) : Ty -> Ty
@@ -347,34 +340,13 @@ instance : SubstMapStable Ty [Ty] where
   stable := by sorry --subst_solve_stable
 
 instance : SubstMapRenCompLeft Ty [Ty] where
-  compose_left_law := by
-    intro s a b
-    induction s generalizing a b
-    all_goals simp [*]; try rfl
-    all_goals
-      iterate 3 (cases a; case' _ a => try simp only)
-      iterate 3 (cases b; case' _ b => try simp only)
-      simp [*]
+  compose_left_law := by subst_solve_compose
 
 instance : SubstMapRenCompRight Ty [Ty] where
-  compose_right_law := by
-    intro s a b
-    induction s generalizing a b
-    all_goals simp [*]; try rfl
-    all_goals
-      iterate 3 (cases a; case' _ a => try simp only)
-      iterate 3 (cases b; case' _ b => try simp only)
-      simp [*]
+  compose_right_law := by subst_solve_compose
 
 instance : SubstMapComp Ty [Ty] where
-  compose_law := by
-    intro s a b
-    induction s generalizing a b
-    all_goals simp [*]; try rfl
-    all_goals
-      iterate 3 (cases a; case' _ a => try simp only)
-      iterate 3 (cases b; case' _ b => try simp only)
-      simp [*]
+  compose_law := by subst_solve_compose
 
 ----------------------------------------------------------------------------------------------------
 -- Term Renaming & Substitution
@@ -462,17 +434,10 @@ theorem Term.from_action_rmap {t : Action Term} {r : RenVec [Term, Ty]}
 instance instRenMapAll_Term_Ty : RenMapAll [Term, Ty] := .cons instRenMapAll_Ty
 
 instance : RenMapId Term [Term, Ty] where
-  id_law := by sorry
+  id_law := by subst_solve_id
 
 instance : RenMapComp Term [Term, Ty] where
-  compose_law := by
-    intro s r1 r2
-    induction s generalizing r1 r2
-    all_goals simp [*]; try rfl
-    all_goals
-      iterate 3 (cases r1; case' _ r1 => try simp only)
-      iterate 3 (cases r2; case' _ r2 => try simp only)
-      simp [*]
+  compose_law := by subst_solve_compose
 
 @[simp]
 def Term.smap (σ : SubstVec [Term, Ty]) : Term -> Term
@@ -480,7 +445,7 @@ def Term.smap (σ : SubstVec [Term, Ty]) : Term -> Term
 | app t1 t2 => app (t1.smap σ) (t2.smap σ)
 | lam A t => lam A[σ.tail.head] (t.smap $ σ.lift [1, 0])
 | tapp t A => tapp (t.smap σ) A[σ.tail.head]
-| tlam t => tlam (t.smap $ σ.lift [0, 1] >> ·⟨.id Term, .add Ty 1⟩)
+| tlam t => tlam (t.smap $ σ |> .lift [0, 1] |> .shift [[0, 1]])
 | zero => zero
 | succ t => succ (t.smap σ)
 | nrec z s n => nrec (z.smap σ) (s.smap $ σ.lift [2, 0]) (n.smap σ)
@@ -512,7 +477,7 @@ theorem Term.smap_term_ty_tapp {t1 t2} {σ : SubstVec [Term, Ty]}
 
 @[simp]
 theorem Term.smap_term_ty_tlam {t} {σ : SubstVec [Term, Ty]}
-  : (tlam t)[σ,] = tlam t[σ.lift [0, 1] >> ·⟨.id Term, .add Ty 1⟩,]
+  : (tlam t)[σ,] = tlam t[σ |> .lift [0, 1] |> .shift [[0, 1]],]
 := by simp only [SubstMap.smap]; rw [smap]; try simp
 
 @[simp]
@@ -537,43 +502,18 @@ theorem Term.from_action_smap {t : Action Term} {σ : SubstVec [Term, Ty]}
 instance instSubstMapAll_Term_Ty : SubstMapAll [Term, Ty] := .cons instSubstMapAll_Ty
 
 instance : SubstMapId Term [Term, Ty] where
-  id_law := by sorry
+  id_law := by subst_solve_id
 
 instance : SubstMapStable Term [Term, Ty] where
-  stable := by sorry --subst_solve_stable
+  stable := by sorry
 
 instance : SubstMapRenCompLeft Term [Term, Ty] where
-  compose_left_law := by
-    intro s a b
-    induction s generalizing a b
-    all_goals simp [*]; try rfl
-    all_goals
-      iterate 3 (cases a; case' _ a => try simp only)
-      iterate 3 (cases b; case' _ b => try simp only)
-      simp [*]
+  compose_left_law := by subst_solve_compose
 
 instance : SubstMapRenCompRight Term [Term, Ty] where
-  compose_right_law := by
-    intro s a b
-    induction s generalizing a b
-    case tlam t ih =>
-      simp [*]
-      sorry
-    all_goals simp [*]; try rfl
-    all_goals
-      iterate 3 (cases a; case' _ a => try simp only)
-      iterate 3 (cases b; case' _ b => try simp only)
-      simp [*]
+  compose_right_law := by subst_solve_compose
 
 instance : SubstMapComp Term [Term, Ty] where
-  compose_law := by
-    intro s a b
-    induction s generalizing a b
-    all_goals simp [*]; try rfl
-    all_goals
-      iterate 3 (cases a; case' _ a => try simp only)
-      iterate 3 (cases b; case' _ b => try simp only)
-      simp [*]
-
+  compose_law := by subst_solve_compose
 
 end SystemFWithNat

@@ -1,14 +1,5 @@
 module
 
-def List.recAppend.{u, u1} {α : Type u} {motive : List α → Sort u1}
-  (nil : motive [])
-  (scons : (front : List α) → (back : α) → motive front → motive (front ++ [back]))
-  : ∀ t, motive t
-| [] => nil
-| x::xs => (dropLast_concat_getLast (cons_ne_nil x xs)) ▸
-  scons _ _ ((x :: xs).dropLast.recAppend nil scons)
-termination_by t => t.length
-
 namespace LeanSubst
 
 public section
@@ -315,9 +306,33 @@ def Ren.add T (k : Nat) : Ren T := ⟨(· + k)⟩
 
 def Subst.add T (k : Nat) : Subst T := ⟨λ x => re $ x + k⟩
 
+@[simp]
+def RenVec.add : (V : List (Type u2)) -> List Nat -> RenVec V
+| [], _ => nil
+| V, [] => id V
+| .cons V Vs, x::xs => Ren.add V x .: add Vs xs
+
+@[simp]
+def SubstVec.add : (V : List (Type u2)) -> List Nat -> SubstVec V
+| [], _ => nil
+| V, [] => id V
+| .cons V Vs, x::xs => Subst.add V x .: add Vs xs
+
 def Ren.sub T (k : Nat) : Ren T := ⟨(· - k)⟩
 
 def Subst.sub T (k : Nat) : Subst T := ⟨λ x => re $ x - k⟩
+
+@[simp]
+def RenVec.sub : (V : List (Type u2)) -> List Nat -> RenVec V
+| [], _ => nil
+| V, [] => id V
+| .cons V Vs, x::xs => Ren.sub V x .: sub Vs xs
+
+@[simp]
+def SubstVec.sub : (V : List (Type u2)) -> List Nat -> SubstVec V
+| [], _ => nil
+| V, [] => id V
+| .cons V Vs, x::xs => Subst.sub V x .: sub Vs xs
 
 def Ren.cons (a : Nat) (r : Ren T) : Ren T :=
   ⟨fun n => match n with
@@ -447,13 +462,20 @@ def RenVec.lift : {V : List (Type u2)} -> RenVec V -> List Nat -> RenVec V
 
 @[simp]
 def Subst.lift (V : List (Type u2)) [RenMap T (T::V)] (σ : Subst T) (k : Nat := 1) : Subst T :=
-  (0...k) ++ (σ >> .add T k .: RenVec.id V)
+  (0...k) ++ (σ >> RenVec.add (T::V) [k])
 
 @[simp]
 def SubstVec.lift : {V : List (Type u2)} -> [RenMapAll V] -> List Nat -> SubstVec V ->  SubstVec V
-| [], _, _, _ => .nil
-| .cons _ _, _, [], cons t ts => t .: ts
-| .cons _ Vs, _, .cons k ks, cons t ts => t.lift Vs k .: ts.lift ks
+| [], _, _, _ => nil
+| _::_, _, [], cons t ts => t .: ts
+| _::Vs, _, k::ks, cons t ts => t.lift Vs k .: ts.lift ks
+
+-- TODO: the expose here is lazy, add proper theorems
+@[expose, simp]
+def SubstVec.shift : ∀ {V}, [RenMapAll V] -> List (List Nat) -> SubstVec V -> SubstVec V
+| [], _, _, _ => nil
+| _::_, _, [], cons t ts => t .: ts
+| V::Vs, _, x::xs, cons t ts => (t >> RenVec.add (V::Vs) x) .: ts.shift xs
 
 def Ren.to (r : Ren T) : Subst T := ⟨λ x => re (r.act x)⟩
 
