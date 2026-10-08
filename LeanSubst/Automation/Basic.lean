@@ -1,7 +1,9 @@
-import LeanSubst
+
 import Lean.Elab.Tactic
 import Lean.Elab.Term.TermElabM
 import LeanSubst.Automation.Attributes
+import LeanSubst.Automation.Tactic
+import LeanSubst.Basic
 
 namespace Automation
   open Lean Elab Elab.Term Tactic Meta LeanSubst Command LeanSubstAttributes
@@ -65,6 +67,7 @@ namespace Automation
   def r := mkIdent `r
   def s := mkIdent `s
   def n := mkIdent `n
+  def k := mkIdent `k
   def t := mkIdent `t
   def σ := mkIdent `σ
   def τ := mkIdent `τ
@@ -172,33 +175,13 @@ namespace Automation
     let pos := tys.idxOf ty
     let mut stx ← `($rσ)
     for _ in List.range $ pos do
-      stx ← `($stx.2)
-    `($stx.1)
-
-  -- Applies a computation for each suffix in the list Tys.
-  def forEachSuffix {A : Type} : (tys : List A) → (f : List A → CommandElabM Unit) → CommandElabM Unit
-  | [], _ => pure ()
-  | tys@(.cons _ tys'), f => do
-    f tys
-    forEachSuffix tys' f
+      stx ← `(($stx).tail)
+    `(($stx).head)
 
   def mapEachSuffix {A B : Type} : (tys : List A) → (f : List A → CommandElabM B) → CommandElabM $ List B
   | [], _ => pure []
   | tys@(.cons _ tys'), f => do
     pure $ (← (f tys)) :: (← mapEachSuffix tys' f)
-
-  def forEachPrefix {A : Type} : (tys : List A) → (f : List A → CommandElabM Unit) → CommandElabM Unit
-  | [], _ => pure ()
-  | tys@(.cons _ _), f => do
-    f tys
-    forEachSuffix tys.reverse.tail.reverse f
-
-  def forHeadAndEachSuffix {A : Type} : (tys : List A) → (f : List A → CommandElabM Unit) → CommandElabM Unit
-  | [], _ => pure ()
-  | .cons ty [], f => do f [ty]
-  | tys@(.cons ty _), f => do
-    f [ty]
-    forEachSuffix tys f
 
   def forEachCtor (ty : Name) (f : Name → CommandElabM Unit) : CommandElabM Unit := do
     for ctor in ← liftCoreM $ runMetaMAsCoreM $ getConstructors ty do f ctor
@@ -249,7 +232,7 @@ namespace Automation
       theorem $from_action_id {$n} : $from_action (𝐬0.act $n) = $var $n := rfl
 
       @[simp]
-      theorem $from_action_succ {$n} : $from_action (𝐬1.act $n) = $var ($n + 1) := rfl
+      theorem $from_action_succ {$k $n} : $from_action ((Subst.add $ty $k).act $n) = $var ($n + $k) := rfl
 
       @[simp]
       theorem $from_action_re {$n} : $from_action (re $n) = $var $n := rfl
@@ -264,60 +247,18 @@ namespace Automation
     let rmap := qualify "rmap"
     let smap := qualify "smap"
 
-    let mkMapSingletonInstance (mapType : MapType) (ty' : Ident) := do
-      let tyList ← (tys.map (TSyntax.raw ·)).mapM (fun `($ty'') ↦ do
-        let ty'Expr ← liftTermElabM $ Term.elabTerm ty' none
-        let ty''Expr ← liftTermElabM $ Term.elabTerm ty'' none
-        if ← liftCoreM $ runMetaMAsCoreM $ isDefEq ty'Expr ty''Expr then
-          match mapType with | .rmap => `($(r).1) | .smap => `($(σ).1)
-        else
-          match mapType with | .rmap => `(Ren.id $ty'') | .smap => `(Subst.id $ty''))
-      let tyArr := (tyList.append [← `(.nil)]).toArray
-      match mapType with
-      | .rmap =>
-        elabCommand $ ← `(
-          instance : RenMap $ty [$ty'] where
-            rmap $r:ident := $rmap ⟨ $tyArr:term,* ⟩
-        )
-      | .smap =>
-        elabCommand $ ← `(
-          instance : SubstMap $ty [$ty'] where
-            smap $σ:ident := $smap ⟨ $tyArr:term,* ⟩
-        )
-
     let mkMapInstances (mapType : MapType) := do
       match mapType with
       | .rmap =>
         elabCommand $ ← `(
           instance : RenMap $ty [$tys.toArray,*] where
             rmap := $rmap
-
-          instance : RenMap $ty [] where
-            rmap _ := id
         )
       | .smap =>
         elabCommand $ ← `(
           instance : SubstMap $ty [$tys.toArray,*] where
             smap := $smap
-
-          instance : SubstMap $ty [] where
-            smap _ := id
         )
-      -- If the length of `tys` is 1, then we've already done the only necessary RenMap
-      -- TODO: check, do we also need all prefixes here?
-      if tys.length > 1 then
-        forEachTy tys $ mkMapSingletonInstance mapType
-
-    let mkSuffixInstances (mapType : MapType) := do
-      let TheSuffix ← match mapType with | .rmap => ``(RenSuffix) | .smap => ``(SubstSuffix)
-      forEachSuffix tys.tail (fun sfx ↦ do
-        elabCommand $ ← `(
-          instance : $TheSuffix $ty:ident [$sfx.toArray,*] := ⟨⟩
-        )
-      )
-      elabCommand $ ← `(
-        instance : $TheSuffix $ty:ident [] := ⟨⟩
-      )
 
     -- rmap setup
     let getLiftsOfTy (data : ArgData) (xs : List Ident) (ty : Ident)  : CommandElabM $ Term := do
@@ -347,19 +288,7 @@ namespace Automation
         pure none
 
     -- smap setup
-    let _getIncrementsOfTy (lifts : List Term) (tysNamesGlobal : List Name) (ty : Name) : CommandElabM $ List (Ident × Term) := do
-      let tysLiftsZip := tysNamesGlobal.zip lifts
-      let increments : List (Ident × Term) ←
-        tysLiftsZip.mapM
-          (fun ⟨ty', lift⟩ ↦ do
-            -- Is there a better way to check if two names are equal?
-            let ty'_eq_ty ← liftCoreM $ runMetaMAsCoreM $ isDefEq (← liftTermElabM $ Term.elabTerm (mkIdent ty') none) (← liftTermElabM $ Term.elabTerm (mkIdent ty) none)
-            if ¬ ty'_eq_ty ∧ (← isBoundIn ty' ty) then
-              pure ⟨mkIdent ty', lift⟩
-            else
-              pure ⟨mkIdent ty', Syntax.mkNatLit 0⟩)
-      pure $ increments.filter (fun (_, stx) ↦ match stx with | `(0) => false | _ => true)
-
+    -- TODO: This should be made a lot simpler
     let mkLiftsAndRens (data : ArgData) (xs : List Ident) (tys' : List Ident) : CommandElabM $ Option $ Term × List Term :=
       match data with
       | .binder _ => do
@@ -386,13 +315,13 @@ namespace Automation
             if optionLifts.tail.all Option.isNone then
               pure none
             else
-              let lifts ← zippedSfx.tail.mapM (fun | ⟨ty, .none⟩ => `(Ren.id $(mkIdent ty)) | ⟨ty, .some n⟩ => `(Ren.add $(mkIdent ty) $n))
-              let tysHd := mkIdent tys.head!
-              let tysTail := (tys.tail!.map mkIdent).toArray
-              let i := Syntax.mkNatLit $ numTotalTys - tys.length -- shadowing is bad, kids
-              pure $ some $ ← `(.ren $tysHd [$tysTail,*] ⟨$lifts.toArray,*, .nil⟩ $i rfl)
+              -- let lifts ← zippedSfx.tail.mapM (fun | ⟨ty, .none⟩ => `(Ren.id $(mkIdent ty)) | ⟨ty, .some n⟩ => `(Ren.add $(mkIdent ty) $n))
+              -- let tysHd := mkIdent tys.head!
+              -- let tysTail := (tys.tail!.map mkIdent).toArray
+              -- let i := Syntax.mkNatLit $ numTotalTys - tys.length -- shadowing is bad, kids
+              pure $ some $ ← `(.shift [[$lifts.toArray,*]])
           )
-          let rens := rens.reverse.tail.reverse -- dropLast
+          -- let rens := rens.reverse.tail.reverse -- dropLast
           let rens ← (rens.filter (Option.isSome)).mapM (fun | .none => `(0) | .some t => pure t)
           let liftsTm ← `([$lifts.toArray,*])
           pure $ some ⟨liftsTm, rens⟩
@@ -400,7 +329,7 @@ namespace Automation
 
     let smap_fVar (tys : List Ident) xs ctor : CommandElabM Term := do
       if (← liftCoreM $ runMetaMAsCoreM $ isDefEq (← liftTermElabM $ Term.elabTerm tys[0]!.raw none) (← liftTermElabM $ Term.elabTerm ty.raw none)) then
-        `($(σ).1.act $(xs[0]!):ident) -- TODO: At the moment, this doesn't generalize to vars with data
+        `($(σ).head.act $(xs[0]!):ident) -- TODO: At the moment, this doesn't generalize to vars with data
       else
         `($ctor $(xs[0]!):ident)
 
@@ -410,7 +339,7 @@ namespace Automation
       match mapType with
       | .rmap =>
         if (← liftCoreM $ runMetaMAsCoreM $ isDefEq (← liftTermElabM $ Term.elabTerm tys[0]!.raw none) (← liftTermElabM $ Term.elabTerm ty.raw none)) then
-          `($(r).1.act $x) -- NOTE: assumes that the type being generated is the first type in [tys]
+          `($(r).head.act $x) -- NOTE: assumes that the type being generated is the first type in [tys]
         else
           `($x)
       | .smap => throwError "smap var case"
@@ -461,29 +390,22 @@ namespace Automation
         theorem $map_fix {$rσ : $TheVec [$tys.toArray,*]} {$t : $ty} : $eq := $simp
       )
 
-      let map_empty := qualify s!"{mapStr}_empty"
-      let eq ← match mapType with | .rmap => `($t⟨$rσ,⟩ = $t) | .smap => `($t[$rσ,] = $t)
-      elabCommand $ ← `(
-        @[simp]
-        theorem $map_empty {$t : $ty} {$rσ : $TheVec []} : $eq := rfl
-      )
-
       let proof ← match mapType with
       | .rmap => `(by first | rfl | simp only [RenMap.rmap] ; rw [$rmap:ident] ; try simp | simp only [RenMap.rmap] ; simp)
       | .smap => `(by first | rfl | simp only [SubstMap.smap] ; rw [$smap:ident] ; try simp | simp only [SubstMap.smap] ; simp)
-      forHeadAndEachSuffix tys (fun sfx ↦ forEachCtor tyNameGlobal (fun ctor ↦ do
-        let tyQual := if tys.length = 1 then "" else "_" ++ ("_".intercalate $ sfx.map (fun (ty : Ident) ↦ ty.raw.getId.toString.toLower))
-        let thmName := qualify s!"{mapStr}{tyQual}_{ctor.components.getLast!}"
-        let fRhs := map_f mapType true (tys := sfx)
+      forEachCtor tyNameGlobal (fun ctor ↦ do
+        --let tyQual := if tys.length = 1 then "" else "_" ++ ("_".intercalate $ sfx.map (fun (ty : Ident) ↦ ty.raw.getId.toString.toLower))
+        let thmName := qualify s!"{mapStr}_{ctor.components.getLast!}"
+        let fRhs := map_f mapType true (tys := tys)
         let fLhs lhs : CommandElabM Term := match mapType with | .rmap => `(($lhs)⟨$(rσ),⟩) | .smap => `(($lhs)[$(rσ),])
-        let eq ← mkCtorEq fLhs fRhs ctor (fVar := match mapType with | .rmap => none | .smap => some $ smap_fVar sfx)
+        let eq ← mkCtorEq fLhs fRhs ctor (fVar := match mapType with | .rmap => none | .smap => some $ smap_fVar tys)
         let args ← mkCtorArgs ctor
         elabCommand $ ← `(
           @[simp]
-          theorem $thmName {$args.toArray*} {$rσ : $TheVec [$sfx.toArray,*]} : $eq :=
+          theorem $thmName {$args.toArray*} {$rσ : $TheVec [$tys.toArray,*]} : $eq :=
             $proof
         )
-      ))
+      )
 
     let mkFromActionMapThms (mapType : MapType) := do
       let map := match mapType with | .rmap => "rmap" | .smap => "smap"
@@ -499,23 +421,10 @@ namespace Automation
           cases $t:ident <;> (first | rfl | simp | simp [$from_action:ident])
       )
 
-      let from_action_mapi (i : Nat) := qualify $ s!"from_action_{map}{i}"
-      if tys.length > 1 then
-        for i in List.range tys.length do
-          elabCommand $ ← `(
-            @[simp]
-            theorem $(from_action_mapi i) {$t : Action $ty} {$rσ : $TheVec [$(tys[i]!)]} : $eq := by
-              cases $t:ident <;> (first | rfl | simp | simp [$from_action:ident])
-          )
-
     let mkMapAllInstances (mapType : MapType) := do
       let TheMapStr := match mapType with | .rmap => "RenMap" | .smap => "SubstMap"
       let TheMapAll ← match mapType with | .rmap => ``(LeanSubst.RenMapAll) | .smap => ``(LeanSubst.SubstMapAll)
       let instTheMapAll_ty := mkIdent $ .mkStr1 s!"inst{TheMapStr}All_{ty.raw.getId.toString}" -- not qualified
-      elabCommand $ ← `(
-        @[reducible, simp]
-        instance $instTheMapAll_ty:ident : $TheMapAll [$ty] := .cons .nil
-      )
       if tys.length > 1 then
         let tysPostfix := "_".intercalate (tys.map (fun (ty : Ident) ↦ ty.raw.getId.toString))
         let tysPostfix' := "_".intercalate (tys.tail.map (fun (ty : Ident) ↦ ty.raw.getId.toString))
@@ -524,9 +433,11 @@ namespace Automation
         elabCommand $ ← `(
           instance $instTheMapAll_tys:ident : $TheMapAll [$tys.toArray:ident,*] := .cons $instTheMapAll_tys'
         )
-
-    -- let mkMapLawInstances (mapType : MapType) := do
-
+      else
+        elabCommand $ ← `(
+          @[reducible, simp]
+          instance $instTheMapAll_ty:ident : $TheMapAll [$tys.toArray:ident,*] := .cons .nil
+        )
 
     -- Executing rmap stuff
     let rmapCases ← mkAllCases (map_f .rmap false) tyNameGlobal
@@ -537,44 +448,16 @@ namespace Automation
     )
 
     mkMapInstances .rmap
-    mkSuffixInstances .rmap
     mkMapThms .rmap
     mkFromActionMapThms .rmap
 
     elabCommand $ ← `(
-      instance : RenMapEmpty $ty where
-        apply_empty := by intro $s:ident; simp [RenMap.rmap]
+      instance : RenMapId $ty [$tys.toArray,*] where
+        id_law := by subst_solve_id
 
-      instance : RenMapVecDef $ty $ty [] where
-        apply_vecdef := by intro $s:ident $r:ident; induction $s:ident generalizing $r:ident <;> simp [*]
-
-      instance : RenMapId $ty [$ty] where
-        apply_id := by subst_solve_id
-
-      instance : RenMapCompose $ty [$ty] where
-        apply_compose := by subst_solve_compose
+      instance : RenMapComp $ty [$tys.toArray,*] where
+        compose_law := by subst_solve_compose
     )
-
-    if tys.length > 1 then
-      forEachSuffix tys.tail (fun tys => do
-        elabCommand $ ← `(
-          instance : RenMapVecDef $ty $ty [$tys.toArray,*] where
-            apply_vecdef := by intro $s:ident $r:ident; induction $s:ident generalizing $r:ident <;> simp [*]
-
-          instance : RenMapId $ty [$tys.toArray,*] where
-            apply_id := by subst_solve_id
-
-          instance : RenMapCompose $ty [$tys.toArray,*] where
-            apply_compose := by subst_solve_compose
-        )
-      )
-      elabCommand $ ← `(
-        instance : RenMapId $ty [$tys.toArray,*] where
-          apply_id := by subst_solve_id
-
-        instance : RenMapCompose $ty [$tys.toArray,*] where
-          apply_compose := by subst_solve_compose
-      )
 
     mkMapAllInstances .rmap
 
@@ -588,89 +471,26 @@ namespace Automation
     )
 
     mkMapInstances .smap
-    mkSuffixInstances .smap
     mkMapAllInstances .smap
     mkMapThms .smap
     mkFromActionMapThms .smap
 
-    if tys.length > 1 then
-      forEachSuffix tys.tail (fun tys => do
-        elabCommand $ ← `(
-          instance : SubstMapVecDef $ty $ty [$tys.toArray,*] where
-            apply_vecdef := by intro $s:ident $r:ident; induction $s:ident generalizing $r:ident <;> simp [*]
-
-          instance : SubstMapId $ty [$tys.toArray,*] where
-            apply_id := by subst_solve_id
-
-          instance : SuffixCommuteRenRen $ty [$tys.toArray,*] where
-            ren_ren := by subst_solve_compose
-
-          instance : SuffixCommuteRenSub $ty [$tys.toArray,*] where
-            ren_sub := by subst_solve_compose
-
-          instance : SuffixCommuteSubRen $ty [$tys.toArray,*] where
-            sub_ren := by subst_solve_compose
-
-          instance : SubstMapStable $ty [$tys.toArray,*] where
-            apply_stable := by subst_solve_stable
-
-          instance : SubstMapRenComposeLeft $ty [$tys.toArray,*] where
-            apply_ren_compose_left := by subst_solve_compose
-
-          instance : SubstMapRenComposeRight $ty [$tys.toArray,*] where
-            apply_ren_compose_right := by subst_solve_compose
-
-          instance : SubstMapCompose $ty [$tys.toArray,*] where
-            apply_compose := by subst_solve_compose
-        )
-      )
-
     elabCommand $ ← `(
-      instance : SubstMapEmpty $ty where
-        apply_empty := by intro $s:ident; simp [SubstMap.smap]
+      instance : SubstMapId $ty [$tys.toArray,*] where
+        id_law := by subst_solve_id
 
-      instance : SubstMapVecDef $ty $ty [] where
-        apply_vecdef := by intro $s:ident $r:ident; induction $s:ident generalizing $r:ident <;> simp [*]
+      instance : SubstMapStable $ty [$tys.toArray,*] where
+        stable := by sorry
 
-      instance : SubstMapId $ty [$ty] where
-        apply_id := by subst_solve_id
+      instance : SubstMapRenCompLeft $ty [$tys.toArray,*] where
+        compose_left_law := by subst_solve_compose
 
-      instance : SubstMapStable $ty [$ty] where
-        apply_stable := by subst_solve_stable
+      instance : SubstMapRenCompRight $ty [$tys.toArray,*] where
+        compose_right_law := by subst_solve_compose
 
-      instance : SubstMapRenComposeLeft $ty [$ty] where
-        apply_ren_compose_left := by subst_solve_compose
-
-      instance : SubstMapRenComposeRight $ty [$ty] where
-        apply_ren_compose_right := by subst_solve_compose
-
-      instance : SubstMapCompose $ty [$ty] where
-        apply_compose := by subst_solve_compose
+      instance : SubstMapComp $ty [$tys.toArray,*] where
+        compose_law := by subst_solve_compose
     )
-
-    if tys.length > 1 then
-      elabCommand $ ← `(
-        instance : SubstMapId $ty [$tys.toArray,*] where
-          apply_id := by subst_solve_id
-
-        instance : SubstMapStable $ty [$tys.toArray,*] where
-          apply_stable := by subst_solve_stable
-
-        instance : SubstMapRenComposeLeft $ty [$tys.toArray,*] where
-          apply_ren_compose_left := by subst_solve_compose
-
-        instance : SubstMapRenComposeRight $ty [$tys.toArray,*] where
-          apply_ren_compose_right := by subst_solve_compose
-
-        instance : SubstMapCompose $ty [$tys.toArray,*] where
-          apply_compose := by subst_solve_compose
-      )
-
-  -- def genAllTys : List Ident → CommandElabM Unit
-  -- | [] => pure ()
-  -- | .cons ty tys => do
-  --   genAllTys tys
-  --   genTy (ty :: tys)
 
   elab "#leansubst" &"generate" tys:ident,* : command =>
     genTy tys.getElems.toList
