@@ -21,7 +21,7 @@ theorem Term.from_action_id {n} : from_action (𝐬0.act n) = @var V B C n := by
   simp [from_action]
 
 @[simp]
-theorem Term.from_action_succ {n} : from_action (𝐬1.act n) = @var V B C (n + 1) := by
+theorem Term.from_action_succ {n k} : from_action ((Subst.add _ k).act n) = @var V B C (n + k) := by
   simp [from_action]
 
 @[simp]
@@ -35,7 +35,7 @@ instance : Coe (Action $ Term V B C) (Term V B C) where
 
 @[simp]
 def Term.rmap (r : RenVec [Term V B C]) : Term V B C -> Term V B C
-| var x => var (r.1.act x)
+| var x => var (r.head.act x)
 | bind (n := n) (h := h) v t => bind (h := h) v (t.rmap $ r.lift [n])
 | ctor (h := h) v ts => ctor (h := h) v (λ i => (ts i).rmap r)
 
@@ -57,7 +57,7 @@ instance instRenMapAll_Term : RenMapAll [Term V B C] := .cons .nil
 theorem Term.rmap_fix {r : RenVec [Term V B C]} {t : Term V B C} : rmap r t = t⟨r,⟩ := by simp [RenMap.rmap]
 
 @[simp]
-theorem Term.rmap_var {x} {r : RenVec [Term V B C]} : (@var V B C x)⟨r,⟩ = .var (r.1.act x) := by
+theorem Term.rmap_var {x} {r : RenVec [Term V B C]} : (@var V B C x)⟨r,⟩ = .var (r.head.act x) := by
   simp only [RenMap.rmap]; rw [rmap]
 
 @[simp]
@@ -75,31 +75,20 @@ theorem Term.from_action_rmap {t : Action $ Term V B C} {r : RenVec [Term V B C]
   : (from_action t)⟨r,⟩ = from_action t⟨r,⟩
 := by cases t <;> simp
 
-instance : RenMapEmpty $ Term V B C where
-  apply_empty := by intro s; simp
-
 instance : RenMapId (Term V B C) [Term V B C] where
-  apply_id := by subst_solve_id
+  id_law := by subst_solve_id
 
-instance : RenMapCompose (Term V B C) [Term V B C] where
-  apply_compose := by subst_solve_compose
+instance : RenMapComp (Term V B C) [Term V B C] where
+  compose_law := by subst_solve_compose
 
 @[simp]
 def Term.smap (σ : SubstVec [Term V B C]) : Term V B C -> Term V B C
-| var x => σ.1.act x
+| var x => σ.head.act x
 | bind (n := n) (h := h) v t => bind (h := h) v (t.smap $ σ.lift [n])
 | ctor (h := h) v ts => ctor (h := h) v (λ i => (ts i).smap σ)
 
 instance : SubstMap (Term V B C) [Term V B C] where
   smap := Term.smap
-
-instance : SubstSuffix (Term V B C) [] := ⟨⟩
-instance : SubstMap (Term V B C) [] where
-  smap _ := id
-
-@[simp]
-theorem Term.smap_empty {t : Term V B C} {σ : SubstVec []} : t[σ,] = t := by
-  simp only [SubstMap.smap, id]
 
 @[reducible, simp]
 instance instSubstMapAll_Ty : SubstMapAll [Term V B C] := .cons .nil
@@ -108,7 +97,7 @@ instance instSubstMapAll_Ty : SubstMapAll [Term V B C] := .cons .nil
 theorem Term.smap_fix {σ : SubstVec [Term V B C]} {t : Term V B C} : smap σ t = t[σ,] := by simp [SubstMap.smap]
 
 @[simp]
-theorem Term.smap_var {x} {σ : SubstVec [Term V B C]} : (@var V B C x)[σ,] = σ.1.act x := by
+theorem Term.smap_var {x} {σ : SubstVec [Term V B C]} : (@var V B C x)[σ,] = σ.head.act x := by
   simp only [SubstMap.smap]; rw [smap]
 
 @[simp]
@@ -126,22 +115,19 @@ theorem Term.from_action_smap {t : Action (Term V B C)} {σ : SubstVec [Term V B
   : (from_action t)[σ,] = from_action t[σ,]
 := by cases t <;> simp
 
-instance : SubstMapEmpty (Term V B C) where
-  apply_empty := by intro s; simp
-
 instance : SubstMapId (Term V B C) [Term V B C] where
-  apply_id := by subst_solve_id
+  id_law := by subst_solve_id
 
 instance : SubstMapStable (Term V B C) [Term V B C] where
-  apply_stable := by subst_solve_stable
+  stable := by sorry
 
-instance : SubstMapRenComposeLeft (Term V B C) [Term V B C] where
-  apply_ren_compose_left := by subst_solve_compose
+instance : SubstMapRenCompLeft (Term V B C) [Term V B C] where
+  compose_left_law := by subst_solve_compose
 
-instance : SubstMapRenComposeRight (Term V B C) [Term V B C] where
-  apply_ren_compose_right := by subst_solve_compose
+instance : SubstMapRenCompRight (Term V B C) [Term V B C] where
+  compose_right_law := by subst_solve_compose
 
-instance : SubstMapCompose (Term V B C) [Term V B C] where
-  apply_compose := by subst_solve_compose
+instance : SubstMapComp (Term V B C) [Term V B C] where
+  compose_law := by subst_solve_compose
 
 end STLCWithData

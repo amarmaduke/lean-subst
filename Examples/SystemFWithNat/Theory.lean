@@ -59,7 +59,7 @@ structure KindingRen (r : Ren Ty) (Δ Δ' : List Unit) where
 
 theorem KindingRen.succ {A X} : KindingRen (.add Ty 1) X (A::X) := ⟨λ h => h⟩
 
-theorem KindingRen.lift {Δ Δ' : List Unit} (r : Ren Ty) (h : KindingRen r Δ Δ')
+theorem KindingRen.lift {Δ Δ' : List Unit} {r : Ren Ty} (h : KindingRen r Δ Δ')
   : KindingRen r.lift (.unit::Δ) (.unit::Δ')
 := ⟨λ {x} _ j =>
     match x with
@@ -87,6 +87,9 @@ theorem Kinding.subst {Δ Δ' A} {σ : Subst Ty} (m : KindingSubst σ Δ Δ') : 
 | nat => nat
 | arrow j1 j2 => arrow (j1.subst m) (j2.subst m)
 | all j => all (j.subst $ m.lift)
+
+structure TypingRen (r : Ren Term) (Γ Γ' : List Ty) where
+  act : ∀ {x T}, Γ[x]? = some T -> Γ'[r.act x]? = some T
 
 -- structure TypingRen (r : RenVec [Term, Ty]) (Δ Δ' : List Unit) (Γ Γ' : List Ty) where
 --   act : (∀ {x T}, Δ[x]? = some T -> Δ'[r.2.1.act x]? = some T)
@@ -125,23 +128,29 @@ theorem Kinding.subst {Δ Δ' A} {σ : Subst Ty} (m : KindingSubst σ Δ Δ') : 
 --   : TypingRen r Δ Δ' Γ Γ' -> KindingRen r.2.1 Δ Δ'
 -- | ⟨act⟩ => ⟨act.1⟩
 
--- theorem Typing.rename {Δ Δ' Γ Γ' A t} {r : RenVec [Term, Ty]} (m : TypingRen r Δ Δ' Γ Γ')
---   : Δ&Γ ⊢ t : A -> Δ'&Γ'⟨r.2.1⟩ ⊢ t⟨r,⟩ : A⟨r.2.1⟩
--- | var (x := x) j1 j2 =>
---   have e := congr (f₁ := λ t => t⟨r.2.1⟩) rfl $ @m.act.2 x A 𝐫0 (j1 |> cast (by simp))
---   var (e |> cast (by simp)) (j2.rename m.kind)
--- | app j1 j2 => app (j1.rename m) (j2.rename m)
--- | lam (A := A) j1 j2 =>
---   have m' : TypingRen (r.lift [1, 0]) Δ Δ' (A::Γ) (A::Γ') := m.lift [] [A] |> cast (by simp)
---   lam (j1.rename m.kind) (j2.rename m')
--- | tapp j1 j2 e => tapp (j1.rename m) (j2.rename m.kind) (by simp [e])
--- | tlam j =>
---   have m' : TypingRen (r.lift [0, 1]) (()::Δ) (()::Δ') Γ⟨𝐫1(Ty)⟩ Γ'⟨𝐫1(Ty)⟩ := m.lift [.unit] []
---   tlam (j.rename m' |> cast (by simp; grind))
--- | zero => zero
--- | succ j => succ (j.rename m)
--- | nrec j1 j2 j3 =>
---   have m' : TypingRen (r.lift [2, 0]) Δ Δ' (A::.nat::Γ) (A::.nat::Γ') := m.lift [] [A, .nat] |> cast (by simp)
---   nrec (j1.rename m) (j2.rename m') (j3.rename m)
+theorem Typing.rename {Δ Δ' Γ Γ' A t} {r1 : Ren Ty} {r2 : Ren Term}
+  (m1 : KindingRen r1 Δ Δ') (m2 : TypingRen r2 Γ Γ')
+  : Δ&Γ ⊢ t : A -> Δ'&Γ'⟨r1⟩ ⊢ t⟨r2, r1⟩ : A⟨r1⟩
+| var (x := x) j1 j2 =>
+  have j1 := congr (f₁ := λ t => t⟨r1⟩) rfl $ m2.act j1
+  var (lsimp j1) (j2.rename m1)
+| app j1 j2 => app (j1.rename m1 m2) (j2.rename m1 m2)
+| lam (A := A) j1 j2 =>
+  sorry
+  -- have m' : TypingRen (r.lift [1, 0]) Δ Δ' (A::Γ) (A::Γ') := m.lift [] [A] |> cast (by simp)
+  -- lam (j1.rename m.kind) (j2.rename m')
+| tapp j1 j2 e => tapp (j1.rename m1 m2) (j2.rename m1) (by simp [e])
+| tlam j =>
+  have m1' := m1.lift
+  have j' := j.rename (m1.lift) m2
+  tlam (by simp; sorry)
+  -- have m' : TypingRen (r.lift [0, 1]) (()::Δ) (()::Δ') Γ⟨𝐫1(Ty)⟩ Γ'⟨𝐫1(Ty)⟩ := m.lift [.unit] []
+  -- tlam (j.rename m' |> cast (by simp; grind))
+| zero => zero
+| succ j => succ (j.rename m1 m2)
+| nrec j1 j2 j3 =>
+  sorry
+  -- have m' : TypingRen (r.lift [2, 0]) Δ Δ' (A::.nat::Γ) (A::.nat::Γ') := m.lift [] [A, .nat] |> cast (by simp)
+  -- nrec (j1.rename m) (j2.rename m') (j3.rename m)
 
 end SystemFWithNat

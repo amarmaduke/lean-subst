@@ -1,5 +1,5 @@
 
-import LeanSubst.Class
+import LeanSubst.Basic
 
 namespace LeanSubst
 
@@ -23,10 +23,10 @@ theorem Option.rmap_some [RenMap S V] {x : S} {r : RenVec V} : (some x)⟨r,⟩ 
   simp [RenMap.rmap, Option.rmap]
 
 instance [RenMap S V] [RenMapId S V] : RenMapId (Option S) V where
-  apply_id := by intro t; cases t <;> simp
+  id_law := by intro t; cases t <;> simp
 
-instance [RenMap S V] [RenMapCompose S V] : RenMapCompose (Option S) V where
-  apply_compose := by intro s σ τ; cases s <;> simp
+instance [RenMap S V] [RenMapComp S V] : RenMapComp (Option S) V where
+  compose_law := by intro s σ τ; cases s <;> simp
 
 def Option.smap [SubstMap S V] (σ : SubstVec V) : Option S -> Option S
 | none => none
@@ -43,10 +43,10 @@ theorem Option.smap_none [SubstMap S V] {σ : SubstVec V} : (@Option.none S)[σ,
 theorem Option.smap_some [SubstMap S V] {x : S} {σ : SubstVec V} : (some x)[σ,] = some x[σ,] := by
   simp [SubstMap.smap, Option.smap]
 
-instance [RenMap S V] [SubstMap S V] [SubstMapId S V] : SubstMapId (Option S) V where
-  apply_id := by intro t; cases t <;> simp
+instance [SubstMap S V] [SubstMapId S V] : SubstMapId (Option S) V where
+  id_law := by intro t; cases t <;> simp
 
-instance [SubstMapAll V] [SubstMap S V] [SubstMapCompose S V] : SubstMapCompose (Option S) V where
-  apply_compose := by intro s σ τ; cases s <;> simp
+instance [SubstMapAll V] [SubstMap S V] [SubstMapComp S V] : SubstMapComp (Option S) V where
+  compose_law := by intro s σ τ; cases s <;> simp
 
 end LeanSubst

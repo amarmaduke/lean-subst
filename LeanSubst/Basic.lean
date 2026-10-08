@@ -77,9 +77,9 @@ meta def RenVec.unexpand_cons : Lean.PrettyPrinter.Unexpander
 
 @[app_unexpander rmap]
 meta def unexpand_rmap : Lean.PrettyPrinter.Unexpander
-| `($_ ($r1, RenVec.nil) $t) => `($t⟨$r1⟩)
-| `($_ ($r1, $r2, RenVec.nil) $t) => `($t⟨$r1, $r2⟩)
-| `($_ ($r1, $r2, $r3, RenVec.nil) $t) => `($t⟨$r1, $r2, $r3⟩)
+| `($_ ·⟨$r1⟩ $t) => `($t⟨$r1⟩)
+| `($_ ·⟨$r1, $r2⟩ $t) => `($t⟨$r1, $r2⟩)
+| `($_ ·⟨$r1, $r2, $r3⟩ $t) => `($t⟨$r1, $r2, $r3⟩)
 | `($_ $r $t) => `($t⟨$r,⟩)
 | _ => throw ()
 
