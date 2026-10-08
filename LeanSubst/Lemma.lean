@@ -181,16 +181,16 @@ theorem Subst.cons_add {T n} : re n .: add T (n + 1) = add T n := by
     simp [add] at *; grind
 
 @[simp]
-theorem RenVec.head_id : (id (T::V)).head = Ren.id T := by sorry
+theorem RenVec.head_id : (id (T::V)).head = Ren.id T := by simp [id]
 
 @[simp]
-theorem SubstVec.head_id : (id (T::V)).head = Subst.id T := by sorry
+theorem SubstVec.head_id : (id (T::V)).head = Subst.id T := by simp [id]
 
 @[simp]
-theorem RenVec.tail_id : (id (T::V)).tail = id V := by sorry
+theorem RenVec.tail_id : (id (T::V)).tail = id V := by simp [id]
 
 @[simp]
-theorem SubstVec.tail_id : (id (T::V)).tail = id V := by sorry
+theorem SubstVec.tail_id : (id (T::V)).tail = id V := by simp [id]
 
 @[simp]
 theorem RenVec.cons_id : (Ren.id T .: id V) = id (T::V) := by simp [id]
@@ -205,10 +205,10 @@ theorem RenVec.cons_id_nil : (Ren.id T .: nil) = id [T] := by simp [id]
 theorem SubstVec.cons_id_nil : (Subst.id T .: nil) = id [T] := by simp [id]
 
 @[simp]
-theorem RenVec.cons_head_id_nil {r : Ren T} : r .: id [] = r .: nil := by sorry
+theorem RenVec.cons_head_id_nil {r : Ren T} : r .: id [] = r .: nil := by simp [id]
 
 @[simp]
-theorem SubstVec.cons_head_id_nil {σ : Subst T} : σ .: id [] = σ .: nil := by sorry
+theorem SubstVec.cons_head_id_nil {σ : Subst T} : σ .: id [] = σ .: nil := by simp [id]
 
 @[simp]
 theorem Ren.append_nil {r : Ren T} : ([] : List Nat) ++ r = r := by
@@ -368,12 +368,22 @@ theorem Subst.append_range_add : ∀ {s e}, (s...e) ++ add T e = add T (min s e)
 @[simp]
 theorem Ren.append_range_to_cons {r : Ren T} {s e} (h : s < e)
   : (s...e) ++ r = s .: (((s+1)...e) ++ r)
-:= sorry
+:= by
+  simp [HAppend.hAppend]
+  generalize ndef : e - s = n
+  induction n generalizing s e r; lia; case _ n ih =>
+  have lem : e - (s + 1) = n := by lia
+  simp [List.range'_succ, append, *]
 
 @[simp]
 theorem Subst.append_range_to_cons {σ : Subst T} {s e} (h : s < e)
   : (s...e) ++ σ = re s .: (((s+1)...e) ++ σ)
-:= sorry
+:= by
+  simp [HAppend.hAppend]
+  generalize ndef : e - s = n
+  induction n generalizing s e σ; lia; case _ n ih =>
+  have lem : e - (s + 1) = n := by lia
+  simp [List.range'_succ, append_ren, *]
 
 @[simp]
 theorem Ren.compose_act {r1 r2 : Ren T} {x} : (r1 >> r2).act x = r2.act (r1.act x) := by
@@ -1408,16 +1418,12 @@ theorem SubstVec.lift_empty : ∀ {V} [RenMapAll V] {σ : SubstVec V}, σ.lift [
 @[simp]
 theorem RenVec.lift_cons {r : Ren T} {rs : RenVec V} {x xs}
   : (r .: rs).lift (x::xs) = r.lift x .: rs.lift xs
-:= sorry
+:= by simp [lift]
 
 @[simp]
 theorem SubstVec.lift_cons [RenMapAll (T::V)] {σ : Subst T} {σs : SubstVec V} {x xs}
   : (σ .: σs).lift (x::xs) = σ.lift V x .: σs.lift xs
-:= sorry
-
-@[simp]
-theorem SubstVec.shift_id [RenMapAll V] {xs} : (id V).shift xs = id V := by
-  sorry
+:= by simp [lift]
 
 end
 

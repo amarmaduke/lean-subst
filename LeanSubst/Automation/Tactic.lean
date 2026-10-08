@@ -1,6 +1,4 @@
 
-namespace LeanSubst
-
 macro "lsimp " t:term : term => `(by
   solve
     | simp; exact $t
@@ -10,7 +8,10 @@ macro "lsimp " t:term : term => `(by
 
 macro "subst_solve_id" : tactic => `(tactic| {
   intro s; induction s
-  all_goals simp [*]
+  all_goals
+    try simp
+    try simp only [LeanSubst.SubstVec.shift, LeanSubst.SubstVec.id]
+    try simp [*]
 })
 
 macro "subst_solve_stable" : tactic => `(tactic| {
@@ -38,5 +39,3 @@ macro "subst_solve_compose" : tactic => `(tactic| {
     repeat (cases b; case' _ b => try simp only)
     simp [*]
 })
-
-namespace LeanSubst
