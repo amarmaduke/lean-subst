@@ -49,7 +49,7 @@ theorem Term.from_action_id {n u} : from_action u (𝐬0.act n) = var u n := by
   simp [from_action]
 
 @[simp]
-theorem Term.from_action_succ {n u} : from_action u (𝐬1.act n) = var u (n + 1) := by
+theorem Term.from_action_succ {n k u} : from_action u ((Subst.add Term k).act n) = var u (n + k) := by
   simp [from_action]
 
 @[simp]
@@ -64,7 +64,7 @@ notation:max "↑[" u "]" t => Term.from_action u t
 
 @[simp]
 def Term.rmap (r : RenVec [Term]) : Term -> Term
-| var u x => var u (r.1.act x)
+| var u x => var u (r.head.act x)
 | univ u => univ u
 | app t1 t2 => app (t1.rmap r) (t2.rmap r)
 | lam t1 t2 => lam (t1.rmap r) (t2.rmap $ r.lift [1])
@@ -88,7 +88,7 @@ instance instRenMapAll_Term : RenMapAll [Term] := .cons .nil
 theorem Term.rmap_fix {r : RenVec [Term]} {t : Term} : rmap r t = t⟨r,⟩ := by simp [RenMap.rmap]
 
 @[simp]
-theorem Term.rmap_var {u x} {r : RenVec [Term]} : (var u x)⟨r,⟩ = var u (r.1.act x) := by
+theorem Term.rmap_var {u x} {r : RenVec [Term]} : (var u x)⟨r,⟩ = var u (r.head.act x) := by
   simp only [RenMap.rmap]; rw [rmap]
 
 @[simp]
@@ -112,18 +112,15 @@ theorem Term.from_action_rmap {t : Action Term} {u} {r : RenVec [Term]}
   : (from_action u t)⟨r,⟩ = from_action u t⟨r,⟩
 := by cases t <;> simp
 
-instance : RenMapEmpty Term where
-  apply_empty := by intro s; simp
-
 instance : RenMapId Term [Term] where
-  apply_id := by subst_solve_id
+  id_law := by subst_solve_id
 
-instance : RenMapCompose Term [Term] where
-  apply_compose := by subst_solve_compose
+instance : RenMapComp Term [Term] where
+  compose_law := by subst_solve_compose
 
 @[simp]
 def Term.smap (σ : SubstVec [Term]) : Term -> Term
-| var u x => ↑[u] σ.1.act x
+| var u x => ↑[u] σ.head.act x
 | univ u => univ u
 | app t1 t2 => app (t1.smap σ) (t2.smap σ)
 | lam t1 t2 => lam (t1.smap σ) (t2.smap $ σ.lift [1])
@@ -147,7 +144,7 @@ instance instSubstMapAll_Ty : SubstMapAll [Term] := .cons .nil
 theorem Term.smap_fix {σ : SubstVec [Term]} {t : Term} : smap σ t = t[σ,] := by simp [SubstMap.smap]
 
 @[simp]
-theorem Term.smap_var {u x} {σ : SubstVec [Term]} : (var u x)[σ,] = ↑[u] σ.1.act x := by
+theorem Term.smap_var {u x} {σ : SubstVec [Term]} : (var u x)[σ,] = ↑[u] σ.head.act x := by
   simp only [SubstMap.smap]; rw [smap]
 
 @[simp]
@@ -171,23 +168,20 @@ theorem Term.from_action_smap {t : Action Term} {u} {σ : SubstVec [Term]}
   : (from_action u t)[σ,] = from_action u t[σ,]
 := by cases t <;> simp
 
-instance : SubstMapEmpty Term where
-  apply_empty := by intro s; simp
-
 instance : SubstMapId Term [Term] where
-  apply_id := by subst_solve_id
+  id_law := by subst_solve_id
 
 instance : SubstMapStable Term [Term] where
-  apply_stable := by subst_solve_stable
+  stable := by sorry --subst_solve_stable
 
-instance : SubstMapRenComposeLeft Term [Term] where
-  apply_ren_compose_left := by subst_solve_compose
+instance : SubstMapRenCompLeft Term [Term] where
+  compose_left_law := by subst_solve_compose
 
-instance : SubstMapRenComposeRight Term [Term] where
-  apply_ren_compose_right := by subst_solve_compose
+instance : SubstMapRenCompRight Term [Term] where
+  compose_right_law := by subst_solve_compose
 
-instance : SubstMapCompose Term [Term] where
-  apply_compose := by subst_solve_compose
+instance : SubstMapComp Term [Term] where
+  compose_law := by subst_solve_compose
 
 theorem Term.universe_rename {r : Ren Term}
   : ∀ {t : Term}, Term.universe t⟨r⟩ = t.universe

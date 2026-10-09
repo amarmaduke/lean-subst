@@ -35,24 +35,22 @@ theorem Subst.actl_cons {σ : Subst T} {x xs} : σ.actl (x::xs) = σ.act x :: σ
   simp [actl]
 
 @[simp]
-theorem Ren.append_list_to_range {r : Ren T} {s e : Nat}
-  : List.range' s (e - s) ++ r = (s...e) ++ r
+theorem Ren.append_list_to_range {r : Ren T} {s n : Nat}
+  : List.range' s n ++ r = (s...(n + s)) ++ r
 := by simp [HAppend.hAppend]
 
 @[simp]
-theorem Subst.append_list_to_range {σ : Subst T} {s e : Nat}
-  : List.range' s (e - s) ++ σ = (s...e) ++ σ
+theorem Subst.append_list_to_range {σ : Subst T} {s n : Nat}
+  : List.range' s n ++ σ = (s...(n + s)) ++ σ
 := by simp [HAppend.hAppend]
 
 @[simp]
-theorem Subst.append_list_to_range_map_re {σ : Subst T} {s e : Nat}
-  : (List.map (@re T) $ List.range' s (e - s)) ++ σ = (s...e) ++ σ
+theorem Subst.append_list_to_range_map_re {σ : Subst T} {s n : Nat}
+  : (List.map (@re T) $ List.range' s n) ++ σ = (s...(n + s)) ++ σ
 := by
   simp [HAppend.hAppend]
-  generalize ndef : e - s = n
-  induction n generalizing s e; simp [append, append_ren]; case _ n ih =>
-  have lem : e - (s + 1) = n := by grind
-  simp [List.range'_succ, append, append_ren, ih lem]
+  induction n generalizing s; simp [append, append_ren]; case _ n ih =>
+  simp [List.range'_succ, append, append_ren, ih]
 
 @[simp, grind =]
 theorem Ren.actr_ge {r : Ren T} {s e} (h : s ≥ e) : r.actr s e = [] := by
@@ -1224,7 +1222,9 @@ theorem Ren.to_append {l : List Nat} {r : Ren T} : (l ++ r).to = l ++ r.to := by
 
 @[simp]
 theorem Ren.to_append_range {s e : Nat} {r : Ren T} : ((s...e) ++ r).to = (s...e) ++ r.to := by
-  rw [<-append_list_to_range, to_append]; simp
+  have lem := @to_append T (List.range' s (e - s)) r
+  simp [HAppend.hAppend]; simp only [HAppend.hAppend] at lem
+  exact lem
 
 @[simp]
 theorem Ren.to_compose {r1 r2 : Ren T} : (r1 >> r2).to = r1 >> r2.to := by

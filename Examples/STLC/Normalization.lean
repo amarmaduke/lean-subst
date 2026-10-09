@@ -24,7 +24,7 @@ inductive ℒ (S : Set Term) : Set Term where
 
 def LR : Ty -> Set Term
 | .base, t => SN Red t
-| .arrow A B, .lam _ t => ∀ a, ℒ (LR A) a -> ℒ (LR B) t[su a::𝐬0]
+| .arrow A B, .lam _ t => ∀ a, ℒ (LR A) a -> ℒ (LR B) t[su a .: 𝐬0]
 | _, _ => False
 
 def ℰ A := ℒ (LR A)
@@ -59,30 +59,30 @@ theorem ℒ.rename {A t} (r : Ren Term) : ℒ A t -> ℒ A t⟨r⟩
     (j2 d').rename r |> cast (by simp [e])
   .lift lem1 lem2
 
-theorem ℛ.lam_mp {A B C b} : ℛ (LR $ A -:> B) (λ[C] b) -> ∀ (r:Ren Term) a, ℰ A a -> ℰ B b[su a::r.to]
+theorem ℛ.lam_mp {A B C b} : ℛ (LR $ A -:> B) (λ[C] b) -> ∀ (r:Ren Term) a, ℰ A a -> ℰ B b[su a .: r.to]
 | j1, r, a, j2 => j1 r a j2 |> cast (by simp [ℰ])
 
-theorem ℛ.lam_mpr {A B C b} : (∀ (r:Ren Term) a, ℰ A a -> ℰ B b[su a::r.to]) -> ℛ (LR $ A -:> B) (λ[C] b)
+theorem ℛ.lam_mpr {A B C b} : (∀ (r:Ren Term) a, ℰ A a -> ℰ B b[su a .: r.to]) -> ℛ (LR $ A -:> B) (λ[C] b)
 | j1, r, a, j2 => j1 r a j2 |> cast (by simp [ℰ])
 
-theorem ℛ.lam {A B C b} : ℛ (LR $ A -:> B) (λ[C] b) <-> ∀ (r:Ren Term) a, ℰ A a -> ℰ B b[su a::r.to] :=
+theorem ℛ.lam {A B C b} : ℛ (LR $ A -:> B) (λ[C] b) <-> ∀ (r:Ren Term) a, ℰ A a -> ℰ B b[su a .: r.to] :=
   ⟨lam_mp, lam_mpr⟩
 
-theorem 𝒞.su {Γ A t σ} : ℰ A t -> 𝒞 Γ σ -> 𝒞 (A::Γ) (su t::σ)
+theorem 𝒞.su {Γ A t σ} : ℰ A t -> 𝒞 Γ σ -> 𝒞 (A::Γ) (su t .: σ)
 | j1, _, 0, _, _ => j1 |> cast (by simp_all)
 | _, j2, _ + 1, _, h => j2 h
 
-theorem 𝒞.re {Γ σ} A x : 𝒞 Γ σ -> 𝒞 (A::Γ) (re x::σ)
+theorem 𝒞.re {Γ σ} A x : 𝒞 Γ σ -> 𝒞 (A::Γ) (re x .: σ)
 | _, 0, _, _ => ℒ.var _ x
 | j, _ + 1, _, h => j h
 
-theorem 𝒞.rename {Γ} {σ : Subst Term} (r : Ren Term) : 𝒞 Γ σ -> 𝒞 Γ (σ >> r)
+theorem 𝒞.rename {Γ} {σ : Subst Term} (r : Ren Term) : 𝒞 Γ σ -> 𝒞 Γ (σ >> ·⟨r⟩)
 | j, i, T, h => ℒ.rename r (j h) |> cast (by simp [ℰ])
 
-theorem 𝒞.weaken {Γ σ} : 𝒞 Γ σ -> 𝒞 Γ (σ >> Ren.succ Term) := rename _
+theorem 𝒞.weaken {Γ σ} : 𝒞 Γ σ -> 𝒞 Γ (σ >> ·⟨.add Term 1⟩) := rename _
 
 theorem 𝒞.lift A {Γ} {σ : Subst Term} : 𝒞 Γ σ -> 𝒞 (A::Γ) σ.lift
-| h, i, T => re A 0 (weaken h) (i := i) (T := T) |> cast (by simp [Subst.rewrite_lift])
+| h, i, T => re A 0 (weaken h) (i := i) (T := T) |> cast (by simp)
 
 theorem ℰ.ind2 {A B s t} {P : Term -> Term -> Prop}
   (ih : ∀ s t,
@@ -106,7 +106,7 @@ theorem ℰ.lam {A B C b} : SN Red b -> ℛ (LR (A -:> B)) (λ[C] b) -> ℰ (A -
 | .sn r, j => .lift (λ _ => j) (λ r' =>
   match r' with
   | .lam (t' := b') r' =>
-    have r'' a (k : Ren Term) : Red b[su a :: k.to] b'[su a :: k.to] := Red.subst r'
+    have r'' a (k : Ren Term) : Red b[su a .: k.to] b'[su a .: k.to] := Red.subst r'
     ℰ.lam (r _ r') (λ k a ah => ℒ.preservation (j k a ah) (r'' a k |> cast (by simp))))
 
 theorem ℰ.app {A B f a} : ℰ (A -:> B) f -> ℰ A a -> ℰ B (.app f a)
@@ -125,9 +125,9 @@ theorem Typing.fundamental {Γ t A} : Γ ⊢ t : A -> Γ ⊨ t : A
 | .var j, σ, h => h j
 | .lam (A := A) (B := B) (t := t) tj, σ, h =>
   have norm : SN Red t[σ.lift] := ℒ.sound $ tj.fundamental σ.lift (𝒞.lift A h)
-  have body (r : Ren Term) (a : Term) (j : ℰ A a) : ℰ B t[σ.lift >> su a :: r.to] :=
-    tj.fundamental (su a :: (σ >> r)) (𝒞.su j $ 𝒞.rename r h)
-      |> cast (by simp [Subst.rewrite_lift, Subst.compose_compose_left_succ (T := Term)])
+  have body (r : Ren Term) (a : Term) (j : ℰ A a) : ℰ B t[σ.lift >> ·[su a .: r.to]] :=
+    tj.fundamental (su a .: (σ >> ·⟨r⟩)) (𝒞.su j $ 𝒞.rename r h)
+      |> cast (by simp; sorry)
   ℰ.lam norm (ℛ.lam.2 $ body |> cast (by simp))
 | .app fj aj, σ, h => ℰ.app (fj.fundamental σ h) (aj.fundamental σ h)
 

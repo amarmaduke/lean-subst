@@ -33,7 +33,7 @@ theorem Term.from_action_id {n} : from_action (𝐬0.act n) = var n := by
   simp [from_action]
 
 @[simp]
-theorem Term.from_action_succ {n} : from_action (𝐬1.act n) = var (n + 1) := by
+theorem Term.from_action_succ {n k} : from_action ((Subst.add _ k).act n) = var (n + k) := by
   simp [from_action]
 
 @[simp]
@@ -51,11 +51,11 @@ def Term.rmap (r : RenVec [Term]) : Term -> Term
 | app t1 t2 => app (t1.rmap r) (t2.rmap r)
 | λ[A] t => λ[A] t.rmap $ r.lift [1]
 
-instance : RenMap Term [Term] where
-  rmap := Term.rmap
+-- instance : RenMap Term [Term] where
+--   rmap := Term.rmap
 
 @[reducible, simp]
-instance instRenMapAll_Term : RenMapAll [Term] := .cons .nil
+instance instRenMapAll_Term : RenMapAll [Term] := @RenMapAll.cons _ _ ⟨Term.rmap⟩ .nil
 
 @[simp]
 theorem Term.rmap_fix {r : RenVec [Term]} {t : Term} : rmap r t = t⟨r,⟩ := by simp [RenMap.rmap]
@@ -78,10 +78,10 @@ theorem Term.from_action_rmap {t : Action Term} {r : RenVec [Term]}
 := by cases t <;> simp
 
 instance : RenMapId Term [Term] where
-  apply_id := by subst_solve_id
+  id_law := by subst_solve_id
 
-instance : RenMapCompose Term [Term] where
-  apply_compose := by subst_solve_compose
+instance : RenMapComp Term [Term] where
+  compose_law := by subst_solve_compose
 
 @[simp]
 def Term.smap (σ : SubstVec [Term]) : Term -> Term
@@ -89,11 +89,11 @@ def Term.smap (σ : SubstVec [Term]) : Term -> Term
 | app t1 t2 => app (t1.smap σ) (t2.smap σ)
 | λ[A] t => λ[A] t.smap $ σ.lift [1]
 
-instance : SubstMap Term [Term] where
-  smap := Term.smap
+-- instance : SubstMap Term [Term] where
+--   smap := Term.smap
 
 @[reducible, simp]
-instance instSubstMapAll_Ty : SubstMapAll [Term] := .cons .nil
+instance instSubstMapAll_Ty : SubstMapAll [Term] := @SubstMapAll.cons _ _ ⟨Term.smap⟩ .nil
 
 @[simp]
 theorem Term.smap_fix {σ : SubstVec [Term]} {t : Term} : smap σ t = t[σ,] := by simp [SubstMap.smap]
@@ -116,19 +116,19 @@ theorem Term.from_action_smap {t : Action Term} {σ : SubstVec [Term]}
 := by cases t <;> simp
 
 instance : SubstMapId Term [Term] where
-  apply_id := by subst_solve_id
+  id_law := by subst_solve_id
 
 instance : SubstMapStable Term [Term] where
-  apply_stable := by sorry --subst_solve_stable
+  stable := by sorry --subst_solve_stable
 
-instance : SubstMapRenComposeLeft Term [Term] where
-  apply_ren_compose_left := by sorry -- subst_solve_compose
+instance : SubstMapRenCompLeft Term [Term] where
+  compose_left_law := by subst_solve_compose
 
-instance : SubstMapRenComposeRight Term [Term] where
-  apply_ren_compose_right := by sorry -- subst_solve_compose
+instance : SubstMapRenCompRight Term [Term] where
+  compose_right_law := by subst_solve_compose
 
-instance : SubstMapCompose Term [Term] where
-  apply_compose := by subst_solve_compose
+instance : SubstMapComp Term [Term] where
+  compose_law := by subst_solve_compose
 
 
 end STLC

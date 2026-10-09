@@ -461,7 +461,7 @@ def RenVec.lift : {V : List (Type u2)} -> RenVec V -> List Nat -> RenVec V
 | _::_, cons t ts, k::ks => t.lift k .: ts.lift ks
 
 @[simp]
-def Subst.lift (V : List (Type u2)) [RenMap T (T::V)] (σ : Subst T) (k : Nat := 1) : Subst T :=
+def Subst.lift (V : List (Type u2) := []) [RenMap T (T::V)] (σ : Subst T) (k : Nat := 1) : Subst T :=
   (0...k) ++ (σ >> RenVec.add (T::V) [k])
 
 @[simp]
