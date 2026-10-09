@@ -91,42 +91,14 @@ theorem Kinding.subst {Δ Δ' A} {σ : Subst Ty} (m : KindingSubst σ Δ Δ') : 
 structure TypingRen (r : Ren Term) (Γ Γ' : List Ty) where
   act : ∀ {x T}, Γ[x]? = some T -> Γ'[r.act x]? = some T
 
--- structure TypingRen (r : RenVec [Term, Ty]) (Δ Δ' : List Unit) (Γ Γ' : List Ty) where
---   act : (∀ {x T}, Δ[x]? = some T -> Δ'[r.2.1.act x]? = some T)
---     ∧ (∀ {x T} (ξ : Ren Ty), Γ⟨ξ⟩[x]? = some T -> Γ'⟨ξ⟩[r.1.act x]? = some T)
+theorem TypingRen.lift {Γ Γ' r} (m : TypingRen r Γ Γ') (A : List Ty)
+  : TypingRen (r.lift A.length) (A ++ Γ) (A ++ Γ')
+:= sorry
 
--- theorem TypingRen.lift {Δ Δ' Γ Γ'} {r : RenVec [Term, Ty]} :
---   ∀ (_ : TypingRen r Δ Δ' Γ Γ') (U : List Unit) (T : List Ty),
---   TypingRen (r.lift [T.length, U.length])
---     (U ++ Δ) (U ++ Δ')
---     (T ++ Γ⟨Ren.add Ty U.length⟩) (T ++ Γ'⟨Ren.add Ty U.length⟩)
--- | ⟨⟨act1, act2⟩⟩, U, T =>
---   ⟨⟨λ {x T'} j =>
---     match Nat.decLt x (U.length) with
---     | .isFalse h => by simp; grind
---     | .isTrue h => by simp; grind,
---     λ {x T'} (ξ : Ren Ty) j =>
---     match Nat.decLt x ((T⟨ξ⟩ : List Ty).length) with
---     | .isFalse h =>
---       have lem0 : T.length = (T⟨ξ⟩ : List Ty).length := by rw [List.rmap_length]
---       have lem1 : Γ'⟨Ren.add Ty U.length >> ξ⟩[r.1.act (x - T.length)]? = some T' := by
---         simp at j; rw [List.getElem?_append_right] at j; rw [<-lem0] at j
---         apply act2 (Ren.add Ty U.length >> ξ) j; grind
---       by {
---         simp; rw [lem0]; rw [Ren.lift_action_ge]
---         rw [List.getElem?_append_right]; simp
---         rw [<-lem0]; exact lem1
---         grind; grind
---       }
---     | .isTrue h => by {
---       have lem0 : T.length = (T⟨ξ⟩ : List Ty).length := by rw [List.rmap_length]
---       have lem1 : x < T.length := by grind
---       simp_all; grind
---     }⟩⟩
-
--- theorem TypingRen.kind {Δ Δ' Γ Γ'} {r : RenVec [Term, Ty]}
---   : TypingRen r Δ Δ' Γ Γ' -> KindingRen r.2.1 Δ Δ'
--- | ⟨act⟩ => ⟨act.1⟩
+theorem TypingRen.shift {Γ Γ' r} k : TypingRen r Γ Γ' -> TypingRen r Γ⟨.add Ty k⟩ Γ'⟨.add Ty k⟩
+| ⟨act⟩ => ⟨λ {x T} h =>
+  have lem : Γ⟨.add Ty k⟩[x]?⟨.sub Ty k⟩ = some T⟨.sub Ty k⟩ := sorry
+  by simp at lem; sorry⟩
 
 theorem Typing.rename {Δ Δ' Γ Γ' A t} {r1 : Ren Ty} {r2 : Ren Term}
   (m1 : KindingRen r1 Δ Δ') (m2 : TypingRen r2 Γ Γ')
@@ -135,22 +107,16 @@ theorem Typing.rename {Δ Δ' Γ Γ' A t} {r1 : Ren Ty} {r2 : Ren Term}
   have j1 := congr (f₁ := λ t => t⟨r1⟩) rfl $ m2.act j1
   var (lsimp j1) (j2.rename m1)
 | app j1 j2 => app (j1.rename m1 m2) (j2.rename m1 m2)
-| lam (A := A) j1 j2 =>
-  sorry
-  -- have m' : TypingRen (r.lift [1, 0]) Δ Δ' (A::Γ) (A::Γ') := m.lift [] [A] |> cast (by simp)
-  -- lam (j1.rename m.kind) (j2.rename m')
+| lam (A := A) j1 j2 => lam (j1.rename m1) (j2.rename m1 $ m2.lift [A])
 | tapp j1 j2 e => tapp (j1.rename m1 m2) (j2.rename m1) (by simp [e])
 | tlam j =>
   have m1' := m1.lift
-  have j' := j.rename (m1.lift) m2
+  --have j' := j.rename (m1.lift) m2
   tlam (by simp; sorry)
   -- have m' : TypingRen (r.lift [0, 1]) (()::Δ) (()::Δ') Γ⟨𝐫1(Ty)⟩ Γ'⟨𝐫1(Ty)⟩ := m.lift [.unit] []
   -- tlam (j.rename m' |> cast (by simp; grind))
 | zero => zero
 | succ j => succ (j.rename m1 m2)
-| nrec j1 j2 j3 =>
-  sorry
-  -- have m' : TypingRen (r.lift [2, 0]) Δ Δ' (A::.nat::Γ) (A::.nat::Γ') := m.lift [] [A, .nat] |> cast (by simp)
-  -- nrec (j1.rename m) (j2.rename m') (j3.rename m)
+| nrec j1 j2 j3 => nrec (j1.rename m1 m2) (j2.rename m1 $ m2.lift [A, Ty.nat]) (j3.rename m1 m2)
 
 end SystemFWithNat

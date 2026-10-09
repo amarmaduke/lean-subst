@@ -6,5 +6,5 @@ import LeanSubst.Automation.Attributes
 import LeanSubst.Automation.Basic
 import LeanSubst.Types.Option
 import LeanSubst.Types.List
--- import LeanSubst.Rewriting.Reduction
--- import LeanSubst.Rewriting.Normal
+import LeanSubst.Rewriting.Reduction
+import LeanSubst.Rewriting.Normal

@@ -1425,6 +1425,16 @@ theorem SubstVec.lift_cons [RenMapAll (T::V)] {σ : Subst T} {σs : SubstVec V} 
   : (σ .: σs).lift (x::xs) = σ.lift V x .: σs.lift xs
 := by simp [lift]
 
+@[simp]
+theorem SubstVec.shift_id_nil [RenMapAll (T::V)]
+  : shift [] (id (T::V)) = id (T::V)
+:= by simp [shift, -cons_id, id]
+
+@[simp]
+theorem SubstVec.shift_id_cons [RenMapAll (T::V)] {x xs}
+  : shift (x::xs) (id (T::V)) = (Subst.id T >> RenVec.add (T::V) x) .: shift xs (id V)
+:= by simp [shift, -cons_id, id]
+
 end
 
 end LeanSubst

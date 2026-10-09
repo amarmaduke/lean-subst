@@ -9,9 +9,7 @@ macro "lsimp " t:term : term => `(by
 macro "subst_solve_id" : tactic => `(tactic| {
   intro s; induction s
   all_goals
-    try simp
-    try simp only [LeanSubst.SubstVec.shift, LeanSubst.SubstVec.id]
-    try simp [*]
+    simp [*]
 })
 
 macro "subst_solve_stable" : tactic => `(tactic| {
