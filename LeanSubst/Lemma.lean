@@ -1397,7 +1397,7 @@ theorem Subst.lift_act_lt [RenMap T (T::V)] {σ : Subst T} {k i} (h : i < k)
   : (σ.lift V k).act i = re i
 := by simp [lift]; grind
 
-theorem Ren.lift_act_ge {r : Ren T} {k i} {h : i ≥ k}
+theorem Ren.lift_act_ge {r : Ren T} {k i} (h : i ≥ k)
   : (r.lift k).act i = r.act (i - k) + k
 := by simp [lift]; rw [Ren.append_range_act_ge h]; simp
 

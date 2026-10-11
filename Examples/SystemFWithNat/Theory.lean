@@ -93,12 +93,27 @@ structure TypingRen (r : Ren Term) (Γ Γ' : List Ty) where
 
 theorem TypingRen.lift {Γ Γ' r} (m : TypingRen r Γ Γ') (A : List Ty)
   : TypingRen (r.lift A.length) (A ++ Γ) (A ++ Γ')
-:= sorry
+:= ⟨λ {x} _ j =>
+    match x.decLt A.length with
+    | isTrue h => by
+      rw [Ren.lift_act_lt h]
+      rw [List.getElem?_append_left h] at *
+      exact j
+    | isFalse h => by
+      replace h : x ≥ A.length := by lia
+      rw [Ren.lift_act_ge h]
+      rw [List.getElem?_append_right (by lia)] at *; simp
+      exact m.act j⟩
 
 theorem TypingRen.shift {Γ Γ' r} k : TypingRen r Γ Γ' -> TypingRen r Γ⟨.add Ty k⟩ Γ'⟨.add Ty k⟩
 | ⟨act⟩ => ⟨λ {x T} h =>
-  have lem : Γ⟨.add Ty k⟩[x]?⟨.sub Ty k⟩ = some T⟨.sub Ty k⟩ := sorry
-  by simp at lem; sorry⟩
+  have lem : Γ⟨.add Ty k⟩[x]?⟨.sub Ty k⟩ = some T⟨.sub Ty k⟩ := by simp [h]
+  by {
+    simp at lem; replace act := act lem
+    rw [<-List.rmap_get?, act]
+    rw [<-Option.rmap_some, <-h]
+    simp
+  }⟩
 
 theorem Typing.rename {Δ Δ' Γ Γ' A t} {r1 : Ren Ty} {r2 : Ren Term}
   (m1 : KindingRen r1 Δ Δ') (m2 : TypingRen r2 Γ Γ')
@@ -109,14 +124,58 @@ theorem Typing.rename {Δ Δ' Γ Γ' A t} {r1 : Ren Ty} {r2 : Ren Term}
 | app j1 j2 => app (j1.rename m1 m2) (j2.rename m1 m2)
 | lam (A := A) j1 j2 => lam (j1.rename m1) (j2.rename m1 $ m2.lift [A])
 | tapp j1 j2 e => tapp (j1.rename m1 m2) (j2.rename m1) (by simp [e])
-| tlam j =>
-  have m1' := m1.lift
-  --have j' := j.rename (m1.lift) m2
-  tlam (by simp; sorry)
-  -- have m' : TypingRen (r.lift [0, 1]) (()::Δ) (()::Δ') Γ⟨𝐫1(Ty)⟩ Γ'⟨𝐫1(Ty)⟩ := m.lift [.unit] []
-  -- tlam (j.rename m' |> cast (by simp; grind))
+| tlam j => tlam (lsimp j.rename m1.lift (m2.shift 1))
 | zero => zero
 | succ j => succ (j.rename m1 m2)
 | nrec j1 j2 j3 => nrec (j1.rename m1 m2) (j2.rename m1 $ m2.lift [A, Ty.nat]) (j3.rename m1 m2)
+
+structure TypingSubst (σ : Subst Term) Δ (Γ Γ' : List Ty) where
+  act : ∀ {x} {T : Ty} {τ Δ'},
+    Γ[x]? = some T ->
+    KindingSubst τ Δ Δ' ->
+    Δ'&Γ'[τ] ⊢ σ.act x : T[τ]
+
+theorem TypingSubst.lift {Δ Γ Γ' σ} (m : TypingSubst σ Δ Γ Γ') (A : List Ty)
+  : TypingSubst (σ.lift [Ty] A.length) Δ (A ++ Γ) (A ++ Γ')
+:= ⟨λ {x} _ j =>
+    match x.decLt A.length with
+    | isTrue h => by
+      sorry
+      -- rw [Ren.lift_act_lt h]
+      -- rw [List.getElem?_append_left h] at *
+      -- exact j
+    | isFalse h => by
+      sorry
+    ⟩
+      -- replace h : x ≥ A.length := by lia
+      -- rw [Ren.lift_act_ge h]
+      -- rw [List.getElem?_append_right (by lia)] at *; simp
+      -- exact m.act j⟩
+
+theorem TypingSubst.shift {Δ Γ Γ' σ} A
+  : TypingSubst σ Δ Γ Γ' ->
+    TypingSubst (σ >> RenVec.add [Term, Ty] [0, 1])
+      (A ++ Δ) Γ⟨.add Ty A.length⟩ Γ'⟨.add Ty A.length⟩
+| ⟨act⟩ => ⟨λ {x T} h =>
+  -- have lem : Γ⟨.add Ty k⟩[x]?⟨.sub Ty k⟩ = some T⟨.sub Ty k⟩ := by simp [h]
+  -- by {
+  --   simp at lem; replace act := act lem
+  --   rw [<-List.rmap_get?, act]
+  --   rw [<-Option.rmap_some, <-h]
+  --   simp
+    sorry
+  ⟩
+
+theorem Typing.subst {Δ Δ' Γ Γ' A t} {σ : Subst Ty} {τ : Subst Term}
+  (mσ : KindingSubst σ Δ Δ') (mτ : TypingSubst τ Δ Γ Γ')
+  : Δ&Γ ⊢ t : A -> Δ'&Γ'[σ] ⊢ t[τ, σ] : A[σ]
+| var (x := x) j1 j2 => mτ.act j1 mσ
+| app j1 j2 => app (j1.subst mσ mτ) (j2.subst mσ mτ)
+| lam (A := A) j1 j2 => lam (j1.subst mσ) (lsimp j2.subst mσ $ mτ.lift [A])
+| tapp j1 j2 e => tapp (j1.subst mσ mτ) (j2.subst mσ) (by simp [e])
+| tlam j => tlam (lsimp j.subst mσ.lift (mτ.shift [()]))
+| zero => zero
+| succ j => succ (j.subst mσ mτ)
+| nrec j1 j2 j3 => nrec (j1.subst mσ mτ) (lsimp j2.subst mσ $ mτ.lift [A, Ty.nat]) (j3.subst mσ mτ)
 
 end SystemFWithNat

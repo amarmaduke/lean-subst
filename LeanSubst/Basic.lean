@@ -77,9 +77,7 @@ meta def RenVec.unexpand_cons : Lean.PrettyPrinter.Unexpander
 
 @[app_unexpander rmap]
 meta def unexpand_rmap : Lean.PrettyPrinter.Unexpander
-| `($_ ·⟨$r1⟩ $t) => `($t⟨$r1⟩)
-| `($_ ·⟨$r1, $r2⟩ $t) => `($t⟨$r1, $r2⟩)
-| `($_ ·⟨$r1, $r2, $r3⟩ $t) => `($t⟨$r1, $r2, $r3⟩)
+| `($_ ·⟨$r,*⟩ $t) => `($t⟨$r,*⟩)
 | `($_ $r $t) => `($t⟨$r,⟩)
 | _ => throw ()
 
@@ -150,9 +148,7 @@ meta def SubstVec.unexpand_cons : Lean.PrettyPrinter.Unexpander
 
 @[app_unexpander smap]
 meta def unexpand_smap : Lean.PrettyPrinter.Unexpander
-| `($_ ($σ1, SubstVec.nil) $t) => `($t[$σ1])
-| `($_ ($σ1, $σ2, SubstVec.nil) $t) => `($t[$σ1, $σ2])
-| `($_ ($σ1, $σ2, $σ3, SubstVec.nil) $t) => `($t[$σ1, $σ2, $σ3])
+| `($_ ·[$σ,*] $t) => `($t[$σ,*])
 | `($_ $σ $t) => `($t[$σ,])
 | _ => throw ()
 
