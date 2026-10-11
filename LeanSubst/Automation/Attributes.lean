@@ -6,14 +6,6 @@ namespace LeanSubstAttributes
 
   initialize leanSubstVar : TagAttribute ← registerTagAttribute `_leansubst_var "Indicates that a constructor is a variable constructor."
 
-  -- #check Lean.Parser.Command.classAbbrev
-  -- #check Lean.Parser.Term.attrInstance
-  -- #check Attr.coe
-
-  -- #check Lean.Parser.Attr.simple
-
-  -- #check mkElabAttribute
-
   syntax (name := leansubst_binder_attr) "_leansubst_binder" "[" term,* "]" "[" ident,* "]" "[" num,* "]" : attr
 
   initialize leanSubstBinder : ParametricAttribute $ List (Term × Ident × Nat) ← registerParametricAttribute {

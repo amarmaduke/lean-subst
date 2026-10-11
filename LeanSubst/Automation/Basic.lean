@@ -197,7 +197,7 @@ namespace Automation
 
   -- The main function
   def genTy (tys : List Ident) : CommandElabM Unit := do
-    let numTotalTys := tys.length
+    let _numTotalTys := tys.length
 
     let toGlobal (ty : Ident) : CommandElabM Name := Command.liftCoreM $ realizeGlobalConstNoOverload ty.raw
     let ty := tys[0]!
@@ -247,18 +247,18 @@ namespace Automation
     let rmap := qualify "rmap"
     let smap := qualify "smap"
 
-    let mkMapInstances (mapType : MapType) := do
-      match mapType with
-      | .rmap =>
-        elabCommand $ ← `(
-          instance : RenMap $ty [$tys.toArray,*] where
-            rmap := $rmap
-        )
-      | .smap =>
-        elabCommand $ ← `(
-          instance : SubstMap $ty [$tys.toArray,*] where
-            smap := $smap
-        )
+    -- let mkMapInstances (mapType : MapType) := do
+    --   match mapType with
+    --   | .rmap =>
+    --     elabCommand $ ← `(
+    --       instance : RenMap $ty [$tys.toArray,*] where
+    --         rmap := $rmap
+    --     )
+    --   | .smap =>
+    --     elabCommand $ ← `(
+    --       instance : SubstMap $ty [$tys.toArray,*] where
+    --         smap := $smap
+    --     )
 
     -- rmap setup
     let getLiftsOfTy (data : ArgData) (xs : List Ident) (ty : Ident)  : CommandElabM $ Term := do
@@ -311,7 +311,7 @@ namespace Automation
           let tysNamesGlobal ← tys.mapM toGlobal
           let zipped := tysNamesGlobal.zip optionLifts
           let rens : List $ Option Term ← mapEachSuffix zipped (fun zippedSfx ↦ do
-            let ⟨tys, optionLifts⟩ := zippedSfx.unzip
+            let ⟨_, optionLifts⟩ := zippedSfx.unzip
             if optionLifts.tail.all Option.isNone then
               pure none
             else
@@ -422,8 +422,14 @@ namespace Automation
       )
 
     let mkMapAllInstances (mapType : MapType) := do
+      let theMapFn := match mapType with
+        | .rmap => qualify "rmap"
+        | .smap => qualify "smap"
       let TheMapStr := match mapType with | .rmap => "RenMap" | .smap => "SubstMap"
       let TheMapAll ← match mapType with | .rmap => ``(LeanSubst.RenMapAll) | .smap => ``(LeanSubst.SubstMapAll)
+      let TheMapAll_cons := match mapType with
+        | .rmap => mkIdent `LeanSubst.RenMapAll.cons
+        | .smap => mkIdent `LeanSubst.SubstMapAll.cons
       let instTheMapAll_ty := mkIdent $ .mkStr1 s!"inst{TheMapStr}All_{ty.raw.getId.toString}" -- not qualified
       if tys.length > 1 then
         let tysPostfix := "_".intercalate (tys.map (fun (ty : Ident) ↦ ty.raw.getId.toString))
@@ -431,12 +437,15 @@ namespace Automation
         let instTheMapAll_tys := mkIdent $ .mkStr1 s!"inst{TheMapStr}All_{tysPostfix}" -- not qualified
         let instTheMapAll_tys' := mkIdent $ .mkStr1 s!"inst{TheMapStr}All_{tysPostfix'}" -- not qualified
         elabCommand $ ← `(
-          instance $instTheMapAll_tys:ident : $TheMapAll [$tys.toArray:ident,*] := .cons $instTheMapAll_tys'
+          @[reducible, simp]
+          instance $instTheMapAll_tys:ident : $TheMapAll [$tys.toArray:ident,*] :=
+            @$TheMapAll_cons _ _ ⟨$theMapFn⟩ $instTheMapAll_tys'
         )
       else
         elabCommand $ ← `(
           @[reducible, simp]
-          instance $instTheMapAll_ty:ident : $TheMapAll [$tys.toArray:ident,*] := .cons .nil
+          instance $instTheMapAll_ty:ident : $TheMapAll [$tys.toArray:ident,*] :=
+            @$TheMapAll_cons _ _ ⟨$theMapFn⟩ .nil
         )
 
     -- Executing rmap stuff
@@ -447,7 +456,8 @@ namespace Automation
       $rmapCases:matchAlt*
     )
 
-    mkMapInstances .rmap
+    -- mkMapInstances .rmap
+    mkMapAllInstances .rmap
     mkMapThms .rmap
     mkFromActionMapThms .rmap
 
@@ -459,8 +469,6 @@ namespace Automation
         compose_law := by subst_solve_compose
     )
 
-    mkMapAllInstances .rmap
-
     -- Executing smap stuff
     let smapCases ← mkAllCases (map_f .smap false) tyNameGlobal (fVar := some $ smap_fVar tys)
 
@@ -470,7 +478,7 @@ namespace Automation
       $smapCases:matchAlt*
     )
 
-    mkMapInstances .smap
+    -- mkMapInstances .smap
     mkMapAllInstances .smap
     mkMapThms .smap
     mkFromActionMapThms .smap
@@ -480,7 +488,7 @@ namespace Automation
         id_law := by subst_solve_id
 
       instance : SubstMapStable $ty [$tys.toArray,*] where
-        stable := by sorry
+        stable := by subst_solve_stable
 
       instance : SubstMapRenCompLeft $ty [$tys.toArray,*] where
         compose_left_law := by subst_solve_compose

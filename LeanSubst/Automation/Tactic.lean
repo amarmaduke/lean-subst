@@ -1,3 +1,9 @@
+module
+
+import LeanSubst.Basic
+import LeanSubst.Lemma
+
+namespace LeanSubst
 
 macro "lsimp " t:term : term => `(by
   solve
@@ -6,6 +12,25 @@ macro "lsimp " t:term : term => `(by
     | exact ($t |> cast (by simp))
 )
 
+macro "norm_stable" : tactic => `(tactic|
+  simp only [
+    <-Ren.to_id,
+    <-Ren.to_add,
+    <-Ren.to_sub,
+    <-Ren.to_cons,
+    <-Ren.to_append,
+    <-Ren.to_append_range,
+    <-Ren.to_compose,
+    <-RenVec.to_nil,
+    <-RenVec.to_cons,
+    <-RenVec.to_head,
+    <-RenVec.to_tail,
+    <-RenVec.to_lift,
+    Subst.to_compose_left,
+    Subst.to_compose_right,
+    Subst.smap_to
+  ])
+
 macro "subst_solve_id" : tactic => `(tactic| {
   intro s; induction s
   all_goals
@@ -13,19 +38,16 @@ macro "subst_solve_id" : tactic => `(tactic| {
 })
 
 macro "subst_solve_stable" : tactic => `(tactic| {
-  intro r σ h
+  intro r σ h; subst h
   funext; case _ t =>
-  induction t generalizing r σ
+  induction t generalizing r
   all_goals
-    try solve | subst h; simp [*] at *; try congr
-    try solve | simp [*] at *
-    try solve | subst h; simp [*]; rw [Subst.apply_stable]; congr
-    try solve | {
-      subst h; simp [*] at *
-      rcases r with ⟨r1, r2, r3, r4, r5, r6, r7, r8, r9⟩
-      try simp [RenVec.to]
-      try rw [Subst.apply_stable]; congr
-    }
+    solve
+      | simp [*]; try norm_stable
+      | repeat (cases r; case' _ r => try simp only)
+        simp [*]; try norm_stable
+      | repeat (cases r; case' _ r => try simp only)
+        simp [*]; congr
 })
 
 macro "subst_solve_compose" : tactic => `(tactic| {
@@ -37,3 +59,5 @@ macro "subst_solve_compose" : tactic => `(tactic| {
     repeat (cases b; case' _ b => try simp only)
     simp [*]
 })
+
+end LeanSubst

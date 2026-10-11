@@ -1203,6 +1203,9 @@ theorem Subst.append_range_actr_lt {σ : Subst T} {k s e} (h : e ≤ k)
   rw [Subst.append_range_act_lt] <;> simp; grind
 
 @[simp]
+theorem Ren.act_to {r : Ren T} {x} : r.to.act x = re (r.act x) := by simp [Ren.to]
+
+@[simp]
 theorem Ren.to_id : (id T).to = .id T := by simp [to, Subst.id]
 
 @[simp]
@@ -1231,17 +1234,25 @@ theorem Ren.to_compose {r1 r2 : Ren T} : (r1 >> r2).to = r1 >> r2.to := by
   simp [HAndThen.hAndThen, AndThen.andThen, to, compose, Subst.compose_left]
 
 @[simp]
+theorem RenVec.to_nil : RenVec.nil.to = SubstVec.nil := by simp [to]
+
+@[simp]
 theorem RenVec.to_cons {r : Ren T} {rs : RenVec V} : (r .: rs).to = r.to .: rs.to := by
   simp [RenVec.to]
+
+@[simp]
+theorem RenVec.to_head {r : RenVec (T::V)} : r.head.to = r.to.head := by
+  cases r; case _ r rs => simp
+
+@[simp]
+theorem RenVec.to_tail {r : RenVec (T::V)} : r.tail.to = r.to.tail := by
+  cases r; case _ r rs => simp
 
 @[simp]
 theorem Subst.to_compose_left
   [RenMap T (T::V)] [SubstMap T (T::V)] {r : Ren T} {σ : SubstVec (T::V)}
   : r.to >> σ = r >> σ.head
-:= by
-  simp [HAndThen.hAndThen, compose, compose_left]; funext; case _ x =>
-  cases σ; case _ σ σs =>
-  simp [Ren.to]
+:= by simp [HAndThen.hAndThen, compose, compose_left]
 
 @[simp]
 theorem Subst.to_compose_right
@@ -1253,6 +1264,13 @@ theorem Subst.to_compose_right
   simp
   have lem := @Subst.stable T (T::V) _ _ _ (r .: rs) (r.to .: rs.to) (by simp)
   rw [Subst.stable (r := r .: rs) (σ := r.to .: rs.to)]; simp
+
+@[simp high]
+theorem Subst.smap_to
+  [RenMap T (T::V)] [SubstMap T (T::V)] [SubstMapStable T (T::V)]
+  {t : T} {r : RenVec (T::V)}
+  : t[r.to,] = t⟨r,⟩
+:= by rw [stable rfl]
 
 private theorem Ren.actr_add_fused_add {r : Ren T} {k s n x}
   : actr_add_fused (add T x >> r) k s n = actr_add_fused r (k + x) (s + x) n
@@ -1424,6 +1442,13 @@ theorem RenVec.lift_cons {r : Ren T} {rs : RenVec V} {x xs}
 theorem SubstVec.lift_cons [RenMapAll (T::V)] {σ : Subst T} {σs : SubstVec V} {x xs}
   : (σ .: σs).lift (x::xs) = σ.lift V x .: σs.lift xs
 := by simp [lift]
+
+@[simp]
+theorem RenVec.to_lift :
+  ∀ {V} [RenMapAll V] {r : RenVec V} {xs}, (r.lift xs).to = r.to.lift xs
+| [], _, _, _ => by simp [SubstVec.lift, to]
+| _::_, _, cons r rs, [] => by simp
+| V::Vs, _, cons r rs, x::xs => by simp [to_lift]; congr
 
 @[simp]
 theorem SubstVec.shift_id_nil [RenMapAll (T::V)]

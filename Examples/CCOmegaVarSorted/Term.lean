@@ -172,7 +172,7 @@ instance : SubstMapId Term [Term] where
   id_law := by subst_solve_id
 
 instance : SubstMapStable Term [Term] where
-  stable := by sorry --subst_solve_stable
+  stable := by subst_solve_stable
 
 instance : SubstMapRenCompLeft Term [Term] where
   compose_left_law := by subst_solve_compose
