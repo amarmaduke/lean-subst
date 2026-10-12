@@ -46,7 +46,7 @@ namespace LeanSubst
         Star R1 x y -> Star R2 x y
       := by
         intro r; induction r
-        case _ => constructor!
+        case _ => constructor
         case _ _ r ih => constructor; apply ih; apply Rprm r
 
       theorem stepr {x y z} : R x y -> Star R y z -> Star R x z := by
@@ -241,7 +241,7 @@ namespace LeanSubst
 
       theorem sym {x y} : Conv R x y -> Conv R y x := by
         intro h; induction h
-        case _ => constructor!
+        case _ => constructor
         case _ r ih => apply forward_right ih r
         case _ r ih => apply backward_right ih r
 
