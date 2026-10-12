@@ -1401,7 +1401,7 @@ theorem Ren.lift_act_ge {r : Ren T} {k i} (h : i ≥ k)
   : (r.lift k).act i = r.act (i - k) + k
 := by simp [lift]; rw [Ren.append_range_act_ge h]; simp
 
-theorem Subst.lift_act_ge [RenMap T (T::V)] {σ : Subst T} {k i} {h : i ≥ k}
+theorem Subst.lift_act_ge [RenMap T (T::V)] {σ : Subst T} {k i} (h : i ≥ k)
   : (σ.lift V k).act i = (σ.act (i - k))⟨.add (T::V) [k],⟩
 := by simp [lift]; rw [Subst.append_range_act_ge h]; simp
 
