@@ -1,6 +1,6 @@
 
 import LeanSubst.Lemma
-import LeanSubst.Types.Option
+import LeanSubst.Data.Option
 
 namespace LeanSubst
 
@@ -19,13 +19,14 @@ theorem List.smap_append [SubstMap S V] {xs ys : List S} {σ : SubstVec V}
 := by induction xs generalizing ys <;> simp [*]
 
 @[simp]
-theorem List.rmap_get? [RenMap S V] {x : List S} {n : Nat} {r : RenVec V}
+theorem List.rmap_getElem? [RenMap S V] {x : List S} {n : Nat} {r : RenVec V}
   : x[n]?⟨r,⟩ = x⟨r,⟩[n]?
 := by
   induction x generalizing n r <;> simp [*]
   case cons => cases n <;> simp [*]
+
 @[simp]
-theorem List.smap_get? [SubstMap S V] {x : List S} {n : Nat} {σ : SubstVec V}
+theorem List.smap_getElem? [SubstMap S V] {x : List S} {n : Nat} {σ : SubstVec V}
   : x[n]?[σ,] = x[σ,][n]?
 := by
   induction x generalizing n σ <;> simp [*]
@@ -40,6 +41,22 @@ theorem List.rmap_length [RenMap S V] {x : List S} {r : RenVec V}
 theorem List.smap_length [SubstMap S V] {x : List S} {σ : SubstVec V}
   : x[σ,].length = x.length
 := by induction x generalizing σ <;> simp [*]
+
+@[simp]
+theorem List.rmap_getElem [RenMap S V] {x : List S} {n : Nat} {r : RenVec V} (h : n < x.length)
+  : x[n]⟨r,⟩ = x⟨r,⟩[n]'(by simp [h])
+:= by
+  induction x generalizing n r <;> simp [*]
+  case nil => cases h
+  case cons => cases n <;> simp [*]
+
+@[simp]
+theorem List.smap_getElem [SubstMap S V] {x : List S} {n : Nat} {σ : SubstVec V} (h : n < x.length)
+  : x[n][σ,] = x[σ,][n]'(by simp [h])
+:= by
+  induction x generalizing n σ <;> simp [*]
+  case nil => cases h
+  case cons => cases n <;> simp [*]
 
 @[simp]
 theorem List.rmap_reverse [RenMap S V] {x : List S} {r : RenVec V}

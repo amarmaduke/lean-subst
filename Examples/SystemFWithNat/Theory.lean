@@ -20,7 +20,7 @@ inductive Kinding : List Unit -> Ty -> Prop where
 
 notation:170 Δ:170 " ⊢ " A:170 " type" => Kinding Δ A
 
-inductive Typing  : List Unit -> List Ty -> Term -> Ty -> Prop where
+inductive Typing : List Unit -> List Ty -> Term -> Ty -> Prop where
 | var {Δ Γ x A} :
   Γ[x]? = some A ->
   Δ ⊢ A type ->
@@ -54,12 +54,23 @@ inductive Typing  : List Unit -> List Ty -> Term -> Ty -> Prop where
 
 notation:200 Δ:200 "&" Γ:200 " ⊢ " t:200 " : " A:200 => Typing Δ Γ t A
 
+inductive ListWf : List Unit -> List Ty -> Prop where
+| nil {Δ} : ListWf Δ []
+| cons {Δ Γ A} : Δ ⊢ A type -> ListWf Δ Γ -> ListWf Δ (A::Γ)
+
+theorem ListWf.get {Δ Γ T} {x : Nat} (wf : ListWf Δ Γ) (h : Γ[x]? = some T) : Δ ⊢ T type := by
+  induction wf generalizing x; cases h
+  case _ cons A j1 j2 ih =>
+  cases x <;> simp at *
+  case zero => subst h; exact j1
+  case succ x => apply ih h
+
 structure KindingRen (r : Ren Ty) (Δ Δ' : List Unit) where
   act : ∀ {x T}, Δ[x]? = some T -> Δ'[r.act x]? = some T
 
 theorem KindingRen.id Δ : KindingRen (.id Ty) Δ Δ := ⟨λ j => j⟩
 
-theorem KindingRen.succ {A X} : KindingRen (.add Ty 1) X (A::X) := ⟨λ h => h⟩
+theorem KindingRen.succ Δ : KindingRen (.add Ty 1) Δ (()::Δ) := ⟨λ h => h⟩
 
 theorem KindingRen.lift {Δ Δ' : List Unit} {r : Ren Ty} (h : KindingRen r Δ Δ')
   : KindingRen r.lift (.unit::Δ) (.unit::Δ')
@@ -77,21 +88,36 @@ theorem Kinding.rename {Δ Δ' A} {r : Ren Ty} (m : KindingRen r Δ Δ') : Δ �
 structure KindingSubst (σ : Subst Ty) (Δ Δ' : List Unit) where
   act : ∀ {x : Nat} {T}, Δ[x]? = some T -> Δ' ⊢ σ.act x type
 
+theorem KindingSubst.id Δ : KindingSubst (.id Ty) Δ Δ := ⟨λ j => .var j⟩
+
+theorem KindingSubst.cons {Δ Δ' τ A} (j : Δ' ⊢ A type) (mτ : KindingSubst τ Δ Δ')
+  : KindingSubst (su A .: τ) (() :: Δ) Δ'
+:= ⟨λ {x T} h =>
+    match x with
+    | 0 => by simp [j]
+    | _ + 1 => by simp_all; exact mτ.act h⟩
+
 theorem KindingSubst.lift {Δ Δ' : List Unit} {σ : Subst Ty} (m : KindingSubst σ Δ Δ')
   : KindingSubst (σ.lift []) (.unit::Δ) (.unit::Δ')
 := ⟨λ {x} _ j =>
     match x with
     | 0 => lsimp .var j
-    | _ + 1 => lsimp (m.act j).rename (Δ' := .unit::Δ') KindingRen.succ⟩
+    | _ + 1 => lsimp (m.act j).rename (KindingRen.succ Δ')⟩
 
-theorem Kinding.subst {Δ Δ' A} {σ : Subst Ty} (m : KindingSubst σ Δ Δ') : Δ ⊢ A type -> Δ' ⊢ A[σ] type
+theorem Kinding.subst {Δ Δ' A} {σ : Subst Ty} (m : KindingSubst σ Δ Δ')
+  : Δ ⊢ A type -> Δ' ⊢ A[σ] type
 | var j => m.act j
 | nat => nat
 | arrow j1 j2 => arrow (j1.subst m) (j2.subst m)
 | all j => all (j.subst $ m.lift)
 
+theorem Kinding.beta {Δ A B} (j1 : Δ ⊢ B type) (j2 : (()::Δ) ⊢ A type) : Δ ⊢ A[su B .: 𝐬0] type :=
+  j2.subst $ KindingSubst.cons j1 (.id Δ)
+
 structure TypingRen (r : Ren Term) (Γ Γ' : List Ty) where
   act : ∀ {x T}, Γ[x]? = some T -> Γ'[r.act x]? = some T
+
+theorem TypingRen.id Γ : TypingRen (.id Term) Γ Γ := ⟨λ j => j⟩
 
 theorem TypingRen.add Γ A : TypingRen (.add Term A.length) Γ (A ++ Γ) :=
   ⟨λ j => by simp; rw [List.getElem?_append_right (by lia)]; simp [j]⟩
@@ -115,7 +141,7 @@ theorem TypingRen.shift {Γ Γ' r} k : TypingRen r Γ Γ' -> TypingRen r Γ⟨.a
   have lem : Γ⟨.add Ty k⟩[x]?⟨.sub Ty k⟩ = some T⟨.sub Ty k⟩ := by simp [h]
   by {
     simp at lem; replace act := act lem
-    rw [<-List.rmap_get?, act]
+    rw [<-List.rmap_getElem?, act]
     rw [<-Option.rmap_some, <-h]
     simp
   }⟩
@@ -135,71 +161,83 @@ theorem Typing.rename {Δ Δ' Γ Γ' A t} {r1 : Ren Ty} {r2 : Ren Term}
 | nrec j1 j2 j3 => nrec (j1.rename m1 m2) (j2.rename m1 $ m2.lift [A, Ty.nat]) (j3.rename m1 m2)
 
 structure TypingSubst (σ : Subst Term) Δ (Γ Γ' : List Ty) where
-  act : ∀ {x} {T : Ty}, Γ[x]? = some T -> Δ&Γ' ⊢ σ.act x : T
+  act : ∀ {x} {T : Ty},
+    Γ[x]? = some T ->
+    Δ&Γ' ⊢ σ.act x : T
 
-theorem TypingSubst.lift {Δ Γ Γ' σ} (m : TypingSubst σ Δ Γ Γ') (A : List Ty)
-  : TypingSubst (σ.lift [Ty] A.length) Δ (A ++ Γ) (A ++ Γ')
-:= ⟨λ {x T} j =>
-    match x.decLt A.length with
-    | isTrue h => by
-      sorry
-      -- rw [Subst.lift_act_lt h]
-      -- apply Typing.var; simp
-      -- have lem : x < A[τ].length := by simp [h]
-      -- rw [List.getElem?_append_left (by simp [h])] at *
-      -- rw [<-List.smap_get?, j1]; simp
-      -- apply Kinding.subst j2 j3
-    | isFalse h => by
-      sorry
-      -- replace h : x ≥ A.length := by lia
-      -- rw [Subst.lift_act_ge h]
-      -- rw [List.getElem?_append_right (by lia)] at j1
-      -- have lem1 := m.act j1 j2 j3
-      -- have lem2 := Typing.rename (KindingRen.id Δ') (TypingRen.add Γ'[τ] A[τ]) lem1
-      -- simp_all
-    ⟩
+structure TypingVecSubst (σ : SubstVec [Term, Ty]) (Δ Δ' : List Unit) (Γ Γ' : List Ty) where
+  ty : KindingSubst σ.tail.head Δ Δ'
+  act : ∀ {x} {T : Ty}, Γ[x]? = some T ->
+    Δ'&Γ'[σ.tail.head] ⊢ σ.head.act x : T[σ.tail.head]
 
-theorem TypingSubst.shift {Δ Γ Γ' σ} A
-  : TypingSubst σ Δ Γ Γ' ->
-    TypingSubst (σ >> RenVec.add [Term, Ty] [0, 1])
-      (A ++ Δ) Γ⟨.add Ty A.length⟩ Γ'⟨.add Ty A.length⟩
-| ⟨act⟩ => ⟨λ {x T} j => by
-
-  -- have lem : Γ⟨.add Ty k⟩[x]?⟨.sub Ty k⟩ = some T⟨.sub Ty k⟩ := by simp [h]
-  -- by {
-  --   simp at lem; replace act := act lem
-  --   rw [<-List.rmap_get?, act]
-  --   rw [<-Option.rmap_some, <-h]
-  --   simp
-    --have lem : Γ⟨.add Ty A.length⟩[x]?⟨.sub Ty A.length⟩ = some T⟨.sub Ty A.length⟩ := by simp [j1]
-    --simp at lem
-    sorry
+theorem TypingVecSubst.lift {σ τ Δ Δ' Γ Γ' A}
+  (m : TypingVecSubst ·[σ, τ] Δ Δ' Γ Γ') (wf : ListWf Δ A)
+  : TypingVecSubst ·[σ.lift [Ty] A.length, τ] Δ Δ' (A ++ Γ) (A ++ Γ')
+:= ⟨m.ty,
+  by
+    intro x T j; simp [-Subst.lift]
+    cases x.decLt A.length
+    case _ h =>
+      replace h : x ≥ A.length := by lia
+      rw [List.getElem?_append_right h] at j
+      rw [Subst.lift_act_ge h]; simp
+      have lem := m.act j; simp at lem
+      replace lem := lem.rename (.id Δ') (.add Γ'[τ] A[τ]); simp at lem
+      exact lem
+    case _ h =>
+      rw [List.getElem?_append_left h] at j
+      rw [Subst.lift_act_lt h]; simp
+      apply Typing.var
+      have lem : x < A[τ].length := by simp [h]
+      rw [List.getElem?_append_left lem]
+      rw [<-Option.smap_some, <-j]; simp
+      have lem2 := wf.get j
+      apply Kinding.subst m.ty lem2
   ⟩
 
-theorem Typing.subst_ty {Δ Δ' Γ A t} {σ : Subst Ty} (mσ : KindingSubst σ Δ Δ')
-  : Δ&Γ ⊢ t : A -> Δ'&Γ[σ] ⊢ t[.id Term, σ] : A[σ]
-| var (x := x) j1 j2 => var (by rw [<-List.smap_get?, j1]; simp) (j2.subst mσ)
-| app j1 j2 => app (j1.subst_ty mσ) (j2.subst_ty mσ)
-| lam (A := A) j1 j2 => lam (j1.subst mσ) (lsimp j2.subst_ty mσ)
-| tapp j1 j2 e => tapp (j1.subst_ty mσ) (j2.subst mσ) (by simp [e])
-| tlam j => tlam (by simp; sorry) --tlam (lsimp j.subst_ty mσ.lift (mτ.shift [()]))
-| zero => zero
-| succ j => succ (j.subst_ty mσ)
-| nrec j1 j2 j3 => nrec (j1.subst_ty mσ) (lsimp j2.subst_ty mσ) (j3.subst_ty mσ)
+theorem TypingVecSubst.lift_ty {σ τ Δ Δ' Γ Γ'} (m : TypingVecSubst ·[σ, τ] Δ Δ' Γ Γ')
+  : TypingVecSubst ·[σ >> RenVec.add [Term, Ty] [0, 1], τ.lift]
+    (() :: Δ) (() :: Δ')
+    Γ⟨.add Ty 1⟩ Γ'⟨.add Ty 1⟩
+:= ⟨KindingSubst.lift m.ty,
+  by
+    intro x T j; simp
+    have lem : Γ⟨.add Ty 1⟩[x]?⟨.sub Ty 1⟩ = some T⟨.sub Ty 1⟩ := by simp [j]
+    simp at lem
+    have lem2 := m.act lem; simp at lem2
+    rw [List.getElem?_eq_some_iff] at j
+    rcases j with ⟨h, e⟩; subst e
+    simp; simp at lem2
+    have lem3 := lem2.rename (.succ Δ') (TypingRen.id Γ'[τ])
+    simp at lem3; exact lem3
+  ⟩
 
-theorem Typing.subst {Δ Δ' Γ Γ' A t} {σ : Subst Ty} {τ : Subst Term}
-  (mσ : KindingSubst σ Δ Δ') (mτ : TypingSubst τ Δ Γ Γ')
-  : Δ&Γ ⊢ t : A -> Δ'&Γ'[σ] ⊢ t[τ, σ] : A[σ]
-| var (x := x) j1 j2 => by
-  have lem := subst_ty mσ $ mτ.act j1
-  simp; simp at lem
-  sorry
-| app j1 j2 => app (j1.subst mσ mτ) (j2.subst mσ mτ)
-| lam (A := A) j1 j2 => lam (j1.subst mσ) (lsimp j2.subst mσ $ mτ.lift [A])
-| tapp j1 j2 e => tapp (j1.subst mσ mτ) (j2.subst mσ) (by simp [e])
-| tlam j => tlam (lsimp j.subst mσ.lift (mτ.shift [()]))
+theorem Typing.kinded {Δ Γ t A} : Δ&Γ ⊢ t : A -> Δ ⊢ A type
+| var j1 j2 => j2
+| app j1 j2 =>
+  match j1.kinded with
+  | .arrow j1' j3 => j3
+| lam j1 j2 => Kinding.arrow j1 j2.kinded
+| tapp j1 j2 e =>
+  match j1.kinded with
+  | .all j1' => Kinding.beta j2 j1' |> cast (by simp [e])
+| tlam j => Kinding.all j.kinded
+| zero => Kinding.nat
+| succ j => j.kinded
+| nrec j1 j2 j3 => j1.kinded
+
+theorem Typing.subst {Δ Δ' Γ Γ' A t} {σ : Subst Term} {τ : Subst Ty}
+  (mσ : TypingVecSubst ·[σ, τ] Δ Δ' Γ Γ')
+  : Δ&Γ ⊢ t : A -> Δ'&Γ'[τ] ⊢ t[σ, τ] : A[τ]
+| var (x := x) j1 j2 => mσ.act j1
+| app j1 j2 => app (j1.subst mσ) (j2.subst mσ)
+| lam (A := A) j1 j2 => lam (j1.subst mσ.ty) (lsimp j2.subst $ mσ.lift (.cons j1 .nil))
+| tapp j1 j2 e => tapp (j1.subst mσ) (j2.subst mσ.ty) (by simp [e])
+| tlam j => tlam (lsimp j.subst $ mσ.lift_ty)
 | zero => zero
-| succ j => succ (j.subst mσ mτ)
-| nrec j1 j2 j3 => nrec (j1.subst mσ mτ) (lsimp j2.subst mσ $ mτ.lift [A, Ty.nat]) (j3.subst mσ mτ)
+| succ j => succ (j.subst mσ)
+| nrec j1 j2 j3 =>
+  have wf := ListWf.cons j1.kinded $ .cons j3.kinded .nil
+  nrec (j1.subst mσ) (lsimp j2.subst $ mσ.lift wf) (j3.subst mσ)
 
 end SystemFWithNat
