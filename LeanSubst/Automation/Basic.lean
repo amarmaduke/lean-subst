@@ -1,8 +1,9 @@
 
+import Lean.Elab
 import Lean.Elab.Tactic
 import Lean.Elab.Term.TermElabM
 import LeanSubst.Automation.Attributes
-import LeanSubst.Automation.Tactic
+import LeanSubst.Tactic
 import LeanSubst.Basic
 
 namespace Automation
@@ -391,8 +392,8 @@ namespace Automation
       )
 
       let proof ← match mapType with
-      | .rmap => `(by first | rfl | simp only [RenMap.rmap] ; rw [$rmap:ident] ; try simp | simp only [RenMap.rmap] ; simp)
-      | .smap => `(by first | rfl | simp only [SubstMap.smap] ; rw [$smap:ident] ; try simp | simp only [SubstMap.smap] ; simp)
+      | .rmap => `(by first | rfl | simp only [RenMap.rmap]; rw [$rmap:ident]; try simp | simp only [RenMap.rmap]; simp)
+      | .smap => `(by first | rfl | simp only [SubstMap.smap]; rw [$smap:ident]; try simp | simp only [SubstMap.smap]; simp)
       forEachCtor tyNameGlobal (fun ctor ↦ do
         --let tyQual := if tys.length = 1 then "" else "_" ++ ("_".intercalate $ sfx.map (fun (ty : Ident) ↦ ty.raw.getId.toString.toLower))
         let thmName := qualify s!"{mapStr}_{ctor.components.getLast!}"
@@ -401,7 +402,7 @@ namespace Automation
         let eq ← mkCtorEq fLhs fRhs ctor (fVar := match mapType with | .rmap => none | .smap => some $ smap_fVar tys)
         let args ← mkCtorArgs ctor
         elabCommand $ ← `(
-          @[simp]
+          @[subst_data]
           theorem $thmName {$args.toArray*} {$rσ : $TheVec [$tys.toArray,*]} : $eq :=
             $proof
         )
@@ -416,7 +417,7 @@ namespace Automation
       | .smap => `(($from_action $t)[$rσ,] = $from_action ($t[$rσ,]))
       let TheVec ← match mapType with | .rmap => ``(RenVec) | .smap => ``(SubstVec)
       elabCommand $ ← `(
-        @[simp]
+        @[subst_data]
         theorem $from_action_map {$t : Action $ty} {$rσ : $TheVec [$tys.toArray,*]} : $eq := by
           cases $t:ident <;> (first | rfl | simp | simp [$from_action:ident])
       )
@@ -451,7 +452,6 @@ namespace Automation
     -- Executing rmap stuff
     let rmapCases ← mkAllCases (map_f .rmap false) tyNameGlobal
     elabCommand $ ← `(
-      @[simp]
       def $rmap ($r : RenVec [$tys.toArray,*]) : $ty → $ty
       $rmapCases:matchAlt*
     )
@@ -473,7 +473,6 @@ namespace Automation
     let smapCases ← mkAllCases (map_f .smap false) tyNameGlobal (fVar := some $ smap_fVar tys)
 
     elabCommand $ ← `(
-      @[simp]
       def $smap ($σ : SubstVec [$tys.toArray,*]) : $ty → $ty
       $smapCases:matchAlt*
     )

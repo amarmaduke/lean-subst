@@ -1,5 +1,7 @@
 module
 
+import LeanSubst.Tactic
+
 namespace LeanSubst
 
 public section
@@ -152,7 +154,7 @@ meta def unexpand_smap : Lean.PrettyPrinter.Unexpander
 | `($_ $σ $t) => `($t[$σ,])
 | _ => throw ()
 
-@[reducible, simp]
+@[reducible]
 instance [i : RenMapAll (T::V)] : RenMap T (T::V) where
   rmap :=
     match i with
@@ -162,19 +164,19 @@ instance [i : RenMapAll (T::V)] : RenMap T (T::V) where
 -- | cons i => i
 
 set_option synthInstance.checkSynthOrder false in
-@[reducible, simp]
+@[reducible]
 instance [i : RenMapAll (T::V)] : RenMapAll V :=
   match i with
   | @RenMapAll.cons _ _ _ i => i
 
-@[reducible, simp]
+@[reducible]
 instance [i : SubstMapAll (T::V)] : SubstMap T (T::V) where
   smap :=
     match i with
     | @SubstMapAll.cons _ _ i _ => i.smap
 
 set_option synthInstance.checkSynthOrder false in
-@[reducible, simp]
+@[reducible]
 instance [i : SubstMapAll (T::V)] : SubstMapAll V :=
   match i with
   | @SubstMapAll.cons _ _ _ i => i
@@ -203,7 +205,6 @@ theorem SubstVec.head_cons {σ : Subst T} {σs : SubstVec V} : (σ .: σs).head 
 @[simp]
 theorem SubstVec.tail_cons {σ : Subst T} {σs : SubstVec V} : (σ .: σs).tail = σs := by simp [tail]
 
-@[simp]
 def Action.rmap1 [RenMap T (T::V)] (r : RenVec (T::V)) : Action T -> Action T
 | re x => re $ r.head.act x
 | su t => su t⟨r,⟩
@@ -211,16 +212,15 @@ def Action.rmap1 [RenMap T (T::V)] (r : RenVec (T::V)) : Action T -> Action T
 instance [RenMap T (T::V)] : RenMap (Action T) (T::V) where
   rmap v := Action.rmap1 v
 
-@[simp]
+@[subst_data]
 theorem Action.rmap1_re [RenMap T (T::V)] {r : RenVec (T::V)} {x : Nat}
   : (@re T x)⟨r,⟩ = re (r.head.act x)
-:= by simp [RenMap.rmap]
+:= by simp [RenMap.rmap, rmap1]
 
-@[simp]
+@[subst_data]
 theorem Action.rmap1_su [RenMap T (T::V)] {r : RenVec (T::V)} {t : T} : (su t)⟨r,⟩ = su t⟨r,⟩ := by
-  simp [RenMap.rmap]
+  simp [RenMap.rmap, rmap1]
 
-@[simp]
 def Action.rmap0 [RenMap S V] (r : RenVec V) : Action S -> Action S
 | re x => re x
 | su t => su t⟨r,⟩
@@ -231,14 +231,13 @@ instance [RenMap S V] [RenSuffix S V] : RenMap (Action S) V where
 @[simp]
 theorem Action.rmap0_re [RenMap S V] [RenSuffix S V] {r : RenVec V} {x : Nat}
   : (@re S x)⟨r,⟩ = re x
-:= by simp [RenMap.rmap]
+:= by simp [RenMap.rmap, rmap0]
 
-@[simp]
+@[subst_data]
 theorem Action.rmap0_su [RenMap S V] [RenSuffix S V] {r : RenVec V} {t : S}
   : (su t)⟨r,⟩ = su t⟨r,⟩
-:= by simp [RenMap.rmap]
+:= by simp [RenMap.rmap, rmap0]
 
-@[simp]
 def Action.smap1 [SubstMap T (T::V)] (σ : SubstVec (T::V)) : Action T -> Action T
 | re x => σ.head.act x
 | su t => su t[σ,]
@@ -246,17 +245,16 @@ def Action.smap1 [SubstMap T (T::V)] (σ : SubstVec (T::V)) : Action T -> Action
 instance [SubstMap T (T::V)] : SubstMap (Action T) (T::V) where
   smap v := Action.smap1 v
 
-@[simp]
+@[subst_data]
 theorem Action.smap1_re [SubstMap T (T::V)] {σ : SubstVec (T::V)} {x : Nat}
   : (@re T x)[σ,] = σ.head.act x
-:= by simp [SubstMap.smap]
+:= by simp [SubstMap.smap, smap1]
 
-@[simp]
+@[subst_data]
 theorem Action.smap1_su [SubstMap T (T::V)] {σ : SubstVec (T::V)} {t : T}
   : (su t)[σ,] = su t[σ,]
-:= by simp [SubstMap.smap]
+:= by simp [SubstMap.smap, smap1]
 
-@[simp]
 def Action.smap0 [SubstMap S V] (σ : SubstVec V) : Action S -> Action S
 | re x => re x
 | su t => su t[σ,]
@@ -264,15 +262,15 @@ def Action.smap0 [SubstMap S V] (σ : SubstVec V) : Action S -> Action S
 instance [SubstMap S V] [SubstSuffix S V] : SubstMap (Action S) V where
   smap := Action.smap0
 
-@[simp]
+@[subst_data]
 theorem Action.smap0_re [SubstMap S V] [SubstSuffix S V] {σ : SubstVec V} {x : Nat}
   : (@re S x)[σ,] = re x
-:= by simp [SubstMap.smap]
+:= by simp [SubstMap.smap, smap0]
 
-@[simp]
+@[subst_data]
 theorem Action.smap0_su [SubstMap S V] [SubstSuffix S V] {σ : SubstVec V} {t : S}
   : (su t)[σ,] = su t[σ,]
-:= by simp [SubstMap.smap]
+:= by simp [SubstMap.smap, smap0]
 
 def Ren.actl (r : Ren T) (l : List Nat) : List Nat := l.map r.act
 
@@ -450,6 +448,9 @@ private def Subst.actr_add_fused [SubstMap T (T::V)] (σ : SubstVec (T::V)) (k :
 @[simp]
 def Ren.lift (r : Ren T) (k : Nat := 1) : Ren T := (0...k) ++ (r >> add T k)
 
+-- @[simp]
+-- theorem Ren.lift_def {r k} : r.lift k = (0...k) ++ (r >> add T k) := by simp [Ren.lift]
+
 @[simp]
 def RenVec.lift : {V : List (Type u2)} -> RenVec V -> List Nat -> RenVec V
 | [], _, _ => .nil
@@ -459,6 +460,11 @@ def RenVec.lift : {V : List (Type u2)} -> RenVec V -> List Nat -> RenVec V
 @[simp]
 def Subst.lift (V : List (Type u2) := []) [RenMap T (T::V)] (σ : Subst T) (k : Nat := 1) : Subst T :=
   (0...k) ++ (σ >> RenVec.add (T::V) [k])
+
+-- @[simp]
+-- theorem Subst.lift_def [RenMap T (T::V)] {σ : Subst T} {k : Nat}
+--   : σ.lift V k = (0...k) ++ (σ >> RenVec.add (T::V) [k])
+-- := by simp [Subst.lift]
 
 @[simp]
 def SubstVec.lift : {V : List (Type u2)} -> [RenMapAll V] -> List Nat -> SubstVec V ->  SubstVec V
@@ -546,33 +552,33 @@ def RenMapLaws_rec : ∀ V, RenMapAll V -> Prop
 | [], _ => True
 | V::Vs, RenMapAll.cons i => RenMapId V (V::Vs) ∧ RenMapComp V (V::Vs) ∧ RenMapLaws_rec Vs i
 
-class RenMapLaws (V : List (Type u2)) [i : RenMapAll V] where
-  laws : RenMapLaws_rec V i
+-- class RenMapLaws (V : List (Type u2)) [i : RenMapAll V] where
+--   laws : RenMapLaws_rec V i
 
-theorem RenMapLaws.id_law : ∀ [RenMapAll (T::V)] [RenMapLaws (T::V)], RenMapId T (T::V)
-| RenMapAll.cons _, i => by
-  cases i; case _ laws =>
-  simp [RenMapLaws_rec] at laws
-  apply laws.1
+-- theorem RenMapLaws.id_law : ∀ [RenMapAll (T::V)] [RenMapLaws (T::V)], RenMapId T (T::V)
+-- | RenMapAll.cons _, i => by
+--   cases i; case _ laws =>
+--   simp [RenMapLaws_rec] at laws
+--   apply laws.1
 
-instance [RenMapAll (T::V)] [RenMapLaws (T::V)] : RenMapId T (T::V) := RenMapLaws.id_law
+-- instance [RenMapAll (T::V)] [RenMapLaws (T::V)] : RenMapId T (T::V) := RenMapLaws.id_law
 
-theorem RenMapLaws.comp_law : ∀ [RenMapAll (T::V)] [RenMapLaws (T::V)], RenMapComp T (T::V)
-| RenMapAll.cons _, i => by
-  cases i; case _ laws =>
-  simp [RenMapLaws_rec] at laws
-  apply laws.2.1
+-- theorem RenMapLaws.comp_law : ∀ [RenMapAll (T::V)] [RenMapLaws (T::V)], RenMapComp T (T::V)
+-- | RenMapAll.cons _, i => by
+--   cases i; case _ laws =>
+--   simp [RenMapLaws_rec] at laws
+--   apply laws.2.1
 
-instance [RenMapAll (T::V)] [RenMapLaws (T::V)] : RenMapId T (T::V) := RenMapLaws.id_law
+-- instance [RenMapAll (T::V)] [RenMapLaws (T::V)] : RenMapId T (T::V) := RenMapLaws.id_law
 
-theorem RenMapLaws.tail : ∀ [RenMapAll (T::V)] [RenMapLaws (T::V)], RenMapLaws V
-| RenMapAll.cons _, i => by
-  cases i; case _ laws =>
-  simp [RenMapLaws_rec] at laws
-  constructor; simp
-  apply laws.2.2
+-- theorem RenMapLaws.tail : ∀ [RenMapAll (T::V)] [RenMapLaws (T::V)], RenMapLaws V
+-- | RenMapAll.cons _, i => by
+--   cases i; case _ laws =>
+--   simp [RenMapLaws_rec] at laws
+--   constructor
+--   apply laws.2.2
 
-instance [RenMapAll (T::V)] [RenMapLaws (T::V)] : RenMapLaws V := RenMapLaws.tail
+-- instance [RenMapAll (T::V)] [RenMapLaws (T::V)] : RenMapLaws V := RenMapLaws.tail
 
 -- theorem test [RenMapAll V] [RenMapLaws2 V] : True := sorry
 

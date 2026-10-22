@@ -73,7 +73,7 @@ theorem Term.rmap_bind {n} {v} {h : B v n} {t : Term V B C} {r : RenVec [Term V 
 @[simp]
 theorem Term.from_action_rmap {t : Action $ Term V B C} {r : RenVec [Term V B C]}
   : (from_action t)⟨r,⟩ = from_action t⟨r,⟩
-:= by cases t <;> simp
+:= by cases t <;> lsubst
 
 instance : RenMapId (Term V B C) [Term V B C] where
   id_law := by subst_solve_id
@@ -113,7 +113,7 @@ theorem Term.smap_bind {n} {v} {h : B v n} {t : Term V B C} {σ : SubstVec [Term
 @[simp]
 theorem Term.from_action_smap {t : Action (Term V B C)} {σ : SubstVec [Term V B C]}
   : (from_action t)[σ,] = from_action t[σ,]
-:= by cases t <;> simp
+:= by cases t <;> lsubst
 
 instance : SubstMapId (Term V B C) [Term V B C] where
   id_law := by subst_solve_id

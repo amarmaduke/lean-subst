@@ -77,7 +77,7 @@ theorem Term.rmap_lam {n As t} {r : RenVec [Term]} : (lam n As t)⟨r,⟩ = lam 
 @[simp]
 theorem Term.from_action_rmap {t : Action Term} {r : RenVec [Term]}
   : (from_action t)⟨r,⟩ = from_action t⟨r,⟩
-:= by cases t <;> simp
+:= by cases t <;> lsubst
 
 instance : RenMapId Term [Term] where
   id_law := by subst_solve_id
@@ -121,7 +121,7 @@ theorem Term.smap_lam {n As t} {σ : SubstVec [Term]} : (lam n As t)[σ,] = lam 
 @[simp]
 theorem Term.from_action_smap {t : Action Term} {σ : SubstVec [Term]}
   : (from_action t)[σ,] = from_action t[σ,]
-:= by cases t <;> simp
+:= by cases t <;> lsubst
 
 instance : SubstMapId Term [Term] where
   id_law := by subst_solve_id

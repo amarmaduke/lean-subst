@@ -106,7 +106,7 @@ theorem Term.rmap_term_ty_val {t1} {r : RenVec [Value, Ty]}
 @[simp]
 theorem Value.from_action_rmap {t : Action Value} {r : RenVec [Value, Ty]}
   : (from_action t)⟨r,⟩ = from_action t⟨r,⟩
-:= by cases t <;> simp [from_action]
+:= by cases t <;> lsubst [from_action]
 
 mutual
   @[simp]
@@ -216,7 +216,7 @@ theorem Term.smap_term_ty_val {t1} {σ : SubstVec [Value, Ty]}
 @[simp]
 theorem Value.from_action_smap {t : Action Value} {σ : SubstVec [Value, Ty]}
   : (from_action t)[σ,] = from_action t[σ,]
-:= by cases t <;> simp [from_action]
+:= by cases t <;> lsubst [from_action]
 
 mutual
   @[simp]
@@ -308,7 +308,7 @@ mutual
     by {
       repeat (cases r; case' _ r => try simp only)
       repeat (cases σ; case' _ σ => try simp only)
-      simp at *; rw [ih]
+      lsubst at *; rw [ih]
     }
 
   @[simp]
@@ -343,7 +343,7 @@ mutual
     by {
       repeat (cases σ; case' _ σ => try simp only)
       repeat (cases τ; case' _ τ => try simp only)
-      simp [*] at *; congr
+      lsubst [*] at *; congr
     }
   | .tlam t, σ, τ =>
     have ih := t.smap_compose
@@ -352,7 +352,7 @@ mutual
     by {
       repeat (cases σ; case' _ σ => try simp only)
       repeat (cases τ; case' _ τ => try simp only)
-      simp at *; rw [ih]
+      lsubst at *; rw [ih]
     }
 
   @[simp]

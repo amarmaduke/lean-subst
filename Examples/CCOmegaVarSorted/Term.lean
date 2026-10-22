@@ -110,7 +110,7 @@ theorem Term.rmap_pi {t1 t2} {r : RenVec [Term]} : (pi t1 t2)⟨r,⟩ = pi t1⟨
 @[simp]
 theorem Term.from_action_rmap {t : Action Term} {u} {r : RenVec [Term]}
   : (from_action u t)⟨r,⟩ = from_action u t⟨r,⟩
-:= by cases t <;> simp
+:= by cases t <;> lsubst
 
 instance : RenMapId Term [Term] where
   id_law := by subst_solve_id
@@ -166,7 +166,7 @@ theorem Term.smap_pi {t1 t2 : Term} {σ : SubstVec [Term]} : (pi t1 t2)[σ,] = p
 @[simp]
 theorem Term.from_action_smap {t : Action Term} {u} {σ : SubstVec [Term]}
   : (from_action u t)[σ,] = from_action u t[σ,]
-:= by cases t <;> simp
+:= by cases t <;> lsubst
 
 instance : SubstMapId Term [Term] where
   id_law := by subst_solve_id
