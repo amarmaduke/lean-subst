@@ -402,7 +402,7 @@ namespace Automation
         let eq ← mkCtorEq fLhs fRhs ctor (fVar := match mapType with | .rmap => none | .smap => some $ smap_fVar tys)
         let args ← mkCtorArgs ctor
         elabCommand $ ← `(
-          @[subst_data]
+          @[simp, subst_data <-]
           theorem $thmName {$args.toArray*} {$rσ : $TheVec [$tys.toArray,*]} : $eq :=
             $proof
         )
@@ -417,7 +417,7 @@ namespace Automation
       | .smap => `(($from_action $t)[$rσ,] = $from_action ($t[$rσ,]))
       let TheVec ← match mapType with | .rmap => ``(RenVec) | .smap => ``(SubstVec)
       elabCommand $ ← `(
-        @[subst_data]
+        @[simp, subst_data <-]
         theorem $from_action_map {$t : Action $ty} {$rσ : $TheVec [$tys.toArray,*]} : $eq := by
           cases $t:ident <;> (first | rfl | simp | simp [$from_action:ident])
       )
