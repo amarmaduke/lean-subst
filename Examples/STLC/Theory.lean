@@ -59,7 +59,7 @@ theorem TypingSubst.re {Γ Δ A y σ} (j : Δ[y]? = some A) (m : Γ -[σ]> Δ) :
     match x with
     | 0 =>
       have h : A = T := by grind
-      .var $ simp% [h] j
+      .var $ j %simp [h]
     | _ + 1 => m.act h⟩
 
 theorem TypingSubst.su {Γ Δ A a σ} (j : Δ ⊢ a : A) (m : Γ -[σ]> Δ) : A::Γ -[su a.:σ]> Δ :=
@@ -67,14 +67,14 @@ theorem TypingSubst.su {Γ Δ A a σ} (j : Δ ⊢ a : A) (m : Γ -[σ]> Δ) : A:
     match x with
     | 0 =>
       have h : A = T := by grind
-      simp% [h] j
+      j %simp [h]
     | _ + 1 => m.act h⟩
 
 theorem TypingSubst.lift {Γ Δ : List Ty} A {σ : Subst Term} (m : Γ -[σ]> Δ) : A::Γ -[σ.lift]> A::Δ :=
   ⟨λ {x} _ h =>
     match x with
     | 0 => .var h
-    | _ + 1 => simp% Typing.rename (Δ := A::Δ) .succ (m.act h)⟩
+    | _ + 1 => Typing.rename (Δ := A::Δ) .succ (m.act h) %simp⟩
 
 theorem Typing.subst {Γ Δ t A} {σ : Subst Term}  (m : Γ -[σ]> Δ) : Γ ⊢ t : A -> Δ ⊢ t[σ] : A
 | var h => m.act h
@@ -87,12 +87,12 @@ theorem Typing.beta {Γ A B b t} (j1 : (A::Γ) ⊢ b : B) (j2 : Γ ⊢ t : A) : 
       match x with
       | 0 =>
         have h : A = T := by grind
-        simp% [h] j2
+        j2 %simp [h]
       | _ + 1 => .var h⟩
     j1
 
 theorem Red.subst {t t'} {σ : Subst Term} : Red t t' -> Red t[σ] t'[σ]
-| @Red.beta A b t => simp% @Red.beta A b[σ.lift] t[σ]
+| @Red.beta A b t => @Red.beta A b[σ.lift] t[σ] %simp
 | .app1 r => .app1 r.subst
 | .app2 r => .app2 r.subst
 | .lam r => .lam r.subst

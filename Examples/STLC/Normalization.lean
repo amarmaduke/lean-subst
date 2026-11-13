@@ -53,17 +53,17 @@ theorem is_lam_rename {r : Ren Term} : {t : Term} -> is_lam t <-> is_lam t⟨r�
 
 theorem ℒ.rename {A t} (r : Ren Term) : ℒ A t -> ℒ A t⟨r⟩
 | .lift (t := t') j1 j2 =>
-  have lem1 (h : is_lam t'⟨r⟩) : ℛ A t'⟨r⟩ := λ k => simp% j1 (is_lam_rename.2 h) (r >> k)
+  have lem1 (h : is_lam t'⟨r⟩) : ℛ A t'⟨r⟩ := λ k => j1 (is_lam_rename.2 h) (r >> k) %simp
   have lem2 {t''} (d : Red t'⟨r⟩ t'') : ℒ A t'' :=
     have ⟨z, d', e⟩ := d.antirename
-    simp% [e] (j2 d').rename r
+    (j2 d').rename r %simp [e]
   .lift lem1 lem2
 
 theorem ℛ.lam_mp {A B C b} : ℛ (LR $ A -:> B) (λ[C] b) -> ∀ (r:Ren Term) a, ℰ A a -> ℰ B b[su a .: r.to]
-| j1, r, a, j2 => simp% [ℰ] j1 r a j2
+| j1, r, a, j2 => j1 r a j2 %simp [ℰ]
 
 theorem ℛ.lam_mpr {A B C b} : (∀ (r:Ren Term) a, ℰ A a -> ℰ B b[su a .: r.to]) -> ℛ (LR $ A -:> B) (λ[C] b)
-| j1, r, a, j2 => simp% [ℰ] j1 r a j2
+| j1, r, a, j2 => j1 r a j2 %simp [ℰ]
 
 theorem ℛ.lam {A B C b} : ℛ (LR $ A -:> B) (λ[C] b) <-> ∀ (r:Ren Term) a, ℰ A a -> ℰ B b[su a .: r.to] :=
   ⟨lam_mp, lam_mpr⟩
@@ -77,12 +77,12 @@ theorem 𝒞.re {Γ σ} A x : 𝒞 Γ σ -> 𝒞 (A::Γ) (re x .: σ)
 | j, _ + 1, _, h => j h
 
 theorem 𝒞.rename {Γ} {σ : Subst Term} (r : Ren Term) : 𝒞 Γ σ -> 𝒞 Γ (σ >> ·⟨r⟩)
-| j, i, T, h => simp% ℒ.rename r (j h)
+| j, i, T, h => ℒ.rename r (j h) %simp
 
 theorem 𝒞.weaken {Γ σ} : 𝒞 Γ σ -> 𝒞 Γ (σ >> ·⟨.add Term 1⟩) := rename _
 
 theorem 𝒞.lift A {Γ} {σ : Subst Term} : 𝒞 Γ σ -> 𝒞 (A::Γ) σ.lift
-| h, i, T => simp% re A 0 (weaken h) (i := i) (T := T)
+| h, i, T => re A 0 (weaken h) (i := i) (T := T) %simp
 
 theorem ℰ.ind2 {A B s t} {P : Term -> Term -> Prop}
   (ih : ∀ s t,
@@ -107,7 +107,7 @@ theorem ℰ.lam {A B C b} : SN Red b -> ℛ (LR (A -:> B)) (λ[C] b) -> ℰ (A -
   match r' with
   | .lam (t' := b') r' =>
     have r'' a (k : Ren Term) : Red b[su a .: k.to] b'[su a .: k.to] := Red.subst r'
-    ℰ.lam (r _ r') (λ k a ah => ℒ.preservation (j k a ah) (simp% r'' a k)))
+    ℰ.lam (r _ r') (λ k a ah => ℒ.preservation (j k a ah) (r'' a k %simp)))
 
 theorem ℰ.app {A B f a} : ℰ (A -:> B) f -> ℰ A a -> ℰ B (.app f a)
 | j1, j2 =>
@@ -129,12 +129,12 @@ theorem Typing.fundamental {Γ t A} : Γ ⊢ t : A -> Γ ⊨ t : A
   have body (r : Ren Term) (a : Term) (j : ℰ A a) : ℰ B t[σ.lift >> ·[su a .: r.to]] :=
     tj.fundamental (su a .: (σ >> ·⟨r⟩)) (𝒞.su j $ 𝒞.rename r h)
       |> cast (by simp; norm_subst)
-  ℰ.lam norm (ℛ.lam.2 $ simp% body)
+  ℰ.lam norm (ℛ.lam.2 $ body %simp)
 | .app fj aj, σ, h => ℰ.app (fj.fundamental σ h) (aj.fundamental σ h)
 
 theorem Typing.strong_normalization {Γ t A} (j : Γ ⊢ t : A) : SN Red t :=
   have lem : Γ ⊨ t : A := j.fundamental
-  have lem : ℰ A t := simp% lem 𝐬0 (λ {i T} h => ℒ.var (LR T) i)
+  have lem : ℰ A t := lem 𝐬0 (λ {i T} h => ℒ.var (LR T) i) %simp
   ℒ.sound lem
 
 end STLC

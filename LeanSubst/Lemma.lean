@@ -301,7 +301,7 @@ theorem Ren.append_act_ge {r : Ren T} {i}
 | .cons hd tl, h =>
   match i with
   | 0 => by simp at h
-  | i + 1 => simp% @append_act_ge r i tl (by grind)
+  | i + 1 => @append_act_ge r i tl (by grind) %simp
 
 @[simp, grind <-]
 theorem Ren.append_range_act_ge {r : Ren T} {i} {s e : Nat} (h : i ≥ e - s)
@@ -319,7 +319,7 @@ theorem Subst.append_act_ge {σ : Subst T} {i}
 | .cons hd tl, h =>
   match i with
   | 0 => by simp at h
-  | i + 1 => simp% @append_act_ge σ i tl (by grind)
+  | i + 1 => @append_act_ge σ i tl (by grind) %simp
 
 @[simp, grind <-]
 theorem Subst.append_list_act_ge {σ : Subst T} {i}
@@ -328,7 +328,7 @@ theorem Subst.append_list_act_ge {σ : Subst T} {i}
 | .cons hd tl, h =>
   match i with
   | 0 => by simp at h
-  | i + 1 => simp% @append_list_act_ge σ i tl (by grind)
+  | i + 1 => @append_list_act_ge σ i tl (by grind) %simp
 
 @[simp, grind <-]
 theorem Subst.append_range_act_ge {σ : Subst T} {i} {s e : Nat} (h : i ≥ e - s)

@@ -63,7 +63,7 @@ theorem ListWf.get {Δ Γ T} {x : Nat} (wf : ListWf Δ Γ) (h : Γ[x]? = some T)
   | .nil, _ => by cases h
   | .cons (A := A) j wf, 0 =>
     have e : A = T := by simp at h; exact h
-    simp% [e] j
+    j %simp [e]
   | .cons j wf, x + 1 => wf.get h
 
 structure KindingRen (r : Ren Ty) (Δ Δ' : List Unit) where
@@ -77,8 +77,8 @@ theorem KindingRen.lift {Δ Δ' : List Unit} {r : Ren Ty} (h : KindingRen r Δ �
   : KindingRen r.lift (.unit::Δ) (.unit::Δ')
 := ⟨λ {x} _ j =>
     match x with
-    | 0 => simp% j
-    | _ + 1 => simp% h.act j⟩
+    | 0 => j %simp
+    | _ + 1 => h.act j⟩
 
 theorem Kinding.rename {Δ Δ' A} {r : Ren Ty} (m : KindingRen r Δ Δ') : Δ ⊢ A type -> Δ' ⊢ A⟨r⟩ type
 | var j => var (m.act j)
@@ -102,8 +102,8 @@ theorem KindingSubst.lift {Δ Δ' : List Unit} {σ : Subst Ty} (m : KindingSubst
   : KindingSubst (σ.lift []) (.unit::Δ) (.unit::Δ')
 := ⟨λ {x} _ j =>
     match x with
-    | 0 => simp% .var j
-    | _ + 1 => simp% (m.act j).rename $ .succ Δ'⟩
+    | 0 => .var j %simp
+    | _ + 1 => ((m.act j).rename $ .succ Δ') %simp ⟩
 
 theorem Kinding.subst {Δ Δ' A} {σ : Subst Ty} (m : KindingSubst σ Δ Δ')
   : Δ ⊢ A type -> Δ' ⊢ A[σ] type
@@ -128,7 +128,7 @@ theorem TypingRen.lift {Γ Γ' r} (m : TypingRen r Γ Γ') (A : List Ty)
 := ⟨λ {x} _ j =>
     match x.decLt A.length with
     | isTrue h =>
-      simp% [-Ren.lift, Ren.lift_act_lt h, List.getElem?_append_left h] j
+      j %simp [-Ren.lift, Ren.lift_act_lt h, List.getElem?_append_left h]
     | isFalse h => by
       replace h : x ≥ A.length := by lia
       rw [Ren.lift_act_ge h]
@@ -138,7 +138,7 @@ theorem TypingRen.lift {Γ Γ' r} (m : TypingRen r Γ Γ') (A : List Ty)
 theorem TypingRen.shift {Γ Γ' r} k : TypingRen r Γ Γ' -> TypingRen r Γ⟨.add Ty k⟩ Γ'⟨.add Ty k⟩
 | ⟨act⟩ => ⟨λ {x T} h =>
   have lem := congrArg (λ x => x⟨.sub Ty k⟩) h
-  have act := @act x T⟨.sub Ty k⟩ $ simp% lem
+  have act := @act x T⟨.sub Ty k⟩ $ lem %simp
   by norm_subst [act, <-h]⟩
 
 theorem Typing.rename {Δ Δ' Γ Γ' A t} {r1 : Ren Ty} {r2 : Ren Term}
@@ -146,11 +146,11 @@ theorem Typing.rename {Δ Δ' Γ Γ' A t} {r1 : Ren Ty} {r2 : Ren Term}
   : Δ&Γ ⊢ t : A -> Δ'&Γ'⟨r1⟩ ⊢ t⟨r2, r1⟩ : A⟨r1⟩
 | var (x := x) j1 j2 =>
   have j1 := congr (f₁ := λ t => t⟨r1⟩) rfl $ m2.act j1
-  var (simp% j1) (j2.rename m1)
+  var (j1 %simp) (j2.rename m1)
 | app j1 j2 => app (j1.rename m1 m2) (j2.rename m1 m2)
 | lam (A := A) j1 j2 => lam (j1.rename m1) (j2.rename m1 $ m2.lift [A])
 | tapp j1 j2 e => tapp (j1.rename m1 m2) (j2.rename m1) (by simp [e])
-| tlam j => tlam (simp% j.rename m1.lift (m2.shift 1))
+| tlam j => tlam (j.rename m1.lift (m2.shift 1) %simp)
 | zero => zero
 | succ j => succ (j.rename m1 m2)
 | nrec j1 j2 j3 => nrec (j1.rename m1 m2) (j2.rename m1 $ m2.lift [A, Ty.nat]) (j3.rename m1 m2)
@@ -170,12 +170,12 @@ theorem TypingSubst.lift {σ τ Δ Δ' Γ Γ' A}
     have j' : Δ'&(A[τ] ++ Γ'[τ]) ⊢ .var x : T[τ] := .var
       (by simp [List.getElem?_append_left lem2]; norm_subst [lem1])
       (.subst m.ty $ wf.get lem1)
-    simp% [-Subst.lift, Subst.lift_act_lt h] j'
+    j' %simp [-Subst.lift, Subst.lift_act_lt h]
   | isFalse h =>
     have h : x ≥ A.length := by lia
     have lem1 := List.getElem?_append_right h ▸ j
     have lem2 := (m.act lem1).rename (.id Δ') (.add Γ'[τ] A[τ])
-    simp% [-Subst.lift, Subst.lift_act_ge h] lem2⟩
+    lem2 %simp [-Subst.lift, Subst.lift_act_ge h]⟩
 
 theorem TypingSubst.lift_ty {σ τ Δ Δ' Γ Γ'} (m : TypingSubst σ τ Δ Δ' Γ Γ')
   : TypingSubst (σ >> RenVec.add [Term, Ty] [0, 1]) (τ.lift)
@@ -184,8 +184,8 @@ theorem TypingSubst.lift_ty {σ τ Δ Δ' Γ Γ'} (m : TypingSubst σ τ Δ Δ' 
 := ⟨.lift m.ty, λ {x T} j =>
   have ⟨_, h⟩ := List.getElem?_eq_some_iff.1 j
   have lem1 := congrArg (λ x => x⟨.sub Ty 1⟩) j
-  have lem2 := @m.act x T⟨.sub Ty 1⟩ $ simp% lem1
-  simp% [<-h] lem2.rename (.succ Δ') (.id Γ'[τ])⟩
+  have lem2 := @m.act x T⟨.sub Ty 1⟩ $ lem1 %simp
+  lem2.rename (.succ Δ') (.id Γ'[τ]) %simp [<-h] ⟩
 
 theorem Typing.kinded {Δ Γ t A} : Δ&Γ ⊢ t : A -> Δ ⊢ A type
 | var j1 j2 => j2
@@ -206,13 +206,13 @@ theorem Typing.subst {Δ Δ' Γ Γ' A t} {σ : Subst Term} {τ : Subst Ty}
   : Δ&Γ ⊢ t : A -> Δ'&Γ'[τ] ⊢ t[σ, τ] : A[τ]
 | var (x := x) j1 j2 => mσ.act j1
 | app j1 j2 => app (j1.subst mσ) (j2.subst mσ)
-| lam (A := A) j1 j2 => lam (j1.subst mσ.ty) (simp% j2.subst $ mσ.lift (.cons j1 .nil))
+| lam (A := A) j1 j2 => lam (j1.subst mσ.ty) (j2.subst (mσ.lift (.cons j1 .nil)) %simp)
 | tapp j1 j2 e => tapp (j1.subst mσ) (j2.subst mσ.ty) (by simp [e])
-| tlam j => tlam (simp% j.subst $ mσ.lift_ty)
+| tlam j => tlam (j.subst (mσ.lift_ty) %simp )
 | zero => zero
 | succ j => succ (j.subst mσ)
 | nrec j1 j2 j3 =>
   have wf := ListWf.cons j1.kinded $ .cons j3.kinded .nil
-  nrec (j1.subst mσ) (simp% j2.subst $ mσ.lift wf) (j3.subst mσ)
+  nrec (j1.subst mσ) (j2.subst (mσ.lift wf) %simp) (j3.subst mσ)
 
 end SystemFWithNat
