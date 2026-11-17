@@ -21,31 +21,31 @@ macro_rules
 | `(tactic| norm_subst [ $h1,* ] at $h2) =>
   `(tactic| simp only [subst_rw, subst_to, subst_data, $h1,*] at $h2)
 
-syntax (name := simp_mod) "simp%"
-  (" [" withoutPosition((simpStar <|> simpErase <|> simpLemma),*,?) "]")? term : term
+syntax (name := mod_simp) term "%simp"
+  (" [" withoutPosition((simpStar <|> simpErase <|> simpLemma),*,?) "]")? : term
 
 macro_rules
-| `(simp% $t) => `(by
+| `($t %simp) => `(by
   solve
     | simp; exact $t
     | have lem := $t; simp at lem; simp; exact lem
     | exact ($t |> cast (by simp)))
-| `(simp% [ $h,* ] $t) => `(by
+| `($t %simp [ $h,* ]) => `(by
   solve
     | simp [$h,*]; exact $t
     | have lem := $t; simp [$h,*] at lem; simp [$h,*]; exact lem
     | exact ($t |> cast (by simp [$h,*])))
 
-syntax (name := norm_subst_mod) "norm_subst%"
-  (" [" withoutPosition((simpStar <|> simpErase <|> simpLemma),*,?) "]")? term : term
+syntax (name := mod_norm_subst) term "%norm_subst"
+  (" [" withoutPosition((simpStar <|> simpErase <|> simpLemma),*,?) "]")? : term
 
 macro_rules
-| `(norm_subst% $t) => `(by
+| `($t %norm_subst) => `(by
   solve
     | norm_subst; exact $t
     | have lem := $t; norm_subst at lem; norm_subst; exact lem
     | exact ($t |> cast (by norm_subst)))
-| `(norm_subst% [ $h,* ] $t) => `(by
+| `($t %norm_subst [ $h,* ]) => `(by
   solve
     | norm_subst [$h,*]; exact $t
     | have lem := $t; norm_subst [$h,*] at lem; norm_subst [$h,*]; exact lem
