@@ -114,7 +114,7 @@ def SemTyping (Γ : List Ty) (t : Term) (A : Ty) := ∀ {σ Δ}, SemSubst Γ Δ 
 
 notation:60 Γ:60 " ⊨ " t:60 " : " A:60 => SemTyping Γ t A
 
-theorem SemSubst.id {Γ} : Γ -⟦.id Term⟧> Γ := sorry
+theorem SemSubst.id {Γ} : Γ -⟦.id Term⟧> Γ := ⟨λ h => .neu (.var h)⟩
 
 theorem SemSubst.su {Γ Δ A σ a} (j : ℰ Δ A a) (m : Γ -⟦σ⟧> Δ) : (A::Γ) -⟦su a .: σ⟧> Δ :=
   ⟨λ {i T} h =>
