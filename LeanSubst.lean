@@ -4,6 +4,7 @@ import LeanSubst.Lemma
 import LeanSubst.Tactic
 import LeanSubst.Automation.Attributes
 import LeanSubst.Automation.Basic
+import LeanSubst.Data.Sequence
 import LeanSubst.Data.Option
 import LeanSubst.Data.List
 import LeanSubst.Rewriting.Reduction

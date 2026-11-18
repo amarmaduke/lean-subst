@@ -38,7 +38,7 @@ mutual
   | red {S Γ A t t'} : SnRed S Γ A t t' -> SnNor S Γ A t' -> SnNor S Γ A t
 
   inductive SnNeu : SemSet -> SemSet
-  | var {S Γ A x} : Γ[x]? = .some A -> SnNeu S Γ A #x
+  | var {S Γ A x} : Γ[x]? = some A -> SnNeu S Γ A #x
   | app {S1 S2 S3 Γ A B f a} : SnNeu S1 Γ (A -:> B) f -> SnNor S2 Γ A a -> SnNeu S3 Γ B (f `• a)
   | proj1 {S1 S2 Γ A B t} : SnNeu S1 Γ (A `× B) t -> SnNeu S2 Γ A (.proj 1 t)
   | proj2 {S1 S2 Γ A B t} : SnNeu S1 Γ (A `× B) t -> SnNeu S2 Γ B (.proj 2 t)

@@ -4,13 +4,16 @@ import LeanSubst
 
 open LeanSubst
 
-namespace SystemFWithNat
+namespace SystemFWithData
 
 inductive Ty where
 | var : Nat -> Ty
 | arrow : Ty -> Ty -> Ty
 | all : Ty -> Ty
-| nat : Ty
+
+prefix:max "t#" => Ty.var
+infixr:64 " -:> " => Ty.arrow
+notation:65 "`∀ " P:65 => Ty.all P
 
 #leansubst var Ty.var
 #leansubst bind Ty at pos 0 in Ty.all
@@ -22,14 +25,16 @@ inductive Term where
 | lam (A : Ty) (t : Term) : Term
 | tapp : Term -> Ty -> Term
 | tlam (t : Term) : Term
-| zero : Term
-| succ : Term -> Term
-| nrec (z : Term) (s : Term) (n : Term) : Term
+
+prefix:max "#" => Term.var
+notation "λ[" A "]" t => Term.lam A t
+notation f " `• " a => Term.app f a
+notation "Λ " t => Term.tlam t
+notation f "•[" A "]" => Term.tapp f A
 
 #leansubst var Term.var
 #leansubst bind Term at pos 1 in Term.lam
 #leansubst bind Ty at pos 0 in Term.tlam
-#leansubst bind 2 of Term at pos 1 in Term.nrec
 
 #leansubst generate Term, Ty
 
@@ -427,4 +432,4 @@ inductive Term where
 -- instance : SubstMapComp Term [Term, Ty] where
 --   compose_law := by subst_solve_compose
 
-end SystemFWithNat
+end SystemFWithData

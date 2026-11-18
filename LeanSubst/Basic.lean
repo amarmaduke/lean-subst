@@ -10,7 +10,7 @@ universe u u1 u2 u3
 variable {S : Type u1} {T : Type u2} {U : Type u3}
 variable {V : List (Type u2)}
 
-class AltCons (S : outParam $ Type u1) (T : Type u2) where
+class AltCons (S : outParam $ Sort u1) (T : Sort u2) where
   altCons : S -> T -> T
 
 infixr:67 (name := «_.:_») " .: " => AltCons.altCons
