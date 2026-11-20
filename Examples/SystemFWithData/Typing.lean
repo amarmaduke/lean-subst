@@ -29,7 +29,7 @@ inductive Typing : List Ty -> Term -> Ty -> Prop where
   Γ ⊢ Λ t : `∀ P
 end
 
-notation:200 Γ:200 " ⊢ " t:200 " : " A:200 => Typing Γ t A
+notation:60 Γ:60 " ⊢ " t:60 " : " A:60 => Typing Γ t A
 
 -- inductive ListWf : List Unit -> List Ty -> Prop where
 -- | nil {Δ} : ListWf Δ []
